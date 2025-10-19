@@ -29,6 +29,6 @@ void* Dequeue(Queue *MQueue);
 //Check if the Queue is currently empty
 int isEmpty(Queue *MQueue);
 
-// Peek at the head node
+// Peek at the head Node
 QueueNode *peek(Queue *MQueue);
 
