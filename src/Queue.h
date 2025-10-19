@@ -30,5 +30,5 @@ void* Dequeue(Queue *MQueue);
 int isEmpty(Queue *MQueue);
 
 // Peek at the head node
-QueueNode peek(Queue *MQueue);
+QueueNode *peek(Queue *MQueue);
 
