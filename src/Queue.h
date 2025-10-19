@@ -2,23 +2,33 @@
 
 //Node struct that represents a single element in the Queue
 typedef struct{ 
-	int size;
 	void *data;
-	Queue *next;
+	struct QueueNode *next;
 }QueueNode;
 
+//Struct to represent the entire Queue
+//Keep track of the Head, Tail, and total size 
+tydef struct{ 
+	QueueNode *head;
+	QueueNode *tail;
+	int size;
+}Queue;
+
+//Get a clean and freshly made Queue struct 
+Queue initalizeQueue(void);
+
 // Get the total size of the queue currently
-int getSize();
+int getSize(Queue *MQueue);
 
 //Add a node to the start of the queue
-void Enqueue(Queue *aQueue, void *data);
+void Enqueue(Queue *MQueue, void *data);
 
 //Take a node off the head of the queue since it is a FIFO data struct 
-void* Dequeue();
+void* Dequeue(Queue *MQueue);
 
-int isEmpty();
+//Check if the Queue is currently empty
+int isEmpty(Queue *MQueue);
 
-
-
-
+// Peek at the head node
+QueueNode peek(Queue *MQueue);
 
