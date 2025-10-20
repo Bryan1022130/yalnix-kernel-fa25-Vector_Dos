@@ -14,7 +14,6 @@ for(int i = 0; i < TRAP_VECTOR_SIZE; i++){
 //Write the Memory Address to the REG_VECTOR_BASE register so it knows where it is
 WriteRegister(REG_VECTOR_BASE, (unsigned int)&Interrupt_Vector_Table);
 
-
 //Find the correct case for the Trap type, then call a function to handle it
 void HandleTrap(UserContext *CurrUC, int TrapValue){
 
@@ -63,16 +62,3 @@ void HandleTrap(UserContext *CurrUC, int TrapValue){
 
 }
 
-// Function declarations for Trap Handler functions
-void HandleKernelTrap(UserContext *CurrUC);
-void HandleMathTrap(UserContext *CurrUC);
-void HandleClockTrap(UserContext *CurrUC);
-void HandleMemoryTrap(UserContext *CurrUC);
-void HandleIllegalTrap(UserContext *CurrUC);
-void HandleDiskTrap(UserContext *CurrUC);
-void HandleTransmitTrap(UserContext *CurrUC);
-void HandleReceiveTrap(UserContext *CurrUC);
-
-//These functions will use a memcopy into the global PCB
-void CopyUserContext();
-void UpdateUserContext();

@@ -42,7 +42,7 @@ void Enqueue(Queue *MQueue, void *data){
 	QueueNode *Node = makeNode(data);
 	if(Node == NULL) return;
 		
-	//If the Queue is empty, make the first node the head node 
+	//If the Queue is empty, make the first node the head node and tail 
 	if(isEmpty(MQueue) == TRUE){
 		MQueue->head = Node;
 		MQueue->tail = Node;
@@ -65,7 +65,7 @@ void *Dequeue(Queue *MQueue){
 	}
 
 	//Since a Queue is FIFO, we get rid of the front 
-	//We then update to the Node it points to the current heads next
+	//We then update to the Node it points to (current heads next)
 	//Tail stays the same 
 
 	QueueNode *temp = MQueue->head;
@@ -73,11 +73,13 @@ void *Dequeue(Queue *MQueue){
 
 	MQueue->head = MQueue->head->next;
 	MQueue->size--;
-
+	
+	//Incase we dequeued the last Node
 	if(MQueue->head == NULL){
 		MQueue->tail = NULL;
 	}
 
+	//free since we called malloc, also to avoid memory leak
 	free(temp);
 
 	return tempdata;

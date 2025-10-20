@@ -1,18 +1,20 @@
 # Boot:
-In the first transition the kernel invoke a function called ==KernelStart()==. When the function returns then we can start running in user mode. 
+In the first transition the kernel invoke a function called KernelStart(). When the function returns then we can start running in user mode. 
 
 # Kernel Heap
 
-We will be given a kernel library that is provided. This will include things such as malloc(), there is Kernel version of brk that we can use to adjust the top of the heap. the function is called ==SetKernelBrk()==. 
+We will be given a kernel library that is provided. This will include things such as malloc(), there is a Kernel version of brk that we can use to adjust the top of the heap. The function is called SetKernelBrk(). 
 
-#### We will write this function ==SetKernelBrk()==
+#### We will write this function SetKernelBrk() as part of the Yalnix Project
 
 ---
+
 # Hardware
 
 ### All registers on the DCS 58 are 32 bits wide
 
-There is general purpose registers that can be accessed by ether Kernel or User mode and these include: 
+There are general purpose registers that can be accessed by both Kernel or User mode and these include: 
+
 • PC, the program counter
 • SP, the stack pointer, contains the virtual address of the top of the current process’s stack.  
 • EBP, the frame pointer (aka base pointer contains the virtual address of the current process’s stack frame
@@ -20,9 +22,10 @@ There is general purpose registers that can be accessed by ether Kernel or User 
 a computation.
 
 ---
+
 ### Privileged Registers
 
-These are only register that can be accessed by kernel or when in kernel mode.
+These are registers that can only be accessed by the kernel or when in kernel mode.
 
 Most of the privileged registers are both writable and readable, except for the REG_TLB_FLUSH register, which is write-only.  
 
@@ -71,7 +74,7 @@ PMEM BASE: The physical memory address of the first byte of physical memory in t
 installed on the machine. At boot time, the computer’s firmware tests the physical memory and determines the  
 amount of memory installed, and passes this value to the initialization procedure of the operating system kernel.
 
-##### As is standard physical frames are equal size to virtual page memory
+##### As is standard, physical frames are equal size to virtual page memory
 
 ---
 
@@ -94,6 +97,7 @@ The limit virtual address (first byte above the region) is VMEM_1_LIMIT
 Size is VMEM_1_SIZE
 
 ---
+
 # Page Tables
 
 The kernel allocates page tables in memory wherever it wants to, and it tells the MMU in the hardware where to  
@@ -111,20 +115,17 @@ virtual pages in Region 1
 
 A 32-bit PTE typically contains the following key fields:
 
-Control Bits:
-	This is 4 bits wide and is composed of a valid bit and 3 permission bits
+Control Bits: This is 4 bits wide and is composed of a valid bit and 3 permission bits
 	
-Unused bits:
-	Unused space in the PTE
+Unused bits: Unused space in the PTE
 
-Page Frame Number:
-	This is the most significant part of the physical memory address where the page is actually located.
+Page Frame Number: This is the most significant part of the physical memory address where the page is actually located.
 
 ---
 
 # **Initializing Virtual Memory**
 
-On the DCS58, virtual memory cannot be disabled after it is enabled (that is, without rebooting the  machine).
+On the DCS58, virtual memory cannot be disabled after it is enabled (that is, without rebooting the machine).
 
 To enable virtual memory without crashing the kernel, the initial virtual address space for the kernel must perfectly 
 mirror the physical address space it's already using.
