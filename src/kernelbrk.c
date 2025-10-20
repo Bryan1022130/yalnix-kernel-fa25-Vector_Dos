@@ -1,4 +1,5 @@
-#include <stdint.h>
+#include <hardware.h>
+#include <ylib.h>
 
 #define ENABLED 1 
 #define DISABLED 0
@@ -17,8 +18,8 @@ int SetKernelBrk(void * addr){
 	uintptr_t new_kbrk_addr = (uintptr_t)addr;
 	uintptr_t old_kbrk = (uintptr_t)current_brk;
 
-	/* SetKernelBrk opeartes differently depending on if virtual memory is enabled or not 
-	 * Before Virtual Memory is enabled, it checks if and by how much the kernel brk is being raised from the original kernel check point
+	/* SetKernelBrk operates differently depending on if virtual memory is enabled or not 
+	 * Before Virtual Memory is enabled, it checks if and by how much the SetKernelBrk is being raised from the original kernel check point
 	 */
 	
 	if(vm_current_state == DISABLED){
@@ -41,28 +42,28 @@ int SetKernelBrk(void * addr){
 		return ERROR;
 	}
 	
-	//Check if the request new address space for the Kernel heap is valid
+	//Check if the requested new address space for the Kernel Heap Brk is valid
 	if(new_kbrk_addr >= KERNEL_STACK_BASE){
 		TracePrintf(0, "Your request will dip in kernel stack space error!\n");
 		return ERROR;
 	}
 
-	//We can now call a function that will set up the page table entries for the new allocated space
-	//We have to calculate the page-algned memory space to be able to loop
-	//We would have to loop from the start of the old break pointer to the new one (By page size and not actual address value)
-	//Try to allocate a new space in physical memory to map the virtual address too
-	//On each iteration we need to set up the table entries with correct permissions and information for virtual memory \
+	//1.We can now call a function that will set up the page table entries for the new allocated space
+	//2.We have to calculate the page-algned memory space to be able to loop
+	//3.We would have to loop from the start of the old break pointer to the new one (By page size and not actual address value)
+	//4.Try to allocate a new space in physical memory to map the virtual address to
+	//5.On each iteration we need to set up the table entries with correct permissions and information for virtual memory
 	
-	//Perform other forms of error checking related to the addr passed in \
+	//6.Perform other forms of error checking related to the addr passed in 
 	
 
 	if(new_kbrk_addr < old_kbrk){
-		//Have logic here to be able to unmap pages and free up memory that was just being used
+		//7.Have logic here to be able to unmap pages and free up memory that was just being used
 	}
 
 	//Return 0 on success!
-	
 	return 0;
+	}	
 }
 
 

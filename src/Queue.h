@@ -8,7 +8,7 @@ typedef struct{
 
 //Struct to represent the entire Queue
 //Keep track of the Head, Tail, and total size 
-tydef struct{ 
+typedef struct{ 
 	QueueNode *head;
 	QueueNode *tail;
 	int size;

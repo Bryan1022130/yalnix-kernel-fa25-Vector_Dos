@@ -1,0 +1,13 @@
+// Function declarations for Trap Handler functions
+void HandleKernelTrap(UserContext *CurrUC);
+void HandleMathTrap(UserContext *CurrUC);
+void HandleClockTrap(UserContext *CurrUC);
+void HandleMemoryTrap(UserContext *CurrUC);
+void HandleIllegalTrap(UserContext *CurrUC);
+void HandleDiskTrap(UserContext *CurrUC);
+void HandleTransmitTrap(UserContext *CurrUC);
+void HandleReceiveTrap(UserContext *CurrUC);
+
+//These functions will use a memcopy into the global PCB
+void CopyUserContext();
+void UpdateUserContext();
