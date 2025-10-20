@@ -3,7 +3,7 @@ In the first transition the kernel invoke a function called ==KernelStart()==. W
 
 # Kernel Heap
 
-We will be given a kernel library that is provided. This will include things such as malloc(), there is Kernel version of brk that we can use to adjust the top of the heap. the function is called ==SetKernelBrk()==. 
+We will be given a kernel library that is provided. This will include things such as malloc(), there is Kernel version of brk that we can use to adjust the top of the heap. the function is called SetKernelBrk(). 
 
 #### We will write this function ==SetKernelBrk()==
 
