@@ -6,6 +6,7 @@
 #include <yalnix.h>
 #include <ylib.h>
 #include <yuser.h>
+#include <sys/mman.h>
 
 //Macros
 #define TRUE 1
@@ -49,23 +50,40 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * --------------------------------------->>>
 	 */
 
-	/*Loop through the text section and set up the pte
+	/*Loop through the text section and set up the ptes
 	 * #include <yalnix.h>
 	 * _first_kernel_text_page - > low page of kernel text
 	 */
 
-	for(long int text = _first_kernel_text_page; text < _first_kernel_data_page; text++){
-		page_table_array[text].
-	}
+	unsigned long int pfn_track = DOWN_TO_PAGE(_first_kernel_text_page);
+	unsigned long int text_end = DOWN_TO_PAGE(_first_kernel_data_page);
+	
+	for(long int text = pfn_track; text < text_end; text++){
+		//Text section should be only have READ && EXEC permissions
+		page_table_array[text].prot = PROT_READ | PROT_EXEC;
+		page_table_array[text].valid = FALSE;
+		page_table_array[text].pfn = pfn_track;
 
+		//Increase by PAGESIZE to store the physical memory addr in pte_t.pfn
+		pfn_track+= PAGESIZE;
+	}
 
 	/*Loop through heap and data sections and setup pte
 	 * _first_kernel_data_page -> low page of heap/data section
 	 * _orig_kernel_brk_page -> first unused page after kernel heap
 	 */
 
-	for(long int i = dataheap ; i < data_end; i++){
-		page_table_array[i].
+	unsigned long int heapdata_start = DOWN_TO_PAGE(_first_kernel_data_page); 
+	unsigned long int heapdata_end = DOWN_TO_PAGE(_orig_kernel_brk_page);
+
+	for(long int dataheap = heapdata_start; dataheap < heapdata_end; dataheap++){
+		//Heap and Data section both have READ and WRITE conditions
+		page_table_array[dataheap].prot = PROT_WRITE | PROT_READ; 
+		page_table_array[dataheap].valid = FALSE;
+		page_table_array[dataheap].pfn = pfn_track;
+
+		//Increase by PAGESIZE as before
+		pfn_track += PAGESIZE;
 	}
 
 	//Write the page table table base and limit registers
