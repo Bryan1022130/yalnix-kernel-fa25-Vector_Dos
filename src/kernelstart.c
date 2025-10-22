@@ -15,7 +15,7 @@
 
 /*
  * Run this file
- * ======>  ./yalnix -W {Recomended}
+ * ======>  ./yalnix -W {Recommended}
  *\
 
  * ================================>>
@@ -33,15 +33,19 @@ PCB *current_proccess;
 void *current_kernel_brk;
 
 //Frames available in physical memory
-long int frame_count;
+unsigned long int frame_count;
+
+//Virtual Memory look up logic
+// Something like -----> (vpn >= vp1) ? vpn - vp1 : vpn - vp0;
+
+unsigned long int vp0 = VMEM_0_BASE >> PAGESHIFT;
+unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
 
 /* Initializing Virtual Memory
  * char *cmd_args: Vector of strings, holding a pointer to each argc in boot command line {Terminated by NULL poointer}
  * unsigned int pmem_size: Size of the physical memory of the machine {Given in byte}
  * UserContext *uctxt: pointer to an initial UserContext structure
  */ 
-
-
 
 void create_free_frames(void){
 	//Set all pages as unused for now 
