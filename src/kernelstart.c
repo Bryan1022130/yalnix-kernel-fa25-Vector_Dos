@@ -47,7 +47,10 @@ void create_free_frames(void){
 	//Set all pages as unused for now 
 	unsigned short int bitmap[MAX_PT_ENTRY] = {0};
 
-	return 
+	//Maybe it can also be set in a unsigned long int???
+	unsigned long int bitmap = 0;
+	
+	return; 
 }
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
