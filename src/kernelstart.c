@@ -37,9 +37,16 @@ unsigned long int frame_count;
 
 //Virtual Memory look up logic
 // Something like -----> (vpn >= vp1) ? vpn - vp1 : vpn - vp0;
-
 unsigned long int vp0 = VMEM_0_BASE >> PAGESHIFT;
 unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
+
+//Page Table allocation -> an array of page table entries
+static pte_t kernel_page_table[MAX_PT_ENTRY];
+static pte_t user_page_table[MAX_PT_ENTRY];
+
+//Terminal Array
+//Functions for terminal {TTY_TRANSMIT && TTY_RECEIVE}
+unsigned int terminal_array[NUM_TERMINALS];
 
 /* Initializing Virtual Memory
  * char *cmd_args: Vector of strings, holding a pointer to each argc in boot command line {Terminated by NULL poointer}
@@ -58,16 +65,18 @@ void create_free_frames(void){
 }
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
+
+	/* <<<---------------------------------------------------------
+	 * Boot up the free frame data structure && definee global vars
+	 * ---------------------------------------------------------->>>
+	 */
+
 	//Initialize the data struct to track the free frames
 	create_free_frames();
-
 
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = pmem_size / PAGESIZE;
 
-	//Page Table allocation, array of page table entries
-	pte_t page_table_array[MAX_PT_ENTRY];
-	
 	/* <<<---------------------------------------
 	 * Set up the initial Region 0 {KERNEL SPACE}
 	 * --> Heap	-
@@ -89,9 +98,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	
 	for(long int text = pfn_track; text < text_end; text++){
 		//Text section should be only have READ && EXEC permissions
-		page_table_array[text].prot = PROT_READ | PROT_EXEC;
-		page_table_array[text].valid = FALSE;
-		page_table_array[text].pfn = pfn_track;
+		kernel_page_table[text].prot = PROT_READ | PROT_EXEC;
+		kernel_page_table[text].valid = TRUE;
+		kernel_page_table[text].pfn = pfn_track;
 
 		//Increase by PAGESIZE to store the physical memory addr in pte_t.pfn
 		pfn_track+= PAGESIZE;
@@ -113,20 +122,42 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	for(long int dataheap = heapdata_start; dataheap < heapdata_end; dataheap++){
 		//Heap and Data section both have READ and WRITE conditions
-		page_table_array[dataheap].prot = PROT_WRITE | PROT_READ; 
-		page_table_array[dataheap].valid = FALSE;
-		page_table_array[dataheap].pfn = pfn_track;
+		kernel_page_table[dataheap].prot = PROT_WRITE | PROT_READ; 
+		kernel_page_table[dataheap].valid = TRUE;
+		kernel_page_table[dataheap].pfn = pfn_track;
 
 		//Increase by PAGESIZE as before
 		pfn_track += PAGESIZE;
+	}
+	unsigned long int stackstart = DOWN_TO_PAGE(KERNEL_STACK_BASE);
+	unsigned long int stackend = DOWN_TO_PAGE(KERNEL_STACK_LIMIT);
+
+	for(long int stackloop = stackstart; stackloop < stackend; stackloop++){
+		kernel_page_table[stackloop].prot = PROT_READ | PROT_WRITE;
+		kernel_page_table[stackloop].valid = TRUE;
+		kernel_pag_table[stackloop].pfn = 
+
 	}
 
 	//Write the page table table base and limit registers for Region 0
 	//In this case since we been tracking it with "pfn_track" we can just pass in value
 	WriteRegister(REG_PTLR0, (unsigned int)pfn_track);
 
-	//Initialize Virtual Memory
+
+	//Interrupt the Vector table
+	//
+
+
+	/* <<<--------------------------
+	 * Initialize Virtual Memory
+	 * -------------------------->>>
+	 */
+	
+	//Kernelbrk();
+	
+	//Write to special register that Virtual Memory is enabled 
 	WriteRegister(REG_VM_ENABLE, TRUE);
+
 	//Set the global variable as true 
 	vm_enabled = TRUE;
 
@@ -136,9 +167,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	return;
 }
-
-
-
 
 
 void DoIdle(void) { 
