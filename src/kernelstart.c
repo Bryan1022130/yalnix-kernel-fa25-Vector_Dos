@@ -78,6 +78,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	unsigned long int pfn_track = DOWN_TO_PAGE(_first_kernel_text_page); //Alias: Start of Text Segment
+									     
+	WriteRegister(REG_PTBR0, (unsigned int)pfn_track); //Write the address of the start of text for pte_t
+
 	unsigned long int text_end = DOWN_TO_PAGE(_first_kernel_data_page);
 	
 	for(long int text = pfn_track; text < text_end; text++){
@@ -114,25 +117,18 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		pfn_track += PAGESIZE;
 	}
 
-	//Write the page table table base and limit registers
-	WriteRegister(REG_PTBR0, (unsigned int) );
-	WriteRegister(REG_PTLR0, (unsigned int) );
+	//Write the page table table base and limit registers for Region 0
+	//In this case since we been tracking it with "pfn_track" we can just pass in value
+	WriteRegister(REG_PTLR0, (unsigned int)pfn_track);
 
-
-	WriteRegister(REG_PTBR1, (unsigned int) );
-	WriteRegister(REG_PTLR1, (unsigned int) ) ;
-
-	//The functions are to write and to read into special purpose registers
-	WriteRegister(REG_PTBR0);
-	ReadRegister(REG_PTLR0, );
-
-	
 	//Initialize Virtual Memory
 	WriteRegister(REG_VM_ENABLE, TRUE);
 	//Set the global variable as true 
 	vm_enabled = TRUE;
 
-
+	//Write the page table table base and limit registers for Region 1
+	WriteRegister(REG_PTBR1, (unsigned int) );
+	WriteRegister(REG_PTLR1, (unsigned int) ) ;
 
 	return;
 }
