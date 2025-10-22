@@ -40,11 +40,33 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Page Table allocation, array of page table entries
 	pte_t page_table_array[MAX_PT_ENTRY];
+	
+	/* <<<---------------------------------------
+	 * Set up the initial Region 0 {KERNEL SPACE}
+	 * --> Heap	-
+	 * --> Data	-
+	 *  -->Text	-
+	 * --------------------------------------->>>
+	 */
 
-	for(long int i = 0; i < MAX_PT_ENTRY; i++){
-		page_table_array[i]. 
+	/*Loop through the text section and set up the pte
+	 * #include <yalnix.h>
+	 * _first_kernel_text_page - > low page of kernel text
+	 */
+
+	for(long int text = _first_kernel_text_page; text < _first_kernel_data_page; text++){
+		page_table_array[text].
 	}
 
+
+	/*Loop through heap and data sections and setup pte
+	 * _first_kernel_data_page -> low page of heap/data section
+	 * _orig_kernel_brk_page -> first unused page after kernel heap
+	 */
+
+	for(long int i = dataheap ; i < data_end; i++){
+		page_table_array[i].
+	}
 
 	//Write the page table table base and limit registers
 	WriteRegister(REG_PTBR0, (unsigned int) );
