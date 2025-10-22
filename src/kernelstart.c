@@ -6,13 +6,19 @@
 #include <yalnix.h>
 #include <ylib.h>
 #include <yuser.h>
-#include <sys/mman.h>
+#include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
+#include "Queue.h"
 
 //Macros
 #define TRUE 1
 #define FALSE 0
 
-/* ================================>>
+/*
+ * Run this file
+ * ======>  ./yalnix -W {Recomended}
+ *\
+
+ * ================================>>
  * Global Variables
  * <<================================
  */
@@ -35,7 +41,20 @@ long int frame_count;
  * UserContext *uctxt: pointer to an initial UserContext structure
  */ 
 
+
+
+void create_free_frames(void){
+	//Set all pages as unused for now 
+	unsigned short int bitmap[MAX_PT_ENTRY] = {0};
+
+	return 
+}
+
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
+	//Initialize the data struct to track the free frames
+	create_free_frames();
+
+
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = pmem_size / PAGESIZE;
 
@@ -55,7 +74,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _first_kernel_text_page - > low page of kernel text
 	 */
 
-	unsigned long int pfn_track = DOWN_TO_PAGE(_first_kernel_text_page);
+	unsigned long int pfn_track = DOWN_TO_PAGE(_first_kernel_text_page); //Alias: Start of Text Segment
 	unsigned long int text_end = DOWN_TO_PAGE(_first_kernel_data_page);
 	
 	for(long int text = pfn_track; text < text_end; text++){
@@ -73,8 +92,14 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _orig_kernel_brk_page -> first unused page after kernel heap
 	 */
 
+
+	//Since the previous loop stopped right before the start of heap/data section
+	//We have to set this pfn manually here or else it would be mapped to 2 pte
+	//THIS COULD BE WRONG COME BACK AND CHECK THIS IF IT IS CORRECT
+	
 	unsigned long int heapdata_start = DOWN_TO_PAGE(_first_kernel_data_page); 
 	unsigned long int heapdata_end = DOWN_TO_PAGE(_orig_kernel_brk_page);
+	pfn_track = heapdata_start;
 
 	for(long int dataheap = heapdata_start; dataheap < heapdata_end; dataheap++){
 		//Heap and Data section both have READ and WRITE conditions
