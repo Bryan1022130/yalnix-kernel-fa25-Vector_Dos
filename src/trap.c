@@ -36,64 +36,82 @@ void HandleTrap(UserContext *CurrUC){
 
 void HandleKernelTrap(UserContext *CurrUC){
 	TracePrintf(0, "In HandleKernelTrap");
-
+	
+	//Get the code from the struct
 	int extract_code = CurrUC->code;
 
+	//Set up the variable that will be the return value 
+	int sys_return = 0;
+
+	//Find what Syscall the code points to 
 	switch(extract_code){
 		case YALNIX_FORK:
+			sys_return = Fork();
 			break;
 
 		case YALNIX_EXEC:
+			sys_return = Exec((char *)CurrUC->regs[0], (char **)CurrUC->regs[1]);
 			break;
 		
 		case YALNIX_EXIT:
+			Exit(CurrUC->regs[0]);
 			break;
 
 		case YALNIX_WAIT:
+			sys_return = Wait(CurrUC->regs[0]);
 			break;
 
 		case YALNIX_GETPID:
+			sys_return = GetPid();
 			break;
 
 		case YALNIX_BRK:
+			sys_return = Brk(CurrUC->regs[0]);
 			break;
 
 		case YALNIX_DELAY:
+			sys_return = Delay(CurrUC->regs[0]);
 			break;
-
-		case YALNIX_FORK:
-			break;
-
-		case YALNIX_EXEC:
-			break;
-
+		
 		case YALNIX_TTY_READ:
+			sys_return = TtyRead(CurrUC->regs[0], CurrUC->regs[1], CurrUC->regs[2]);
 			break;
 
 		case YALNIX_TTY_WRITE:
+			sys_return = TtyWrite(CurrUC->regs[0], CurrUC->regs[1], CurrUC->regs[2]);
 			break;
 
 		case YALNIX_READ_SECTOR:
+			sys_return = ReadSector(CurrUC->regs[0], CurrUC->regs[1]);
 			break;
 
 		case YALNIX_WRITE_SECTOR:
+			sys_return = WriteSector(CurrUC->regs[0], CurrUC->regs[1]);
 			break;
 
 		case YALNIX_PIPE_INIT:
+			sys_return = PipeInit(CurrUC->regs[0]);
 			break;
 
 		case YALNIX_PIPE_READ:
+			sys_return = PipeRead(CurrUC->regs[0], CurrUC->regs[1], CurrUC->regs[2]); 
 			break;
 
-		case YALNIX_TTY_WRITE:
+		case YALNIX_PIPE_WRITE:
+			sys_return = PipeWrite(CurrUC->regs[0], CurrUC->regs[1], CurrUC->regs[2]); 
 			break;
 
 		default:
 			PrintTracef(0,"The current code did not match any syscall");
 			break;
 
+	//Store the value that we get from the syscall into the regs[0];
+	CurrUC->regs[0] = sys_return;
+
 	TracePrintf(0, "Leaving HandleKernelTrap");
+
 	return;
+	}
 }
 
 /* <<<---------------------------------
@@ -101,8 +119,6 @@ void HandleKernelTrap(UserContext *CurrUC){
  *  ->
  * --------------------------------->>>
  */
-
-
 
 void HandleClockTrap(UserContext *CurrUC){
 	TracePrintf(0, "In HandleClockTrap");
