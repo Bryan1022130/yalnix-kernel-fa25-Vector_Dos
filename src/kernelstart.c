@@ -141,23 +141,41 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//MAX_PT_ENTRY {maybe} 
 	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
 
+	/* <<<------------------------------
+	 * Call SetKernelBrk()
+	 * ------------------------------>>>
+	 */
+	
+	int kbrk_return = SetKernelBrk();
 
-	//Interrupt the Vector table
-	//
+	if(kbrk_return != 0){
+		TracePrintf(0, "There was an error in SetKernelBrk");
+		return;
+	}
 
+	/* <<<------------------------------
+	 * Set up the Interrupt Vector Table
+	 * ------------------------------>>>
+	 */
+
+	setup_trap_handler(Interrupt_Vector_Table);
 
 	/* <<<--------------------------
 	 * Initialize Virtual Memory
 	 * -------------------------->>>
 	 */
-	
-	//Kernelbrk();
-	
+		
 	//Write to special register that Virtual Memory is enabled 
 	WriteRegister(REG_VM_ENABLE, TRUE);
 
 	//Set the global variable as true 
 	vm_enabled = TRUE;
+
+
+	/* <<<-------------------------------------
+	 * Create Process
+	 * ------------------------------------->>>
+	 */
 
 
 
