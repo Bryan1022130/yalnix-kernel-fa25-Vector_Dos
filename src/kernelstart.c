@@ -146,7 +146,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * ------------------------------>>>
 	 */
 	
-	int kbrk_return = SetKernelBrk();
+	int kbrk_return = SetKernelBrk(current_kernel_brk);
 
 	if(kbrk_return != 0){
 		TracePrintf(0, "There was an error in SetKernelBrk");
