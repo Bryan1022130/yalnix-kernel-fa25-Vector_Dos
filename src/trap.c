@@ -115,7 +115,8 @@ void HandleKernelTrap(UserContext *CurrUC){
 }
 
 /* <<<---------------------------------
- * General Flow
+ * General Flow: In Progress for now
+ * CP1 only needs use to trace print that it works
  *  ->
  * --------------------------------->>>
  */

@@ -1,6 +1,6 @@
 //Header files from yalnix_framework
 #include <ykernel.h>
-#include <hardware.h>
+#include <hardware.h> // For macros regarding kernel space
 #include <ctype.h>
 #include <load_info.h>
 #include <yalnix.h>
@@ -14,9 +14,10 @@
 #define TRUE 1
 #define FALSE 0
 
-/*
- * Run this file
+/* ==================================
+ * Run this file for checkpoint 1
  * ======>  ./yalnix -W {Recommended}
+ * ==================================
  *\
 
  * ================================>>
@@ -33,7 +34,7 @@ PCB *current_process;
 //Brk Location
 void *current_kernel_brk;
 
-//Frames available in physical memory
+//Frames available in physical memory {pmem_size / PAGESIZE}
 unsigned long int frame_count;
 
 //Virtual Memory look up logic
@@ -53,11 +54,6 @@ static unsigned int terminal_array[NUM_TERMINALS];
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
-/* Initializing Virtual Memory
- * char *cmd_args: Vector of strings, holding a pointer to each argc in boot command line {Terminated by NULL poointer}
- * unsigned int pmem_size: Size of the physical memory of the machine {Given in byte}
- * UserContext *uctxt: pointer to an initial UserContext structure
- */ 
 
 void create_free_frames(void){
 	//Set all pages as unused for now 
@@ -72,6 +68,14 @@ void create_free_frames(void){
 void init_proc_create(void){
 
 }
+
+/* ========================================================
+ * Initializing Virtual Memory
+ * char *cmd_args: Vector of strings, holding a pointer to each argc in boot command line {Terminated by NULL poointer}
+ * unsigned int pmem_size: Size of the physical memory of the machine {Given in bytes}
+ * UserContext *uctxt: pointer to an initial UserContext structure
+ * =========================================================
+ */ 
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
@@ -88,6 +92,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	/* <<<---------------------------------------
 	 * Set up the initial Region 0 {KERNEL SPACE}
+	 * -->Stack	-
+	 *  		-
+	 *  		-
 	 * --> Heap	-
 	 * --> Data	-
 	 *  -->Text	-
@@ -99,9 +106,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _first_kernel_text_page - > low page of kernel text
 	 */
 
-	unsigned long int text_start = DOWN_TO_PAGE(_first_kernel_text_page); //Alias: Start of Text Segment
-									     
-	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table); //Write the address of the start of text for pte_t
+	//Alias: Start of Text Segment
+	unsigned long int text_start = DOWN_TO_PAGE(_first_kernel_text_page);
+	
+	//Write the address of the start of text for pte_t
+	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
 
 	unsigned long int text_end = DOWN_TO_PAGE(_first_kernel_data_page);
 	
@@ -127,6 +136,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		kernel_page_table[data_heap].pfn = data_heap;
 	}
 
+	/*
+	 * At this point there is unmapped entires between the heap and stack
+	 * These would be our red zones
+	 */
+
 	unsigned long int stack_start = DOWN_TO_PAGE(KERNEL_STACK_BASE);
 	unsigned long int stack_end = DOWN_TO_PAGE(KERNEL_STACK_LIMIT);
 
@@ -134,7 +148,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		kernel_page_table[stack_loop].prot = PROT_READ | PROT_WRITE;
 		kernel_page_table[stack_loop].valid = TRUE;
 		kernel_page_table[stack_loop].pfn = stack_loop; 
-
 	}
 
 	//Write the page table table limit register for Region 0
@@ -177,14 +190,13 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * ------------------------------------->>>
 	 */
 
-	//Create the base of the region 1 memory
+	//Write the base of the region 1 memory
 	WriteRegister(REG_PTBR1, (unsigned int) user_page_table);
 	
 	//Create idle proc
 	init_proc_create();
 
-	PDB idle_proc;
-
+	//Write the limit of the region 1 memory
 	WriteRegister(REG_PTLR1, (unsigned int) ) ;
 
 	return;
