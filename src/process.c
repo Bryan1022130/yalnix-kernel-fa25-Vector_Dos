@@ -1,38 +1,17 @@
-// ------------------ PROCESS LOGIC ---------------------------------
-
-//Enum to be able to represent the many states of the Process
-typedef enum{
-	NEW,
-	READY,
-	BLOCKED,
-	RUNNING,
-	TERMINATED,
-	STOPPED,
-}ProcessState;
-
-//Create the PCB that we be use for context switching 
-typedef struct{
-	KernelContext CurrKC; // Hold the Current Kernel Context {Not just a pointer}
-	UserContext CurrUC; //Hold the Current User Context { Not just the pointer}
-	int PFN; // The physical frame numbers that are contained in the processes kernel stack {This could be a ssize_t}
-	int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
-	ProcessState CurrState; //Enum states
-	void *AddressSpace; // to keep track of where it is currently in its address space {Page Table}
-	int ExitStatus; // When a process is going to exit
-	
-	//Linked List Data Structure for storing and accessing PCB blocks
-	PCB *next;
-	PCB *prev;
-
-}PCB;
-
-// Keep track of the CurrentProcess; global variable to pass to other functions
-// Extern Maybe
-PCB *CurrentProcess = NULL;
+//Header files from yalnix_framework
+#include <ykernel.h>
+#include <hardware.h>
+#include <ctype.h>
+#include <load_info.h>
+#include <yalnix.h>
+#include <ylib.h>
+#include <yuser.h>
+#include "process.h"
 
 // ----------------- Context Switching -----------------------------
 
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
+
 	//Check if the process is valid
 	PCB *current_pcb = (PCB *)curr_pcb_p;
 	PCB *next_pcb = (PCB *)next_pcb_pl;

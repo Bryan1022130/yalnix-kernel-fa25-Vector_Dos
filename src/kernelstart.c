@@ -27,7 +27,7 @@
 short int vm_enabled = FALSE;
 
 //Process Block
-PCB *current_proccess; 
+PCB *current_process; 
 
 //Brk Location
 void *current_kernel_brk;
