@@ -30,9 +30,16 @@ short int vm_enabled = FALSE;
 
 //Process Block
 PCB *current_process; 
+PCB *idle_process;
+PCB * process_read_head;
 
 //Brk Location
 void *current_kernel_brk;
+
+//Kernel Tracking Logic
+void *kernel_region_pt;
+void *kernel_stack_limit;
+UserContext *KernelUC;
 
 //Frames available in physical memory {pmem_size / PAGESIZE}
 unsigned long int frame_count;
@@ -65,8 +72,79 @@ void create_free_frames(void){
 	return; 
 }
 
-void init_proc_create(void){
+/* =======================================
+ * Process Logic Functions
+ * =======================================
+ */
 
+int pid_create(void *pagetable){
+	//Static so that it maintians its value across calls
+	static int pid_count = 0;
+
+	return pid_count++;
+}
+
+
+void init_proc_create(void){
+	
+	//Get a process from our PCB free list
+	PCB *idle_process = pcb_alloc();
+
+	if(idle_process == NULL){
+		PrintTracef(0, "There was an error when trying with pcb_alloc, NULL returned!");
+		return;
+	}
+	
+	/* =======================
+	 * Pid Logic
+	 * =======================
+	 */
+	
+	//Get a pid for the process
+	idle_process->pid = pid_create(kernel_region_pt);
+
+	//To indicate that its the kernel process itself
+	idle_process->ppid = 0;
+	
+	/* ======================================================
+	 * Copy in UserContext from KernelStart into the idle PCB
+	 * ======================================================
+	 */
+
+	memcpy(&idlePCB->curr_uc, g_initial_user_context, sizeof(UserContext));
+	
+	/* =======================================
+	 * Store AddressSpace for region 1 table
+	 * =======================================
+	 */
+
+	idle_process->AddressSpace = kernel_region_pt;
+
+	idle_process->curr_kc.pc = ;
+	idle_prcocess->curr_kc.sp = ;
+
+	//Set as running
+	idle_process->currState = Running;
+
+	//Set pfn
+	idle_process->pfn = 0;
+
+	//Set global variable for current process as the idle process
+	current_process = idle_process;
+	
+
+}
+
+/* =======================================
+ * Idle Function that runs in Kernel Space
+ * =======================================
+ */
+
+void DoIdle(void) { 
+	while(1) {
+		TracePrintf(1,"DoIdle\n");
+		Pause();
+	}
 }
 
 /* ========================================================
@@ -89,6 +167,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = pmem_size / PAGESIZE;
+	
+	//Set up global variable for UserContext
+	KernelUC = uctxt;
 
 	/* <<<---------------------------------------
 	 * Set up the initial Region 0 {KERNEL SPACE}
@@ -111,6 +192,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	
 	//Write the address of the start of text for pte_t
 	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
+	
+	//Set the Global variable
+	kernel_region_pt = (void *)kernel_page_table;
 
 	unsigned long int text_end = DOWN_TO_PAGE(_first_kernel_data_page);
 	
@@ -153,6 +237,10 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Write the page table table limit register for Region 0
 	//We can pass in MAX_PT_LEN because REG_PTLR0 needs number of entries in the page table for region 0
 	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
+	
+	//Set global variable for stack limit
+	//Should be the same as just the end of the memory space for region 0
+	kernel_stack_limit = VNEM_0_LIMIT;
 
 	/* <<<------------------------------
 	 * Call SetKernelBrk()
@@ -200,12 +288,4 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	WriteRegister(REG_PTLR1, (unsigned int) ) ;
 
 	return;
-}
-
-
-void DoIdle(void) { 
-	while(1) {
-		TracePrintf(1,"DoIdle\n");
-		Pause();
-	}
 }
