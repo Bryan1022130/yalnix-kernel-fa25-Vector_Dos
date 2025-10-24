@@ -1,6 +1,6 @@
 //Header files from yalnix_framework
 #include <ykernel.h>
-#include <hardware.h>
+#include <hardware.h> // For macros regarding kernel space
 #include <ctype.h>
 #include <load_info.h>
 #include <yalnix.h>
@@ -8,14 +8,16 @@
 #include <yuser.h>
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 #include "Queue.h"
+#include "trap.h"
 
 //Macros
 #define TRUE 1
 #define FALSE 0
 
-/*
- * Run this file
+/* ==================================
+ * Run this file for checkpoint 1
  * ======>  ./yalnix -W {Recommended}
+ * ==================================
  *\
 
  * ================================>>
@@ -27,12 +29,19 @@
 short int vm_enabled = FALSE;
 
 //Process Block
-PCB *current_proccess; 
+PCB *current_process; 
+PCB *idle_process;
+PCB *process_read_head;
 
 //Brk Location
 void *current_kernel_brk;
 
-//Frames available in physical memory
+//Kernel Tracking Logic
+void *kernel_region_pt;
+void *kernel_stack_limit;
+UserContext *KernelUC;
+
+//Frames available in physical memory {pmem_size / PAGESIZE}
 unsigned long int frame_count;
 
 //Virtual Memory look up logic
@@ -41,28 +50,110 @@ unsigned long int vp0 = VMEM_0_BASE >> PAGESHIFT;
 unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
 
 //Page Table allocation -> an array of page table entries
-static pte_t kernel_page_table[MAX_PT_ENTRY];
-static pte_t user_page_table[MAX_PT_ENTRY];
+static pte_t kernel_page_table[MAX_PT_LEN];
+static pte_t user_page_table[MAX_PT_LEN];
 
 //Terminal Array
 //Functions for terminal {TTY_TRANSMIT && TTY_RECEIVE}
-unsigned int terminal_array[NUM_TERMINALS];
+static unsigned int terminal_array[NUM_TERMINALS];
 
-/* Initializing Virtual Memory
- * char *cmd_args: Vector of strings, holding a pointer to each argc in boot command line {Terminated by NULL poointer}
- * unsigned int pmem_size: Size of the physical memory of the machine {Given in byte}
- * UserContext *uctxt: pointer to an initial UserContext structure
- */ 
+//Global array for the Interrupt Vector Table
+HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
+
 
 void create_free_frames(void){
 	//Set all pages as unused for now 
-	unsigned short int bitmap[MAX_PT_ENTRY] = {0};
+	unsigned short int bitmap[MAX_PT_LEN] = {0};
 
 	//Maybe it can also be set in a unsigned long int???
 	unsigned long int bitmap = 0;
 	
 	return; 
 }
+
+/* =======================================
+ * Process Logic Functions
+ * =======================================
+ */
+
+//Where is pid_helper?
+int pid_create(void *pagetable){
+	//Static so that it maintians its value across calls
+	static int pid_count = 0;
+
+	return pid_count++;
+}
+
+
+void init_proc_create(void){
+	
+	//Get a process from our PCB free list
+	idle_process = pcb_alloc();
+
+	if(idle_process == NULL){
+		PrintTracef(0, "There was an error when trying with pcb_alloc, NULL returned!");
+		return;
+	}
+	
+	/* =======================
+	 * Pid Logic
+	 * =======================
+	 */
+	
+	//Get a pid for the process
+	idle_process->pid = pid_create(kernel_region_pt);
+
+	//To indicate that its the kernel process itself
+	idle_process->ppid = 0;
+	
+	/* ======================================================
+	 * Copy in UserContext from KernelStart into the idle PCB
+	 * ======================================================
+	 */
+
+	memcpy(&idleprocess->curr_uc, KernelUC, sizeof(UserContext));
+	
+	/* =======================================
+	 * Store AddressSpace for region 1 table
+	 * =======================================
+	 */
+
+	idle_process->AddressSpace = kernel_region_pt;
+
+	idle_process->curr_uc.pc = (void*)DoIdle;
+	idle_prcocess->curr_uc.sp = kernel_stack_limit;
+
+	//Set as running
+	idle_process->currState = Running;
+
+	//Set pfn
+	idle_process->pfn = 0;
+
+	//Set global variable for current process as the idle process
+	current_process = idle_process;
+	
+
+}
+
+/* =======================================
+ * Idle Function that runs in Kernel Space
+ * =======================================
+ */
+
+void DoIdle(void) { 
+	while(1) {
+		TracePrintf(1,"DoIdle\n");
+		Pause();
+	}
+}
+
+/* ========================================================
+ * Initializing Virtual Memory
+ * char *cmd_args: Vector of strings, holding a pointer to each argc in boot command line {Terminated by NULL poointer}
+ * unsigned int pmem_size: Size of the physical memory of the machine {Given in bytes}
+ * UserContext *uctxt: pointer to an initial UserContext structure
+ * =========================================================
+ */ 
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
@@ -76,9 +167,15 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = pmem_size / PAGESIZE;
+	
+	//Set up global variable for UserContext
+	KernelUC = uctxt;
 
 	/* <<<---------------------------------------
 	 * Set up the initial Region 0 {KERNEL SPACE}
+	 * -->Stack	-
+	 *  		-
+	 *  		-
 	 * --> Heap	-
 	 * --> Data	-
 	 *  -->Text	-
@@ -90,20 +187,20 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _first_kernel_text_page - > low page of kernel text
 	 */
 
-	unsigned long int pfn_track = DOWN_TO_PAGE(_first_kernel_text_page); //Alias: Start of Text Segment
-									     
-	WriteRegister(REG_PTBR0, (unsigned int)pfn_track); //Write the address of the start of text for pte_t
-
-	unsigned long int text_end = DOWN_TO_PAGE(_first_kernel_data_page);
+	//Write the address of the start of text for pte_t
+	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
 	
-	for(long int text = pfn_track; text < text_end; text++){
+	//Set the Global variable
+	kernel_region_pt = (void *)kernel_page_table;
+	
+	unsigned long int text_start = DOWN_TO_PAGE((unsigned long)_first_kernel_text_page);
+	unsigned long int text_end = DOWN_TO_PAGE((unsigned long)_first_kernel_data_page);
+	
+	for(unsigned long int text = text_start; text < text_end; text++){
 		//Text section should be only have READ && EXEC permissions
 		kernel_page_table[text].prot = PROT_READ | PROT_EXEC;
 		kernel_page_table[text].valid = TRUE;
-		kernel_page_table[text].pfn = pfn_track;
-
-		//Increase by PAGESIZE to store the physical memory addr in pte_t.pfn
-		pfn_track+= PAGESIZE;
+		kernel_page_table[text].pfn = text;
 	}
 
 	/*Loop through heap and data sections and setup pte
@@ -111,67 +208,86 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _orig_kernel_brk_page -> first unused page after kernel heap
 	 */
 
+	unsigned long int heapdata_start = DOWN_TO_PAGE((unsigned long)_first_kernel_data_page); 
+	unsigned long int heapdata_end = DOWN_TO_PAGE((unsigned long)_orig_kernel_brk_page);
 
-	//Since the previous loop stopped right before the start of heap/data section
-	//We have to set this pfn manually here or else it would be mapped to 2 pte
-	//THIS COULD BE WRONG COME BACK AND CHECK THIS IF IT IS CORRECT
-	
-	unsigned long int heapdata_start = DOWN_TO_PAGE(_first_kernel_data_page); 
-	unsigned long int heapdata_end = DOWN_TO_PAGE(_orig_kernel_brk_page);
-	pfn_track = heapdata_start;
+	for(unsigned long int data_heap = heapdata_start; data_heap < heapdata_end; data_heap++){
 
-	for(long int dataheap = heapdata_start; dataheap < heapdata_end; dataheap++){
+
 		//Heap and Data section both have READ and WRITE conditions
-		kernel_page_table[dataheap].prot = PROT_WRITE | PROT_READ; 
-		kernel_page_table[dataheap].valid = TRUE;
-		kernel_page_table[dataheap].pfn = pfn_track;
-
-		//Increase by PAGESIZE as before
-		pfn_track += PAGESIZE;
-	}
-	unsigned long int stackstart = DOWN_TO_PAGE(KERNEL_STACK_BASE);
-	unsigned long int stackend = DOWN_TO_PAGE(KERNEL_STACK_LIMIT);
-
-	for(long int stackloop = stackstart; stackloop < stackend; stackloop++){
-		kernel_page_table[stackloop].prot = PROT_READ | PROT_WRITE;
-		kernel_page_table[stackloop].valid = TRUE;
-		kernel_pag_table[stackloop].pfn = 
-
+		kernel_page_table[data_heap].prot = PROT_WRITE | PROT_READ; 
+		kernel_page_table[data_heap].valid = TRUE;
+		kernel_page_table[data_heap].pfn = data_heap;
 	}
 
-	//Write the page table table base and limit registers for Region 0
-	//In this case since we been tracking it with "pfn_track" we can just pass in value
-	WriteRegister(REG_PTLR0, (unsigned int)pfn_track);
+	/* ==============================
+	 * Red Zone {Unmapped Pages}
+	 * ==============================
+	 */
 
+	unsigned long int stack_start = DOWN_TO_PAGE(KERNEL_STACK_BASE);
+	unsigned long int stack_end = DOWN_TO_PAGE(KERNEL_STACK_LIMIT);
 
-	//Interrupt the Vector table
-	//
+	for(unsigned long int stack_loop = stack_start; stack_loop < stack_end; stack_loop++){
+		kernel_page_table[stack_loop].prot = PROT_READ | PROT_WRITE;
+		kernel_page_table[stack_loop].valid = TRUE;
+		kernel_page_table[stack_loop].pfn = stack_loop; 
+	}
 
+	//Write the page table table limit register for Region 0
+	//MAX_PT_LEN because REG_PTLR0 needs number of entries in the page table for region 0
+	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
+	
+	//Set global variable for stack limit
+	kernel_stack_limit = VMEM_0_LIMIT;
+
+	/* <<<------------------------------
+	 * Call SetKernelBrk()
+	 * ------------------------------>>>
+	 */
+
+	//Set current brk and then call SetKernelBrk
+	current_kernel_brk = (void *)_orig_kernel_brk_page;
+
+	int kbrk_return = SetKernelBrk(current_kernel_brk);
+
+	if(kbrk_return != 0){
+		TracePrintf(0, "There was an error in SetKernelBrk");
+		return;
+	}
+
+	/* <<<------------------------------
+	 * Set up the Interrupt Vector Table
+	 * ------------------------------>>>
+	 */
+
+	setup_trap_handler(Interrupt_Vector_Table);
 
 	/* <<<--------------------------
 	 * Initialize Virtual Memory
 	 * -------------------------->>>
 	 */
-	
-	//Kernelbrk();
-	
+		
 	//Write to special register that Virtual Memory is enabled 
 	WriteRegister(REG_VM_ENABLE, TRUE);
 
 	//Set the global variable as true 
 	vm_enabled = TRUE;
 
-	//Write the page table table base and limit registers for Region 1
-	WriteRegister(REG_PTBR1, (unsigned int) );
+
+	/* <<<-------------------------------------
+	 * Create Process
+	 * ------------------------------------->>>
+	 */
+
+	//Write the base of the region 1 memory
+	WriteRegister(REG_PTBR1, (unsigned int) user_page_table);
+	
+	//Create idle proc
+	init_proc_create();
+
+	//Write the limit of the region 1 memory
 	WriteRegister(REG_PTLR1, (unsigned int) ) ;
 
 	return;
-}
-
-
-void DoIdle(void) { 
-	while(1) {
-		TracePrintf(1,"DoIdle\n");
-		Pause();
-	}
 }

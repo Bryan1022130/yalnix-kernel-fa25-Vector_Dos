@@ -11,3 +11,6 @@ void HandleReceiveTrap(UserContext *CurrUC);
 //These functions will use a memcopy into the global PCB
 void CopyUserContext();
 void UpdateUserContext();
+
+//Temporary function for filling in the table
+void HandleTrap(UserContext *CurrUC);
