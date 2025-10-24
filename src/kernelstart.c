@@ -31,7 +31,7 @@ short int vm_enabled = FALSE;
 //Process Block
 PCB *current_process; 
 PCB *idle_process;
-PCB * process_read_head;
+PCB *process_read_head;
 
 //Brk Location
 void *current_kernel_brk;
@@ -50,7 +50,6 @@ unsigned long int vp0 = VMEM_0_BASE >> PAGESHIFT;
 unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
 
 //Page Table allocation -> an array of page table entries
-//Gets Zeroed out since it is static and unintialized
 static pte_t kernel_page_table[MAX_PT_LEN];
 static pte_t user_page_table[MAX_PT_LEN];
 
@@ -77,6 +76,7 @@ void create_free_frames(void){
  * =======================================
  */
 
+//Where is pid_helper?
 int pid_create(void *pagetable){
 	//Static so that it maintians its value across calls
 	static int pid_count = 0;
@@ -88,7 +88,7 @@ int pid_create(void *pagetable){
 void init_proc_create(void){
 	
 	//Get a process from our PCB free list
-	PCB *idle_process = pcb_alloc();
+	idle_process = pcb_alloc();
 
 	if(idle_process == NULL){
 		PrintTracef(0, "There was an error when trying with pcb_alloc, NULL returned!");
@@ -111,7 +111,7 @@ void init_proc_create(void){
 	 * ======================================================
 	 */
 
-	memcpy(&idlePCB->curr_uc, g_initial_user_context, sizeof(UserContext));
+	memcpy(&idleprocess->curr_uc, KernelUC, sizeof(UserContext));
 	
 	/* =======================================
 	 * Store AddressSpace for region 1 table
@@ -120,8 +120,8 @@ void init_proc_create(void){
 
 	idle_process->AddressSpace = kernel_region_pt;
 
-	idle_process->curr_kc.pc = ;
-	idle_prcocess->curr_kc.sp = ;
+	idle_process->curr_uc.pc = (void*)DoIdle;
+	idle_prcocess->curr_uc.sp = kernel_stack_limit;
 
 	//Set as running
 	idle_process->currState = Running;
@@ -187,18 +187,16 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _first_kernel_text_page - > low page of kernel text
 	 */
 
-	//Alias: Start of Text Segment
-	unsigned long int text_start = DOWN_TO_PAGE(_first_kernel_text_page);
-	
 	//Write the address of the start of text for pte_t
 	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
 	
 	//Set the Global variable
 	kernel_region_pt = (void *)kernel_page_table;
-
-	unsigned long int text_end = DOWN_TO_PAGE(_first_kernel_data_page);
 	
-	for(long int text = text_start; text < text_end; text++){
+	unsigned long int text_start = DOWN_TO_PAGE((unsigned long)_first_kernel_text_page);
+	unsigned long int text_end = DOWN_TO_PAGE((unsigned long)_first_kernel_data_page);
+	
+	for(unsigned long int text = text_start; text < text_end; text++){
 		//Text section should be only have READ && EXEC permissions
 		kernel_page_table[text].prot = PROT_READ | PROT_EXEC;
 		kernel_page_table[text].valid = TRUE;
@@ -210,43 +208,47 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _orig_kernel_brk_page -> first unused page after kernel heap
 	 */
 
-	unsigned long int heapdata_start = DOWN_TO_PAGE(_first_kernel_data_page); 
-	unsigned long int heapdata_end = DOWN_TO_PAGE(_orig_kernel_brk_page);
+	unsigned long int heapdata_start = DOWN_TO_PAGE((unsigned long)_first_kernel_data_page); 
+	unsigned long int heapdata_end = DOWN_TO_PAGE((unsigned long)_orig_kernel_brk_page);
 
-	for(long int data_heap = heapdata_start; data_heap < heapdata_end; data_heap++){
+	for(unsigned long int data_heap = heapdata_start; data_heap < heapdata_end; data_heap++){
+
+
 		//Heap and Data section both have READ and WRITE conditions
 		kernel_page_table[data_heap].prot = PROT_WRITE | PROT_READ; 
 		kernel_page_table[data_heap].valid = TRUE;
 		kernel_page_table[data_heap].pfn = data_heap;
 	}
 
-	/*
-	 * At this point there is unmapped entires between the heap and stack
-	 * These would be our red zones
+	/* ==============================
+	 * Red Zone {Unmapped Pages}
+	 * ==============================
 	 */
 
 	unsigned long int stack_start = DOWN_TO_PAGE(KERNEL_STACK_BASE);
 	unsigned long int stack_end = DOWN_TO_PAGE(KERNEL_STACK_LIMIT);
 
-	for(long int stack_loop = stack_start; stack_loop < stack_end; stack_loop++){
+	for(unsigned long int stack_loop = stack_start; stack_loop < stack_end; stack_loop++){
 		kernel_page_table[stack_loop].prot = PROT_READ | PROT_WRITE;
 		kernel_page_table[stack_loop].valid = TRUE;
 		kernel_page_table[stack_loop].pfn = stack_loop; 
 	}
 
 	//Write the page table table limit register for Region 0
-	//We can pass in MAX_PT_LEN because REG_PTLR0 needs number of entries in the page table for region 0
+	//MAX_PT_LEN because REG_PTLR0 needs number of entries in the page table for region 0
 	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
 	
 	//Set global variable for stack limit
-	//Should be the same as just the end of the memory space for region 0
-	kernel_stack_limit = VNEM_0_LIMIT;
+	kernel_stack_limit = VMEM_0_LIMIT;
 
 	/* <<<------------------------------
 	 * Call SetKernelBrk()
 	 * ------------------------------>>>
 	 */
-	
+
+	//Set current brk and then call SetKernelBrk
+	current_kernel_brk = (void *)_orig_kernel_brk_page;
+
 	int kbrk_return = SetKernelBrk(current_kernel_brk);
 
 	if(kbrk_return != 0){

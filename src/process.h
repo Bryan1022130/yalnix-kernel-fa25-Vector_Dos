@@ -11,6 +11,10 @@ typedef enum{
 
 //Create the PCB that we be use for context switching
 typedef struct PCB{
+
+	//Kernel Stack Frames
+	unsigned int kernel_stack_frames[KERNEL_STACK_MAXSIZE / PAGESIZE];
+
 	//Context Switch Logic
         KernelContext curr_kc; // Hold the Current Kernel Context {Not just a pointer}
         UserContext curr_uc; //Hold the Current User Context { Not just the pointer}
@@ -23,6 +27,7 @@ typedef struct PCB{
 
         ProcessState currState; //Enum states for process
         void *AddressSpace; // to keep track of where it is currently in its address space {Page Table}
+	
 	
 	unsigned int user_heap_end; //The top of heap
 	unsigned int user_stack_end; //Lowest stack address
