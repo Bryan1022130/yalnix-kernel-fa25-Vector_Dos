@@ -1,5 +1,6 @@
 #include <hardware.h>
 #include <ylib.h>
+#include "memory.h"
 
 #define ENABLED 1 
 #define DISABLED 0
@@ -12,6 +13,8 @@ short int vm_current_state = DISABLED;
 //It should be calculated with something like (_orig_kernel_brk_page * PAGESIZE);
 //This will be handled in the KernelStart() function
 void *current_brk;
+extern pte_t kernel_page_table[];  // defined in kernelstart.c
+
 
 int SetKernelBrk(void * addr){
 	//Convert the address to uintptr_t to be able to use as a integer
