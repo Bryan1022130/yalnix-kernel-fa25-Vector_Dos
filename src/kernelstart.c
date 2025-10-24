@@ -8,6 +8,7 @@
 #include <yuser.h>
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 #include "Queue.h"
+#include "trap.h"
 
 //Macros
 #define TRUE 1
@@ -68,6 +69,10 @@ void create_free_frames(void){
 	return; 
 }
 
+void init_proc_create(void){
+
+}
+
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	/* <<<---------------------------------------------------------
@@ -112,10 +117,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _orig_kernel_brk_page -> first unused page after kernel heap
 	 */
 
-	//Since the previous loop stopped right before the start of heap/data section
-	//We have to set this pfn manually here or else it would be mapped to 2 pte
-	//THIS COULD BE WRONG COME BACK AND CHECK THIS IF IT IS CORRECT
-	
 	unsigned long int heapdata_start = DOWN_TO_PAGE(_first_kernel_data_page); 
 	unsigned long int heapdata_end = DOWN_TO_PAGE(_orig_kernel_brk_page);
 
@@ -137,8 +138,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	}
 
 	//Write the page table table limit register for Region 0
-	//We can pass in heapdata_end because REG_PTLR0 needs number of entries in the page table for region 0
-	//MAX_PT_ENTRY {maybe} 
+	//We can pass in MAX_PT_LEN because REG_PTLR0 needs number of entries in the page table for region 0
 	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
 
 	/* <<<------------------------------
@@ -177,10 +177,14 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * ------------------------------------->>>
 	 */
 
+	//Create the base of the region 1 memory
+	WriteRegister(REG_PTBR1, (unsigned int) user_page_table);
+	
+	//Create idle proc
+	init_proc_create();
 
+	PDB idle_proc;
 
-	//Write the page table table base and limit registers for Region 1
-	WriteRegister(REG_PTBR1, (unsigned int) );
 	WriteRegister(REG_PTLR1, (unsigned int) ) ;
 
 	return;

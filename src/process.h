@@ -17,7 +17,7 @@ typedef struct PCB{
 	
 	//Process information
         int pfn; // The physical frame numbers that are contained in the processes kernel stack {This could be a ssize_t}
-	int ppid //Parent Process id 
+	int ppid; //Parent Process id 
         int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
 	int exitstatus; // When a process is going to exit
 
@@ -31,7 +31,7 @@ typedef struct PCB{
 	//Works as a stack and tree
 	PCB *parent; //Parent Node
 	PCB *first_child; //Child that was recently created by a fork() call
-	PCB *next_sibling; //Other children created by the parent
+	PCB *next_sibling; //Points to the parent's next-oldest child 
 	
 	//Scheduling Logic
 	unsigned long wake_tick; //For Delay() and time to wake up
@@ -40,8 +40,9 @@ typedef struct PCB{
 
 }PCB;
 
-KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p);
 
-KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb p, void *not_used);
+//Helper functions for Context Switching
+KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p);
+KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used);
 
 
