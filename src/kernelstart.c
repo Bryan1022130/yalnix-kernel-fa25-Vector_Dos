@@ -9,6 +9,13 @@
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 #include "Queue.h"
 #include "trap.h"
+#include <stdint.h>
+
+// Add extern declarations so this file shares globals with kernelbrk.c
+// remove later when global variable file made
+extern void *current_brk;
+extern short int vm_current_state;
+
 
 //Macros
 #define TRUE 1
@@ -27,6 +34,7 @@
 
 //Virtual Memory Check
 short int vm_enabled = FALSE;
+vm_current_state = ENABLED;
 
 //Process Block
 PCB *current_process; 
@@ -50,7 +58,7 @@ unsigned long int vp0 = VMEM_0_BASE >> PAGESHIFT;
 unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
 
 //Page Table allocation -> an array of page table entries
-static pte_t kernel_page_table[MAX_PT_LEN];
+pte_t kernel_page_table[MAX_PT_LEN];
 static pte_t user_page_table[MAX_PT_LEN];
 
 //Terminal Array
@@ -91,7 +99,7 @@ void init_proc_create(void){
 	idle_process = pcb_alloc();
 
 	if(idle_process == NULL){
-		PrintTracef(0, "There was an error when trying with pcb_alloc, NULL returned!");
+		TracePrintf(0, "There was an error when trying with pcb_alloc, NULL returned!");
 		return;
 	}
 	
@@ -111,7 +119,7 @@ void init_proc_create(void){
 	 * ======================================================
 	 */
 
-	memcpy(&idleprocess->curr_uc, KernelUC, sizeof(UserContext));
+	memcpy(&idle_process->curr_uc, KernelUC, sizeof(UserContext));
 	
 	/* =======================================
 	 * Store AddressSpace for region 1 table
@@ -121,7 +129,7 @@ void init_proc_create(void){
 	idle_process->AddressSpace = kernel_region_pt;
 
 	idle_process->curr_uc.pc = (void*)DoIdle;
-	idle_prcocess->curr_uc.sp = kernel_stack_limit;
+	idle_process->curr_uc.sp = kernel_stack_limit;
 
 	//Set as running
 	idle_process->currState = Running;
@@ -247,7 +255,12 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	//Set current brk and then call SetKernelBrk
-	current_kernel_brk = (void *)_orig_kernel_brk_page;
+	//multiply by PAGESIZE to convert from page index to address
+	current_kernel_brk = (void *)((uintptr_t)_orig_kernel_brk_page * PAGESIZE);
+
+	//Sync with SetKernelBrk globals
+        current_brk = current_kernel_brk;
+        vm_current_state = DISABLED;
 
 	int kbrk_return = SetKernelBrk(current_kernel_brk);
 
@@ -287,7 +300,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	init_proc_create();
 
 	//Write the limit of the region 1 memory
-	WriteRegister(REG_PTLR1, (unsigned int) ) ;
+	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN) ;
 
 	return;
 }

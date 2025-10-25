@@ -1,8 +1,11 @@
 #include "memory.h"
 #include <stdio.h>
 
-// Global frame tracker (private to memory.c)
+
+// Global array of Frame structs — one per physical frame
 static Frame frame_table[MAX_FRAMES];
+
+// Tracks how many totals frames exist (from pmem_size)
 static int total_frames = 0;
 
 void frames_init(unsigned int pmem_size) {
@@ -16,10 +19,10 @@ void frames_init(unsigned int pmem_size) {
 
 	// Step 2: Mark kernel-used frames as in_use = 1
 	for (int i = 0; i < total_frames; i++) {
-        frame_table[i].pfn = i;
-        frame_table[i].in_use = 0;
+        frame_table[i].pfn = i; // Physical frame number
+        frame_table[i].in_use = 0; // 0 = free, 1 = used
         frame_table[i].owner_pid = -1;  // -1 = kernel/unowned
-        frame_table[i].refcount = 0;
+        frame_table[i].refcount = 0; // reference count for shared usage
     }
 	// Step 3: Mark all others as free
 	for (int i = 0; i < 256 && i < total_frames; i++) {
@@ -35,13 +38,14 @@ void frames_init(unsigned int pmem_size) {
 int frame_alloc(int owner_pid) {
 	/*
 	* Find first free frame in frame_table, mark it in use, and return its pfn.
+	* Returns -1 if out of memory 
 	*/
 	for (int i = 0; i < total_frames; i++) {
         if (frame_table[i].in_use == 0) {
             frame_table[i].in_use = 1;
             frame_table[i].owner_pid = owner_pid;
             frame_table[i].refcount = 1;
-            return i;
+            return i; // return physical frame number (pfn)
         }
     }
 
@@ -51,7 +55,9 @@ int frame_alloc(int owner_pid) {
 
 void frame_free(int pfn) {
 	/*
-	* decrement refcnt, if 0 mark free; run helper_force_free(pfn) if needed later.
+	* Decrement the refcount of the given frame.
+     	* If the count hits 0, mark it free again.
+     	* Invalid pfn values are safely ignored with an error message.
 	*/
 	if (pfn < 0 || pfn >= total_frames) {
         printf("ERROR: invalid frame number %d\n", pfn);
@@ -67,10 +73,9 @@ void frame_free(int pfn) {
     }
 }
 
-int SetKernelBrk(void *addr) {
-	/*
-	* Use frame_alloc() to grow kernel heap or frame_free() to shrink it.
-	*/
-	 printf("[memory.c] Kernel break moved to %p\n", addr);
-    return 0;
-}
+/*
+ * Summary:
+ * - frames_init() builds the master record of all physical memory.
+ * - frame_alloc() hands out frames to the kernel or processes.
+ * - frame_free() recycles them safely.
+*/

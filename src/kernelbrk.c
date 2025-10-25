@@ -1,6 +1,8 @@
 #include <hardware.h>
+#include <stdint.h>
 #include <ylib.h>
 #include "memory.h"
+#include <sys/mman.h>
 
 #define ENABLED 1 
 #define DISABLED 0
@@ -13,7 +15,14 @@ short int vm_current_state = DISABLED;
 //It should be calculated with something like (_orig_kernel_brk_page * PAGESIZE);
 //This will be handled in the KernelStart() function
 void *current_brk;
+
 extern pte_t kernel_page_table[];  // defined in kernelstart.c
+extern unsigned long _orig_kernel_brk;        // byte address
+extern unsigned long _orig_kernel_brk_page;   // page index
+
+//Helper Macros
+#define ROUND_UP(addr)   (((addr) + PAGESIZE - 1) & ~(PAGESIZE - 1))
+#define ROUND_DOWN(addr) ((addr) & ~(PAGESIZE - 1))
 
 
 int SetKernelBrk(void * addr){
@@ -25,6 +34,10 @@ int SetKernelBrk(void * addr){
 	 * Before Virtual Memory is enabled, it checks if and by how much the SetKernelBrk is being raised from the original kernel check point
 	 */
 	
+	TracePrintf(1, "[SetKernelBrk] old=%p new=%p state=%s\n",
+                current_brk, addr,
+                (vm_current_state == ENABLED ? "ENABLED" : "DISABLED"));
+
 	if(vm_current_state == DISABLED){
 		//It can not be less then the original break point since this space is used for data
 		if(new_kbrk_addr < old_kbrk){
@@ -32,43 +45,107 @@ int SetKernelBrk(void * addr){
 			return ERROR;
 		}
 
-	//Here check for more conditions that would be invalid, like if the new_kbrk_addr were to be greater than memory there is
+		//Here check for more conditions that would be invalid, like if the new_kbrk_addr were to be greater than memory there is
 	
-	current_brk = new_kbrk_addr;
-
-	} else if (vm_current_state == ENABLED){
-	//SetKernelBrk functions as regular brk after Virtual Memory has been initalized
-
-	uintptr_t original_brk_addr = (uintptr_t)(_orig_kernel_brk * PAGESIZE);
-	if(new_kbrk_addr < original_brk_addr){
-		TracePrintf(0, "Error! I will be writing into the data section!");
-		return ERROR;
+		current_brk = (void *)new_kbrk_addr;
+		TracePrintf(1, "[SetKernelBrk] Updated current_brk (no VM): %p\n", current_brk);
+        	return 0;
 	}
-	
-	//Check if the requested new address space for the Kernel Heap Brk is valid
-	if(new_kbrk_addr >= KERNEL_STACK_BASE){
-		TracePrintf(0, "Your request will dip in kernel stack space error!\n");
-		return ERROR;
-	}
+	else if (vm_current_state == ENABLED){
+		//SetKernelBrk functions as regular brk after Virtual Memory has been initalized
+		
+		//Stores the byte address of the kernel break
+		uintptr_t original_brk_addr = (uintptr_t)_orig_kernel_brk;
 
-	//1.We can now call a function that will set up the page table entries for the new allocated space
-	//2.We have to calculate the page-algned memory space to be able to loop
-	//3.We would have to loop from the start of the old break pointer to the new one (By page size and not actual address value)
-	//4.Try to allocate a new space in physical memory to map the virtual address to
-	//5.On each iteration we need to set up the table entries with correct permissions and information for virtual memory
-	
-	//6.Perform other forms of error checking related to the addr passed in 
-	
+		if(new_kbrk_addr < original_brk_addr){
+			TracePrintf(0, "Error! I will be writing into the data section!");
+			return ERROR;
+		}
+		
+		//Check if the requested new address space for the Kernel Heap Brk is valid
+		if(new_kbrk_addr >= KERNEL_STACK_BASE){
+			TracePrintf(0, "Your request will dip in kernel stack space error!\n");
+			return ERROR;
+		}
+		//1.We can now call a function that will set up the page table entries for the new allocated space
+		//2.We have to calculate the page-algned memory space to be able to loop
+		//3.We would have to loop from the start of the old break pointer to the new one (By page size and not actual address value)
+		//4.Try to allocate a new space in physical memory to map the virtual address to
+		//5.On each iteration we need to set up the table entries with correct permissions and information for virtual memory
+		
+		//6.Perform other forms of error checking related to the addr passed in 
 
-	if(new_kbrk_addr < old_kbrk){
-		//7.Have logic here to be able to unmap pages and free up memory that was just being used
-	}
+		// Step 1: Align old/new break values
+		// ---------------------------------------------------------
+		uintptr_t grow_start = ROUND_UP(old_kbrk);        // first new page if growing
+		uintptr_t grow_end   = ROUND_UP(new_kbrk_addr);   // one past last page
+		// If grow_end > grow_start → we’re expanding the heap
+		// If grow_end < grow_start → we’re shrinking
 
-	//Return 0 on success!
-	return 0;
-	}	
+		// Step 2: Growing the heap (allocate frames)
+		if (grow_end > grow_start) {
+		        TracePrintf(1, "[SetKernelBrk] Growing kernel heap...\n");
+		        uintptr_t mapped_until = grow_start;   // track how far we’ve gotten
+
+		        for (uintptr_t vaddr = grow_start; vaddr < grow_end; vaddr += PAGESIZE) {
+		                int vpn = (int)(vaddr >> PAGESHIFT);
+
+		                // skip if already valid 
+		                if (kernel_page_table[vpn].valid) {
+		                        mapped_until = vaddr + PAGESIZE;
+		                        continue;
+		                }
+
+		                int pfn = frame_alloc(-1);   // -1 marks kernel ownership
+		                if (pfn < 0) {
+		                        // roll back anything we just mapped
+		                        for (uintptr_t rv = grow_start; rv < mapped_until; rv += PAGESIZE) {
+		                                int rvpn = (int)(rv >> PAGESHIFT);
+		                                if (kernel_page_table[rvpn].valid) {
+		                                        frame_free(kernel_page_table[rvpn].pfn);
+		                                        kernel_page_table[rvpn].valid = 0;
+		                                        kernel_page_table[rvpn].prot  = 0;
+		                                        kernel_page_table[rvpn].pfn   = 0;
+		                                }
+		                        }
+		                        TracePrintf(0, "[SetKernelBrk] Out of frames while growing!\n");
+		                        return ERROR;
+		                }
+
+		                kernel_page_table[vpn].pfn   = pfn;
+		                kernel_page_table[vpn].prot  = PROT_READ | PROT_WRITE;
+		                kernel_page_table[vpn].valid = 1;
+
+		                mapped_until = vaddr + PAGESIZE;
+		        }
+
+		        // Optionally flush TLB for region 0
+		        // WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+		}
+		else if (grow_end < grow_start) {
+		        TracePrintf(1, "[SetKernelBrk] Shrinking kernel heap...\n");
+		        for (uintptr_t vaddr = grow_end; vaddr < grow_start; vaddr += PAGESIZE) {
+		                int vpn = (int)(vaddr >> PAGESHIFT);
+		                if (kernel_page_table[vpn].valid) {
+		                        frame_free(kernel_page_table[vpn].pfn);
+		                        kernel_page_table[vpn].valid = 0;
+		                        kernel_page_table[vpn].prot  = 0;
+		                        kernel_page_table[vpn].pfn   = 0;
+		                }
+		        }
+
+		        // Optionally flush TLB for region 0
+		        // WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+		}
+		 // Step 4: Finalize and return
+	        // ------------------------------------------------------------
+	        current_brk = (void *)new_kbrk_addr;
+	        TracePrintf(1, "[SetKernelBrk] Moved break to %p (VM enabled)\n", current_brk);
+	        return 0;
+	    }
+	TracePrintf(0, "[SetKernelBrk] Unknown VM state!\n");
+	return ERROR;
 }
-
 
 
 
