@@ -18,6 +18,7 @@ void *current_brk;
 
 extern pte_t kernel_page_table[];  // defined in kernelstart.c
 extern unsigned long _orig_kernel_brk;        // byte address
+extern unsigned long int frame_count;   // set in KernelStart; used for phys limit check
 
 int SetKernelBrk(void * addr){
 	//Convert the address to uintptr_t to be able to use as a integer
@@ -40,7 +41,39 @@ int SetKernelBrk(void * addr){
 		}
 
 		//Here check for more conditions that would be invalid, like if the new_kbrk_addr were to be greater than memory there is
-	
+		// --- address validity checks before VM is enabled ---
+		uintptr_t heap_start = (uintptr_t)_orig_kernel_brk;
+		uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
+
+		// 1. can't shrink below data/heap start
+		if (new_kbrk_addr < heap_start) {
+		    TracePrintf(0, "[SetKernelBrk] Error: address %p is below kernel heap start (%p)\n",
+		                (void*)new_kbrk_addr, (void*)heap_start);
+		    return ERROR;
+		}
+
+		// 2. can't grow into kernel stack region
+		if (new_kbrk_addr >= heap_end_limit) {
+		    TracePrintf(0, "[SetKernelBrk] Error: address %p would overlap kernel stack (%p)\n",
+		                (void*)new_kbrk_addr, (void*)heap_end_limit);
+		    return ERROR;
+		}
+
+		// 3. optionally, if you’ve stored total physical memory
+		extern unsigned long frame_count;  // set in KernelStart
+		uintptr_t phys_limit = frame_count * PAGESIZE;
+		if (new_kbrk_addr >= phys_limit) {
+		    TracePrintf(0, "[SetKernelBrk] Error: address %p exceeds physical memory limit (%p)\n",
+		                (void*)new_kbrk_addr, (void*)phys_limit);
+		    return ERROR;
+		}
+
+		// 4. warn if not page aligned
+		if ((new_kbrk_addr & PAGEOFFSET) != 0) {
+		    TracePrintf(1, "[SetKernelBrk] Warning: unaligned address %p; rounding internally.\n",
+		                (void*)new_kbrk_addr);
+		}
+
 		current_brk = (void *)new_kbrk_addr;
 		TracePrintf(1, "[SetKernelBrk] Updated current_brk (no VM): %p\n", current_brk);
         	return 0;
@@ -133,8 +166,7 @@ int SetKernelBrk(void * addr){
 		                mapped_until = vaddr + PAGESIZE;
 		        }
 
-		        // Optionally flush TLB for region 0
-		        // WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+		        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 		}
 		else if (grow_end < grow_start) {
 		        TracePrintf(1, "[SetKernelBrk] Shrinking kernel heap...\n");
