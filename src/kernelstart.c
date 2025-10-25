@@ -9,7 +9,7 @@
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 #include "Queue.h"
 #include "trap.h"
-
+#include "memory.h"
 //Macros
 #define TRUE 1
 #define FALSE 0
@@ -78,7 +78,7 @@ void create_free_frames(void){
 
 void init_proc_create(void){
 	//Need to work on this ----------------------<<<<<<>>>>>>>
-
+	//MAKING THE  PCB ALLOC FUNCTIONS
 	//Get a process from our PCB free list
 	idle_process = pcb_alloc();
 
@@ -102,7 +102,7 @@ void init_proc_create(void){
 	 * ======================================================
 	 */
 
-	memcpy(&idleprocess->curr_uc, KernelUC, sizeof(UserContext));
+	memcpy(&idle_process->curr_uc, KernelUC, sizeof(UserContext));
 	
 	/* =======================================
 	 * Store AddressSpace for region 1 table
@@ -114,17 +114,18 @@ void init_proc_create(void){
 	//Set the pc to DoIdle location
 	//Set sp to the top of the user stack that we set up
 	idle_process->curr_uc.pc = (void*)DoIdle;
-	idle_prcocess->curr_uc.sp = kernel_stack_limit;
+	idle_process->curr_uc.sp = (void*)VMEM_1_LIMIT;;
 
 	//Set as running
 	idle_process->currState = Running;
-
-	//Set pfn
-	idle_process->pfn = 0;
+	
+	//Track Kernel Stack Frames
+	
 
 	//Set global variable for current process as the idle process
 	current_process = idle_process;
-	
+
+	memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
 
 }
 
@@ -156,7 +157,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	//Initialize the data struct to track the free frames
-	create_free_frames();
+	frames_init(pmem_size);
 
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = pmem_size / PAGESIZE;
@@ -205,8 +206,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	unsigned long int heapdata_end = DOWN_TO_PAGE((unsigned long)_orig_kernel_brk_page);
 
 	for(unsigned long int data_heap = heapdata_start; data_heap < heapdata_end; data_heap++){
-
-
 		//Heap and Data section both have READ and WRITE conditions
 		kernel_page_table[data_heap].prot = PROT_WRITE | PROT_READ; 
 		kernel_page_table[data_heap].valid = TRUE;
@@ -233,6 +232,51 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	
 	//Set global variable for stack limit
 	kernel_stack_limit = VMEM_0_LIMIT;
+	
+	/* <<<------------------------------
+	 * Set up the Interrupt Vector Table
+	 * ------------------------------>>>
+	 */
+
+	setup_trap_handler(Interrupt_Vector_Table);
+
+	/* <<<-----------------------------------
+	 * Set Up Region 1 for the Idle Process
+	 * ----------------------------------->>>
+	 */
+
+	//Write the base of the region 1 memory
+	WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
+
+	//Already allocated regionn 1 Page table as global
+	int idle_stack_pfn = frame_alloc(0);
+
+	if (idle_stack_pfn == -1) {
+		TracePrintf(0, "FAILED to allocate frame for idle stack!\n");
+		return;
+	}
+
+	unsigned long stack_page_index = MAX_PT_LEN - 1;
+
+   	 user_page_table[stack_page_index].valid = 1;
+   	 user_page_table[stack_page_index].prot = PROT_READ | PROT_WRITE;
+   	 user_page_table[stack_page_index].pfn = idle_stack_pfn;
+
+
+	//Write the limit of the region 1 memory
+	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+
+
+	/* <<<--------------------------
+	 * Initialize Virtual Memory
+	 * -------------------------->>>
+	 */
+		
+	//Write to special register that Virtual Memory is enabled 
+	WriteRegister(REG_VM_ENABLE, TRUE);
+
+	//Set the global variable as true 
+	vm_enabled = TRUE;
 
 	/* <<<------------------------------
 	 * Call SetKernelBrk()
@@ -249,39 +293,13 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	/* <<<------------------------------
-	 * Set up the Interrupt Vector Table
-	 * ------------------------------>>>
-	 */
-
-	setup_trap_handler(Interrupt_Vector_Table);
-
-	/* <<<--------------------------
-	 * Initialize Virtual Memory
-	 * -------------------------->>>
-	 */
-		
-	//Write to special register that Virtual Memory is enabled 
-	WriteRegister(REG_VM_ENABLE, TRUE);
-
-	//Set the global variable as true 
-	vm_enabled = TRUE;
-
-
 	/* <<<-------------------------------------
 	 * Create Process
 	 * ------------------------------------->>>
 	 */
 
-	//Write the base of the region 1 memory
-	WriteRegister(REG_PTBR1, (unsigned int) user_page_table);
-	
 	//Create idle proc
 	init_proc_create();
-
-	//Write the limit of the region 1 memory
-	WriteRegister(REG_PTLR1, (unsigned int) ) ;
-	
 
 	TracePrintf(0, "I am leaving KernelStart");
 	return;
