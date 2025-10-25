@@ -18,12 +18,6 @@ void *current_brk;
 
 extern pte_t kernel_page_table[];  // defined in kernelstart.c
 extern unsigned long _orig_kernel_brk;        // byte address
-extern unsigned long _orig_kernel_brk_page;   // page index
-
-//Helper Macros
-#define ROUND_UP(addr)   (((addr) + PAGESIZE - 1) & ~(PAGESIZE - 1))
-#define ROUND_DOWN(addr) ((addr) & ~(PAGESIZE - 1))
-
 
 int SetKernelBrk(void * addr){
 	//Convert the address to uintptr_t to be able to use as a integer
@@ -63,10 +57,30 @@ int SetKernelBrk(void * addr){
 		}
 		
 		//Check if the requested new address space for the Kernel Heap Brk is valid
-		if(new_kbrk_addr >= KERNEL_STACK_BASE){
-			TracePrintf(0, "Your request will dip in kernel stack space error!\n");
-			return ERROR;
+		// --- address validity checks ---
+		uintptr_t heap_start = (uintptr_t)_orig_kernel_brk;
+		uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
+
+		// 1. must not go below heap start (data section)
+		if (new_kbrk_addr < heap_start) {
+		    TracePrintf(0, "[SetKernelBrk] Error: address %p is below kernel heap start (%p)\n",
+		                (void*)new_kbrk_addr, (void*)heap_start);
+		    return ERROR;
 		}
+
+		// 2. must not grow into kernel stack
+		if (new_kbrk_addr >= heap_end_limit) {
+		    TracePrintf(0, "[SetKernelBrk] Error: address %p overlaps kernel stack base (%p)\n",
+		                (void*)new_kbrk_addr, (void*)heap_end_limit);
+		    return ERROR;
+		}
+
+		// 3. warn if not page aligned (not fatal, but we’ll round internally)
+		if ((new_kbrk_addr & PAGEOFFSET) != 0) {
+		    TracePrintf(1, "[SetKernelBrk] Warning: unaligned address %p; rounding to page boundary.\n",
+		                (void*)new_kbrk_addr);
+		}
+
 		//1.We can now call a function that will set up the page table entries for the new allocated space
 		//2.We have to calculate the page-algned memory space to be able to loop
 		//3.We would have to loop from the start of the old break pointer to the new one (By page size and not actual address value)
@@ -77,8 +91,8 @@ int SetKernelBrk(void * addr){
 
 		// Step 1: Align old/new break values
 		// ---------------------------------------------------------
-		uintptr_t grow_start = ROUND_UP(old_kbrk);        // first new page if growing
-		uintptr_t grow_end   = ROUND_UP(new_kbrk_addr);   // one past last page
+		uintptr_t grow_start = UP_TO_PAGE(old_kbrk);        // first new page if growing
+		uintptr_t grow_end   = UP_TO_PAGE(new_kbrk_addr);   // one past last page
 		// If grow_end > grow_start → we’re expanding the heap
 		// If grow_end < grow_start → we’re shrinking
 
@@ -134,8 +148,8 @@ int SetKernelBrk(void * addr){
 		                }
 		        }
 
-		        // Optionally flush TLB for region 0
-		        // WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+		        // flush TLB for region 0
+		        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 		}
 		 // Step 4: Finalize and return
 	        // ------------------------------------------------------------
