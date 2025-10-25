@@ -76,17 +76,9 @@ void create_free_frames(void){
  * =======================================
  */
 
-//Where is pid_helper?
-int pid_create(void *pagetable){
-	//Static so that it maintians its value across calls
-	static int pid_count = 0;
-
-	return pid_count++;
-}
-
-
 void init_proc_create(void){
-	
+	//Need to work on this ----------------------<<<<<<>>>>>>>
+
 	//Get a process from our PCB free list
 	idle_process = pcb_alloc();
 
@@ -101,8 +93,7 @@ void init_proc_create(void){
 	 */
 	
 	//Get a pid for the process
-	idle_process->pid = pid_create(kernel_region_pt);
-
+	idle_process->pid = helper_new_pid(user_page_table);
 	//To indicate that its the kernel process itself
 	idle_process->ppid = 0;
 	
@@ -118,8 +109,10 @@ void init_proc_create(void){
 	 * =======================================
 	 */
 
-	idle_process->AddressSpace = kernel_region_pt;
-
+	idle_process->AddressSpace = user_page_table;
+	
+	//Set the pc to DoIdle location
+	//Set sp to the top of the user stack that we set up
 	idle_process->curr_uc.pc = (void*)DoIdle;
 	idle_prcocess->curr_uc.sp = kernel_stack_limit;
 
@@ -288,6 +281,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Write the limit of the region 1 memory
 	WriteRegister(REG_PTLR1, (unsigned int) ) ;
+	
 
+	TracePrintf(0, "I am leaving KernelStart");
 	return;
 }
