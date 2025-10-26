@@ -10,7 +10,7 @@
 
 
 //Node struct that represents a single element in the Queue
-typedef struct{ 
+typedef struct QueueNode{ 
 	void *data;
 	struct QueueNode *next;
 }QueueNode;
@@ -24,7 +24,7 @@ typedef struct{
 }Queue;
 
 //Get a clean and freshly made Queue struct 
-Queue initalizeQueue(void);
+Queue *initalizeQueue(void);
 
 // Get the total size of the queue currently
 int getSize(Queue *MQueue);

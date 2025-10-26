@@ -155,7 +155,7 @@ void HandleDiskTrap(UserContext *CurrUC) {
 }
 
 void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]){
-
+	TracePrintf(0, "We are setting up the Interrupt vector table\n");
 	//Setup the table!
 	for(int i = 0; i < TRAP_VECTOR_SIZE; i++){
 		Interrupt_Vector_Table[i] = &HandleTrap;
@@ -172,6 +172,8 @@ void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]){
 
 	//Write the Memory Address to the REG_VECTOR_BASE register so it knows where it is
 	WriteRegister(REG_VECTOR_BASE, (unsigned int)Interrupt_Vector_Table);
+
+	TracePrintf(0,"We just finshed writing the Interrupt Vector Table\n");
 }
 
 
