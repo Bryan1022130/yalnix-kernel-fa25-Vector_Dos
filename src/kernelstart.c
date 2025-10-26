@@ -67,8 +67,6 @@ static unsigned int terminal_array[NUM_TERMINALS];
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
-
-
 /* =======================================
  * Idle Function that runs in Kernel Space
  * =======================================
@@ -409,6 +407,8 @@ int SetKernelBrk(void * addr){
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
+	TracePrintf(0,"WE ARE CURRENTLY IN THE KERNELSTART PROGRAM\n");
+
 	/* <<<---------------------------------------------------------
 	 * Boot up the free frame data structure && definee global vars
 	 * ---------------------------------------------------------->>>
@@ -422,6 +422,15 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	
 	//Set up global variable for UserContext
 	KernelUC = uctxt;
+
+	/* <<<------------------------------
+	 * Set up the Interrupt Vector Table
+	 * ------------------------------>>>
+	 */
+	
+	TracePrintf(0,"WE ARE SETTING UP THE INTERRUPTM VERCTOR TABLE\n");
+	setup_trap_handler(Interrupt_Vector_Table);
+
 
 	/* <<<---------------------------------------
 	 * Set up the initial Region 0 {KERNEL SPACE}
@@ -438,10 +447,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * #include <yalnix.h>
 	 * _first_kernel_text_page - > low page of kernel text
 	 */
-
-	//Write the address of the start of text for pte_t
-	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
 	
+	TracePrintf(0,"WE ARE WRITING THE BASE REGISTER FOR REGION 0\n");
+
 	//Set the Global variable
 	kernel_region_pt = (void *)kernel_page_table;
 	
@@ -469,6 +477,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		kernel_page_table[data_heap].valid = TRUE;
 		kernel_page_table[data_heap].pfn = data_heap;
 	}
+	TracePrintf(0,"WE ARE GETTING IN THE RED ZONE PAGE\n");
+
 
 	/* ==============================
 	 * Red Zone {Unmapped Pages}
@@ -483,30 +493,26 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		kernel_page_table[stack_loop].valid = TRUE;
 		kernel_page_table[stack_loop].pfn = stack_loop; 
 	}
-
-	//Write the page table table limit register for Region 0
-	//MAX_PT_LEN because REG_PTLR0 needs number of entries in the page table for region 0
-	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
 	
 	//Set global variable for stack limit
 	kernel_stack_limit = (void *)VMEM_0_LIMIT;
-	
-	/* <<<------------------------------
-	 * Set up the Interrupt Vector Table
-	 * ------------------------------>>>
-	 */
 
-	setup_trap_handler(Interrupt_Vector_Table);
+	//Write the address of the start of text for pte_t
+	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
+	
+	//Write the page table table limit register for Region 0
+	//MAX_PT_LEN because REG_PTLR0 needs number of entries in the page table for region 0
+	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
+
+	TracePrintf(0,"WE ARE DONE SETTTING UP THE PAGE TABLES FOR STACK, TEXT AND DATA\n");
 
 	/* <<<-----------------------------------
 	 * Set Up Region 1 for the Idle Process
 	 * ----------------------------------->>>
 	 */
 
-	//Write the base of the region 1 memory
-	WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
-
-	//Already allocated regionn 1 Page table as global
+	//Already allocated reginn 1 Page table as global
+	
 	int idle_stack_pfn = frame_alloc(0);
 
 	if (idle_stack_pfn == -1) {
@@ -522,6 +528,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 
 	//Write the limit of the region 1 memory
+	//Write the base of the region 1 memory
+	WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
 
 
@@ -560,8 +568,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	//Create idle proc
+	InitPcbTable();
 	init_proc_create();
 
-	TracePrintf(0, "I am leaving KernelStart");
+	TracePrintf(0, "I am leaving KernelStart\n");
 	return;
 }
