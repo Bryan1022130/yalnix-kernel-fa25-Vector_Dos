@@ -1,32 +1,28 @@
-//Header files from yalnix_framework
+//Header files from yalnix_framework && libc library
 #include <stdint.h>
 #include <stddef.h>
-#include <ykernel.h>
-#include <hardware.h> // For macros regarding kernel space
-#include <yalnix.h>
-#include <ylib.h>
-#include <yuser.h>
+#include <sys/types.h> //For u_long
+
+#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
+#include <load_info.h> //The struct for load_info
+#include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
+#include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ... 
+#include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
+#include <ylib.h> // Function declarations for many libc functions 
+#include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 
-// Non Standard Lib C library files
-#include "Queue.h"
-#include "trap.h"
-#include "memory.h"
-#include "process.h"
+//Our Header Files
+#include "Queue.h" //API calls for our queue data structure 
+#include "trap.h" //API for trap handling and initializing the Interrupt Vector Table
+#include "memory.h" //API for Frame tracking in our program
+#include "process.h" //API for process block control
 
-//Macros
+//Macros for if VM is enabled
 #define TRUE 1
 #define FALSE 0
 
-//MAX_PROCS defined in yalnix.h
-
-/* ==================================
- * Run this file for checkpoint 1
- * ======>   make 
- * ======>  ./yalnix -W 
- * ==================================
- *\
-
+/*
  * ================================>>
  * Global Variables
  * <<================================
@@ -207,7 +203,7 @@ void init_proc_create(void){
 	//Set the pc to DoIdle location
 	//Set sp to the top of the user stack that we set up
 	idle_process->curr_uc.pc = (void*)DoIdle;
-	idle_process->curr_uc.sp = (void*)VMEM_1_LIMIT;;
+	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - PAGESIZE);
 
 	//Set as running
 	idle_process->currState = READY;
@@ -408,19 +404,22 @@ int SetKernelBrk(void * addr){
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
+
 	TracePrintf(0,"WE ARE CURRENTLY IN THE KERNELSTART PROGRAM\n");
+
+	TracePrintf(0, "<<<<<<<<<<<<<<<< this is the size og pmem_size => %lx", pmem_size);
 
 	/* <<<---------------------------------------------------------
 	 * Boot up the free frame data structure && definee global vars
 	 * ---------------------------------------------------------->>>
 	 */
 
-	//Initialize the data struct to track the free frames
-	frames_init(pmem_size);
-
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = pmem_size / PAGESIZE;
 	
+	//Initialize the data struct to track the free frames
+	frames_init(pmem_size);
+
 	//Set up global variable for UserContext
 	KernelUC = uctxt;
 

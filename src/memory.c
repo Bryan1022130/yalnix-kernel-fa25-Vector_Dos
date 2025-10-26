@@ -4,7 +4,10 @@
 #include <hardware.h> 
 #include <ykernel.h> 
 
-static Frame frame_table[MAX_FRAMES];
+#define FRAME_COUNT 100
+
+
+static Frame frame_table[FRAME_COUNT];
 static int total_frames = 0;
 
 void frames_init(unsigned int pmem_size) {
