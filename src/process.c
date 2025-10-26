@@ -14,7 +14,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 
 	//Check if the process is valid
 	PCB *current_pcb = (PCB *)curr_pcb_p;
-	PCB *next_pcb = (PCB *)next_pcb_pl;
+	PCB *next_pcb = (PCB *)next_pcb_p;
 
 	if(current_pcb == NULL || next_pcb == NULL){
 		TracePrintf(0, "Error with one of the PCB being NULL!");
@@ -31,7 +31,7 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 	//Check if the process is valid
 	PCB *new_pcb = (PCB *)new_pcb_p;
 
-	if(new_pcb == NULL)	{
+	if(new_pcb == NULL){
 		TracePrintf(0, "Error with one of the PCB being NULL!");
 	}
 

@@ -4,7 +4,7 @@
 #include <hardware.h> 
 #include <ykernel.h> 
 
-tatic Frame frame_table[MAX_FRAMES];
+static Frame frame_table[MAX_FRAMES];
 static int total_frames = 0;
 
 void frames_init(unsigned int pmem_size) {

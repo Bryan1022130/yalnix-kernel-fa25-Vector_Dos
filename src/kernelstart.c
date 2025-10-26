@@ -1,9 +1,8 @@
 //Header files from yalnix_framework
+#include <stdint.h>
 #include <stddef.h>
 #include <ykernel.h>
 #include <hardware.h> // For macros regarding kernel space
-#include <ctype.h>
-#include <load_info.h>
 #include <yalnix.h>
 #include <ylib.h>
 #include <yuser.h>
@@ -18,7 +17,8 @@
 //Macros
 #define TRUE 1
 #define FALSE 0
-#define MAX_PROCS 256
+
+//MAX_PROCS defined in yalnix.h
 
 /* ==================================
  * Run this file for checkpoint 1
@@ -67,6 +67,20 @@ static unsigned int terminal_array[NUM_TERMINALS];
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
+
+
+/* =======================================
+ * Idle Function that runs in Kernel Space
+ * =======================================
+ */
+
+void DoIdle(void) { 
+	while(1) {
+		TracePrintf(1,"DoIdle\n");
+		Pause();
+	}
+}
+
 /* =======================================
  * Process Logic Functions
  * =======================================
@@ -74,11 +88,11 @@ HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
 void InitPcbTable(void){
     // Zero out the entire array
-    memset(pcb_table, 0, sizeof(pcb_table));
+    memset(process_table, 0, sizeof(process_table));
 
     // Set all entries in the pcb table as free 
     for (int i = 0; i < MAX_PROCS; i++) {
-        pcb_table[i].currState = FREE;
+        process_table[i].currState = FREE;
     }
 
     TracePrintf(1, "PCB table initialized \n");
@@ -87,15 +101,15 @@ void InitPcbTable(void){
 
 PCB *pcb_alloc(void){
 	for (int pid = 0; pid < MAX_PROCS; pid++) {
-		if (pcb_table[pid].currState == FREE) {
+		if (process_table[pid].currState == FREE) {
 
 			//Clear out the data from prev processes
-			memset(&pcb_table[pid], 0, sizeof(PCB));
+			memset(&process_table[pid], 0, sizeof(PCB));
 
-			pcb_table[pid].currState = READY; 
-			pcb_table[pid].pid = pid;
+			process_table[pid].currState = READY; 
+			process_table[pid].pid = pid;
 
-			return &pcb_table[pid];
+			return &process_table[pid];
 		}
 	}
 	
@@ -209,18 +223,6 @@ void init_proc_create(void){
 
 }
 
-/* =======================================
- * Idle Function that runs in Kernel Space
- * =======================================
- */
-
-void DoIdle(void) { 
-	while(1) {
-		TracePrintf(1,"DoIdle\n");
-		Pause();
-	}
-}
-
 /* ========================================================
  * SetKernelBrk Function Logic
  * ========================================================
@@ -235,7 +237,7 @@ int SetKernelBrk(void * addr){
 	 * Before Virtual Memory is enabled, it checks if and by how much the SetKernelBrk is being raised from the original kernel check point
 	 */
 	
-	if(vm_enabled == DISABLED){
+	if(vm_enabled == FALSE){
 		uintptr_t original_brk_addr = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
 
 		//It can not be less then the original break point since this space is used for data
@@ -246,7 +248,7 @@ int SetKernelBrk(void * addr){
 
 		//Here check for more conditions that would be invalid, like if the new_kbrk_addr were to be greater than memory there is
 		// --- address validity checks before VM is enabled ---
-		uintptr_t heap_start = (uintptr_t)_orig_kernel_brk;
+		uintptr_t heap_start = (uintptr_t)_orig_kernel_brk_page;
 		uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
 
 		// can't shrink below data/heap start
@@ -277,14 +279,14 @@ int SetKernelBrk(void * addr){
 		}
 
 		current_kernel_brk = (void *)new_kbrk_addr;
-		TracePrintf(1, "[SetKernelBrk] Updated current_brk (no VM): %p\n", current_brk);
+		TracePrintf(1, "[SetKernelBrk] Updated current_brk (no VM): %p\n", current_kernel_brk);
         	return 0;
 	}
-	else if (vm_enabled == ENABLED){
+	else if (vm_enabled == TRUE){
 		//SetKernelBrk functions as regular brk after Virtual Memory has been initialized
 		
 		//Stores the byte address of the kernel break
-		uintptr_t original_brk_addr = (uintptr_t)_orig_kernel_brk;
+		uintptr_t original_brk_addr = (uintptr_t)_orig_kernel_brk_page;
 
 		if(new_kbrk_addr < original_brk_addr){
 			TracePrintf(0, "Error! I will be writing into the data section!");
@@ -294,7 +296,7 @@ int SetKernelBrk(void * addr){
 		//Check if the requested new address space for the Kernel Heap Brk is valid
 
 		// --- address validity checks ---
-		uintptr_t heap_start = (uintptr_t)_orig_kernel_brk;
+		uintptr_t heap_start = (uintptr_t)_orig_kernel_brk_page;
 		uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
 
 		// 1. must not go below heap start (data section)
@@ -390,7 +392,7 @@ int SetKernelBrk(void * addr){
 		 // Step 4: Finalize and return
 	        // ------------------------------------------------------------
 	        current_kernel_brk = (void *)new_kbrk_addr;
-	        TracePrintf(1, "[SetKernelBrk] Moved break to %p (VM enabled)\n", current_brk);
+	        TracePrintf(1, "[SetKernelBrk] Moved break to %p (VM enabled)\n", current_kernel_brk);
 	        return 0;
 	    }
 	TracePrintf(0, "[SetKernelBrk] Unknown VM state!\n");
@@ -487,7 +489,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
 	
 	//Set global variable for stack limit
-	kernel_stack_limit = VMEM_0_LIMIT;
+	kernel_stack_limit = (void *)VMEM_0_LIMIT;
 	
 	/* <<<------------------------------
 	 * Set up the Interrupt Vector Table

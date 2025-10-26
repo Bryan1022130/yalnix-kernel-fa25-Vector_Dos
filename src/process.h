@@ -1,3 +1,9 @@
+#pragma once
+#include <hardware.h>
+#include "memory.h"
+
+typedef struct pcb PCB;
+
 //Enum to be able to represent the many states of the Process
 typedef enum{
         FREE,
@@ -10,7 +16,7 @@ typedef enum{
 }ProcessState;
 
 //Create the PCB that we be use for context switching
-typedef struct pcb{
+struct pcb{
 
 	//Kernel Stack Frames
 	unsigned int kernel_stack_frames[KERNEL_STACK_MAXSIZE / PAGESIZE];
@@ -42,7 +48,7 @@ typedef struct pcb{
         PCB *next;
         PCB *prev;
 
-}PCB;
+};
 
 
 //Helper functions for Context Switching

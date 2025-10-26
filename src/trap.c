@@ -1,16 +1,15 @@
 //Header files from yalnix_framework
-#include <ykernel.h>
-#include <hardware.h>
+#include <sys/types.h>
 #include <ctype.h>
 #include <load_info.h>
+#include <ykernel.h>
+#include <hardware.h>
 #include <yalnix.h>
 #include <ylib.h>
 #include <yuser.h>
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
-#include "trap.h"
 
-//typedef for function pointer that will point to the Handle Trap function
-typedef void (*HandleTrapCall)(UserContext *CurrUC);
+#include "trap.h"
 
 //Declaration of the default place holder function
 void HandleTrap(UserContext *CurrUC){
@@ -54,11 +53,11 @@ void HandleKernelTrap(UserContext *CurrUC){
 			break;
 		
 		case YALNIX_EXIT:
-			Exit(CurrUC->regs[0]);
+			Exit((int)CurrUC->regs[0]);
 			break;
 
 		case YALNIX_WAIT:
-			sys_return = Wait(CurrUC->regs[0]);
+			sys_return = Wait((int *)CurrUC->regs[0]);
 			break;
 
 		case YALNIX_GETPID:
@@ -66,43 +65,43 @@ void HandleKernelTrap(UserContext *CurrUC){
 			break;
 
 		case YALNIX_BRK:
-			sys_return = Brk(CurrUC->regs[0]);
+			sys_return = Brk((void *)CurrUC->regs[0]);
 			break;
 
 		case YALNIX_DELAY:
-			sys_return = Delay(CurrUC->regs[0]);
+			sys_return = Delay((int)CurrUC->regs[0]);
 			break;
 		
 		case YALNIX_TTY_READ:
-			sys_return = TtyRead(CurrUC->regs[0], CurrUC->regs[1], CurrUC->regs[2]);
+			sys_return = TtyRead((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]);
 			break;
 
 		case YALNIX_TTY_WRITE:
-			sys_return = TtyWrite(CurrUC->regs[0], CurrUC->regs[1], CurrUC->regs[2]);
+			sys_return = TtyWrite((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]);
 			break;
 
 		case YALNIX_READ_SECTOR:
-			sys_return = ReadSector(CurrUC->regs[0], CurrUC->regs[1]);
+			sys_return = ReadSector((int)CurrUC->regs[0], (void *)CurrUC->regs[1]);
 			break;
 
 		case YALNIX_WRITE_SECTOR:
-			sys_return = WriteSector(CurrUC->regs[0], CurrUC->regs[1]);
+			sys_return = WriteSector((int)CurrUC->regs[0], (void *)CurrUC->regs[1]);
 			break;
 
 		case YALNIX_PIPE_INIT:
-			sys_return = PipeInit(CurrUC->regs[0]);
+			sys_return = PipeInit((int *)CurrUC->regs[0]);
 			break;
 
 		case YALNIX_PIPE_READ:
-			sys_return = PipeRead(CurrUC->regs[0], CurrUC->regs[1], CurrUC->regs[2]); 
+			sys_return = PipeRead((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]); 
 			break;
 
 		case YALNIX_PIPE_WRITE:
-			sys_return = PipeWrite(CurrUC->regs[0], CurrUC->regs[1], CurrUC->regs[2]); 
+			sys_return = PipeWrite((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]); 
 			break;
 
 		default:
-			PrintTracef(0,"The current code did not match any syscall");
+			TracePrintf(0,"The current code did not match any syscall");
 			break;
 
 	//Store the value that we get from the syscall into the regs[0];
@@ -128,6 +127,32 @@ void HandleClockTrap(UserContext *CurrUC){
 	return;
 }
 
+void HandleIllegalTrap(UserContext *CurrUC) {
+    TracePrintf(0, "TRAP: Illegal instruction! Halting.\n");
+    Halt();
+}
+
+void HandleMemoryTrap(UserContext *CurrUC) {
+    TracePrintf(0, "TRAP: Memory error! Halting.\n");
+    Halt();
+}
+
+void HandleMathTrap(UserContext *CurrUC) {
+    TracePrintf(0, "TRAP: Math error! Halting.\n");
+    Halt();
+}
+
+void HandleReceiveTrap(UserContext *CurrUC) {
+    TracePrintf(0, "TRAP: TTY Receive called.\n");
+}
+
+void HandleTransmitTrap(UserContext *CurrUC) {
+    TracePrintf(0, "TRAP: TTY Transmit called.\n");
+}
+
+void HandleDiskTrap(UserContext *CurrUC) {
+    TracePrintf(0, "TRAP: Disk called.\n");
+}
 
 void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]){
 

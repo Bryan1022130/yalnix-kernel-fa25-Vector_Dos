@@ -1,4 +1,13 @@
 #pragma once
+#include <stdint.h>
+#include <stddef.h>
+#include <ykernel.h>
+#include <hardware.h> // For macros regarding kernel space
+#include <yalnix.h>
+#include <ylib.h>
+#include <yuser.h>
+#include <sys/mman.h>
+
 
 //Node struct that represents a single element in the Queue
 typedef struct{ 

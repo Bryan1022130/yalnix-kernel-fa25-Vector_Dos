@@ -1,3 +1,9 @@
+#pragma once
+#include <hardware.h>
+
+typedef void (*HandleTrapCall)(UserContext *CurrUC);
+void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]);
+
 // Function declarations for Trap Handler functions
 void HandleKernelTrap(UserContext *CurrUC);
 void HandleMathTrap(UserContext *CurrUC);
