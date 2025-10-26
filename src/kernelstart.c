@@ -22,7 +22,8 @@
 
 /* ==================================
  * Run this file for checkpoint 1
- * ======>  ./yalnix -W {Recommended}
+ * ======>   make 
+ * ======>  ./yalnix -W 
  * ==================================
  *\
 
@@ -452,9 +453,15 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Set the Global variable
 	kernel_region_pt = (void *)kernel_page_table;
+
+
 	
-	unsigned long int text_start = DOWN_TO_PAGE((unsigned long)_first_kernel_text_page);
-	unsigned long int text_end = DOWN_TO_PAGE((unsigned long)_first_kernel_data_page);
+	unsigned long int text_start = _first_kernel_text_page;
+	TracePrintf(0, "This is the value of the text_page --> %lx and this is the of with the DOWN_TO_PAGE --> %lx +++++++++++++\n", _first_kernel_text_page, text_start);
+
+	unsigned long int text_end = _first_kernel_data_page;
+
+	TracePrintf(0, "This is the value of the text_end ---> %lx\n ++++++++++++++", text_end);
 	
 	for(unsigned long int text = text_start; text < text_end; text++){
 		//Text section should be only have READ && EXEC permissions
@@ -468,8 +475,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _orig_kernel_brk_page -> first unused page after kernel heap
 	 */
 
-	unsigned long int heapdata_start = DOWN_TO_PAGE((unsigned long)_first_kernel_data_page); 
-	unsigned long int heapdata_end = DOWN_TO_PAGE((unsigned long)_orig_kernel_brk_page);
+	unsigned long int heapdata_start = _first_kernel_data_page; 
+	TracePrintf(0, "This is the value of the heapdata_start---> %lx\n ++++++++++++++++", heapdata_start);
+
+	unsigned long int heapdata_end = _orig_kernel_brk_page;
+	TracePrintf(0, "This is the value of the heapdata_end ---> %lx\n ++++++++++++++", heapdata_end);
 
 	for(unsigned long int data_heap = heapdata_start; data_heap < heapdata_end; data_heap++){
 		//Heap and Data section both have READ and WRITE conditions
@@ -485,15 +495,26 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * ==============================
 	 */
 
-	unsigned long int stack_start = DOWN_TO_PAGE(KERNEL_STACK_BASE);
-	unsigned long int stack_end = DOWN_TO_PAGE(KERNEL_STACK_LIMIT);
+	TracePrintf(0,"WE ARE GETTING IN THE RED ZONE PAGE\n");
+
+	unsigned long int stack_start = KERNEL_STACK_BASE >> PAGESHIFT;
+	unsigned long int stack_end = KERNEL_STACK_LIMIT >> PAGESHIFT;
+	
+	TracePrintf(0,"This is in the stack loop\n");
+
+
+	TracePrintf(0," this is the value of stack_start --> %lx and this is stackend --> %lx \n", stack_start, stack_end);
 
 	for(unsigned long int stack_loop = stack_start; stack_loop < stack_end; stack_loop++){
+
+		TracePrintf(0,"WE ARE in the stack loop\n");
 		kernel_page_table[stack_loop].prot = PROT_READ | PROT_WRITE;
 		kernel_page_table[stack_loop].valid = TRUE;
 		kernel_page_table[stack_loop].pfn = stack_loop; 
 	}
-	
+
+	TracePrintf(0,"THIS IS BEFORE WE ARE WRITING THE PAGE TABLE ADRESSSSSSSSS\n");
+
 	//Set global variable for stack limit
 	kernel_stack_limit = (void *)VMEM_0_LIMIT;
 
@@ -572,5 +593,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	init_proc_create();
 
 	TracePrintf(0, "I am leaving KernelStart\n");
+	TracePrintf(0, "Good bye for now friends\n");
 	return;
 }
