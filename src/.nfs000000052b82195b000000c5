@@ -1,0 +1,33 @@
+** Hardware level 1 tracing enabled **
+** Yalnix level 1 tracing enabled **
+** User Prog level 1 tracing enabled **
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 6 blocks allocated, 1848 bytes total
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(10), depth 1
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 1
+Hardware   ----
+Hardware   | Calling KernelStart
+Hardware   ----
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 7 blocks allocated, 1936 bytes total
+Yalnix     WE ARE CURRENTLY IN THE KERNELSTART PROGRAM
+Yalnix     Frame table initialization done
+Yalnix     WE ARE SETTING UP THE INTERRUPTM VERCTOR TABLE
+Hardware       | WriteRegister(REG_VECTOR_BASE,0x037040)
+Yalnix     WE ARE WRITING THE BASE REGISTER FOR REGION 0
+Yalnix     WE ARE GETTING IN THE RED ZONE PAGE
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 2
+Hardware   ----
+Hardware   | Trap Segmentation fault
+Hardware   | From usermode  SP [region 0] 0xff230 | PC [region 0] 0x21832
+Hardware   | PTBR1 0x000000 | kstack 126 127
+Hardware   The kernel has an unsresolved trap, depth = 2
+Hardware   | 
+
+
+ BIG GREEN SCREEN O' DEATH!!!!!!
+
+
