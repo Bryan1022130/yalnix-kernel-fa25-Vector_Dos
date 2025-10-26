@@ -203,7 +203,7 @@ void init_proc_create(void){
 	//Set the pc to DoIdle location
 	//Set sp to the top of the user stack that we set up
 	idle_process->curr_uc.pc = (void*)DoIdle;
-	idle_process->curr_uc.sp = (void*)VMEM_1_LIMIT;;
+	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - PAGESIZE);
 
 	//Set as running
 	idle_process->currState = READY;
