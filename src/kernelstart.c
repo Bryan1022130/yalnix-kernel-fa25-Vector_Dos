@@ -1,34 +1,28 @@
-//Header files from yalnix_framework
+//Header files from yalnix_framework && libc library
 #include <stdint.h>
 #include <stddef.h>
-#include <ykernel.h>
-#include <hardware.h> // For macros regarding kernel space
-#include <yalnix.h>
-#include <ylib.h>
-#include <yuser.h>
+#include <sys/types.h> //For u_long
+
+#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
+#include <load_info.h> //The struct for load_info
+#include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
+#include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ... 
+#include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
+#include <ylib.h> // Function declarations for many libc functions 
+#include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 
-// Non Standard Lib C library files
-#include "Queue.h"
-#include "trap.h"
-#include "memory.h"
-#include "process.h"
+//Our Header Files
+#include "Queue.h" //API calls for our queue data structure 
+#include "trap.h" //API for trap handling and initializing the Interrupt Vector Table
+#include "memory.h" //API for Frame tracking in our program
+#include "process.h" //API for process block control
 
-//Macros
+//Macros for if VM is enabled
 #define TRUE 1
 #define FALSE 0
 
-
-
-//MAX_PROCS defined in yalnix.h
-
-/* ==================================
- * Run this file for checkpoint 1
- * ======>   make 
- * ======>  ./yalnix -W 
- * ==================================
- *\
-
+/*
  * ================================>>
  * Global Variables
  * <<================================
