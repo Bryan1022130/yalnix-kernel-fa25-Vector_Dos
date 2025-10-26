@@ -1,4 +1,5 @@
 //Header files from yalnix_framework
+#include <stddef.h>
 #include <ykernel.h>
 #include <hardware.h> // For macros regarding kernel space
 #include <ctype.h>
@@ -66,21 +67,10 @@ static unsigned int terminal_array[NUM_TERMINALS];
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
-
-void create_free_frames(void){
-	//Set all pages as unused for now 
-	unsigned short int bitmap[MAX_PT_LEN] = {0};
-
-	//Maybe it can also be set in a unsigned long int???
-	unsigned long int bitmap = 0;
-	return; 
-}
-
 /* =======================================
  * Process Logic Functions
  * =======================================
  */
-
 
 void InitPcbTable(void){
     // Zero out the entire array
@@ -98,22 +88,30 @@ void InitPcbTable(void){
 PCB *pcb_alloc(void){
 	for (int pid = 0; pid < MAX_PROCS; pid++) {
 		if (pcb_table[pid].currState == FREE) {
+
+			//Clear out the data from prev processes
+			memset(&pcb_table[pid], 0, sizeof(PCB));
+
 			pcb_table[pid].currState = READY; 
-			return pid;
+			pcb_table[pid].pid = pid;
+
+			return &pcb_table[pid];
 		}
 	}
-    return ERROR;
+	
+	TracePrintf(0, "ERROR! No free PCBs available.\n");
+	return NULL;
 }
 
-unsigned int pcb_free(int pid){
+int pcb_free(int pid){
 
     	if(pid < 0 || pid >= MAX_PROCS){ 
-        	TracePrintf(0, "This is a invalid bit");
+        	TracePrintf(0, "This is a invalid pid");
 		return -1;
 	}
 
 	if(process_table[pid].currState == FREE){
-		PrintTracef(0, "Your process is already free");
+		TracePrintf(0, "Your process is already free");
 		return -1;
 	}
 
@@ -122,50 +120,49 @@ unsigned int pcb_free(int pid){
 	pte_t *pt_r1 = (pte_t *)proc->AddressSpace;
 
 	if (pt_r1 != NULL) {
-
-		//Index to be able to loop through each page in region 1
+		//Index to be able to loop through each pte and free 
 		int num_r1_pages = (VMEM_1_SIZE >> PAGESHIFT);
 
 		for (int vpn = 0; vpn < num_r1_pages; vpn++) {
 			if (pt_r1[vpn].valid) {
 				frame_free(pt_r1[vpn].pfn);
-           		 	}
-        		}
-
+           		}
+		}
+	
+	//Free the page table
 	uintptr_t pt_vaddr = (uintptr_t)pt_r1;
-
 
 	process_table[pid].currState = FREE;
 
-	// 3. Look up its PFN in the kernel's page table
+	//Get the pfn for the page table inside of Region 0
+	int pt_vpn_r0 = (int)(pt_vaddr >> PAGESHIFT);
         int pt_pfn = kernel_page_table[pt_vpn_r0].pfn;
 
-        // 4. Free the physical frame that held the page table
+        // Free the physical frame that held the page table
         frame_free(pt_pfn);
-
-	kernel_page_table[pt_vpn_r0].valid = 0;
-
+	
+	//Mark the virtual mapping as invalid for physical memmory
+	kernel_page_table[pt_vpn_r0].valid = FALSE;
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
 	memset(proc, 0, sizeof(PCB));
 
+	}
+	memset(proc, 0, sizeof(PCB));
 	proc->currState = FREE;
 
-
-	TracePrintf(0, "I have freed your process from the proc table :)");
-	
-	return;
+	TracePrintf(0, "I have freed your process from the proc table :)");	
+	return 0;
 
 }
 
 void init_proc_create(void){
-	//Need to work on this ----------------------<<<<<<>>>>>>>
-	//MAKING THE PCB ALLOC FUNCTIONS
+
 	//Get a process from our PCB free list
 	idle_process = pcb_alloc();
 
 	if(idle_process == NULL){
-		PrintTracef(0, "There was an error when trying with pcb_alloc, NULL returned!");
+		TracePrintf(0, "There was an error when trying with pcb_alloc, NULL returned!");
 		return;
 	}
 	
@@ -176,6 +173,7 @@ void init_proc_create(void){
 	
 	//Get a pid for the process
 	idle_process->pid = helper_new_pid(user_page_table);
+
 	//To indicate that its the kernel process itself
 	idle_process->ppid = 0;
 	
@@ -199,7 +197,7 @@ void init_proc_create(void){
 	idle_process->curr_uc.sp = (void*)VMEM_1_LIMIT;;
 
 	//Set as running
-	idle_process->currState = Running;
+	idle_process->currState = READY;
 	
 	//Track Kernel Stack Frames
 	
@@ -238,6 +236,8 @@ int SetKernelBrk(void * addr){
 	 */
 	
 	if(vm_enabled == DISABLED){
+		uintptr_t original_brk_addr = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
+
 		//It can not be less then the original break point since this space is used for data
 		if(new_kbrk_addr < old_kbrk){
 			TracePrintf(0, "You can not shrink the heap!");
@@ -249,14 +249,14 @@ int SetKernelBrk(void * addr){
 		uintptr_t heap_start = (uintptr_t)_orig_kernel_brk;
 		uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
 
-		// 1. can't shrink below data/heap start
+		// can't shrink below data/heap start
 		if (new_kbrk_addr < heap_start) {
 		    TracePrintf(0, "[SetKernelBrk] Error: address %p is below kernel heap start (%p)\n",
 		                (void*)new_kbrk_addr, (void*)heap_start);
 		    return ERROR;
 		}
 
-		// 2. can't grow into kernel stack region
+		// can't grow into kernel stack region
 		if (new_kbrk_addr >= heap_end_limit) {
 		    TracePrintf(0, "[SetKernelBrk] Error: address %p would overlap kernel stack (%p)\n",
 		                (void*)new_kbrk_addr, (void*)heap_end_limit);
@@ -276,7 +276,7 @@ int SetKernelBrk(void * addr){
 		                (void*)new_kbrk_addr);
 		}
 
-		current_brk = (void *)new_kbrk_addr;
+		current_kernel_brk = (void *)new_kbrk_addr;
 		TracePrintf(1, "[SetKernelBrk] Updated current_brk (no VM): %p\n", current_brk);
         	return 0;
 	}
@@ -389,12 +389,12 @@ int SetKernelBrk(void * addr){
 		}
 		 // Step 4: Finalize and return
 	        // ------------------------------------------------------------
-	        current_brk = (void *)new_kbrk_addr;
+	        current_kernel_brk = (void *)new_kbrk_addr;
 	        TracePrintf(1, "[SetKernelBrk] Moved break to %p (VM enabled)\n", current_brk);
 	        return 0;
 	    }
 	TracePrintf(0, "[SetKernelBrk] Unknown VM state!\n");
-	return ERROR;
+	return -1;
 }
 
 /* ========================================================
@@ -540,7 +540,10 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	//Set current brk and then call SetKernelBrk
-	current_kernel_brk = (void *)_orig_kernel_brk_page;
+	
+    	uintptr_t orig_brk_address = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
+
+	current_kernel_brk = (void *)orig_brk_address;
 
 	int kbrk_return = SetKernelBrk(current_kernel_brk);
 
