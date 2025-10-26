@@ -1,6 +1,6 @@
 //Enum to be able to represent the many states of the Process
 typedef enum{
-        NEW,
+        FREE,
         READY,
         BLOCKED,
         RUNNING,
@@ -10,7 +10,7 @@ typedef enum{
 }ProcessState;
 
 //Create the PCB that we be use for context switching
-typedef struct PCB{
+typedef struct pcb{
 
 	//Kernel Stack Frames
 	unsigned int kernel_stack_frames[KERNEL_STACK_MAXSIZE / PAGESIZE];
@@ -20,7 +20,6 @@ typedef struct PCB{
         UserContext curr_uc; //Hold the Current User Context { Not just the pointer}
 	
 	//Process information
-        int pfn; // The physical frame numbers that are contained in the processes kernel stack {This could be a ssize_t}
 	int ppid; //Parent Process id 
         int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
 	int exitstatus; // When a process is going to exit
