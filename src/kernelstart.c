@@ -18,6 +18,8 @@
 #define TRUE 1
 #define FALSE 0
 
+
+
 //MAX_PROCS defined in yalnix.h
 
 /* ==================================
@@ -408,19 +410,22 @@ int SetKernelBrk(void * addr){
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
+
 	TracePrintf(0,"WE ARE CURRENTLY IN THE KERNELSTART PROGRAM\n");
+
+	TracePrintf(0, "<<<<<<<<<<<<<<<< this is the size og pmem_size => %lx", pmem_size);
 
 	/* <<<---------------------------------------------------------
 	 * Boot up the free frame data structure && definee global vars
 	 * ---------------------------------------------------------->>>
 	 */
 
-	//Initialize the data struct to track the free frames
-	frames_init(pmem_size);
-
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = pmem_size / PAGESIZE;
 	
+	//Initialize the data struct to track the free frames
+	frames_init(pmem_size);
+
 	//Set up global variable for UserContext
 	KernelUC = uctxt;
 

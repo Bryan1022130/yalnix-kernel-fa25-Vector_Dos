@@ -1,0 +1,74 @@
+** Hardware level 1 tracing enabled **
+** Yalnix level 1 tracing enabled **
+** User Prog level 1 tracing enabled **
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 6 blocks allocated, 1848 bytes total
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(10), depth 1
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 1
+Hardware   ----
+Hardware   | Calling KernelStart
+Hardware   ----
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 7 blocks allocated, 1936 bytes total
+Yalnix     WE ARE CURRENTLY IN THE KERNELSTART PROGRAM
+Yalnix     <<<<<<<<<<<<<<<< this is the size og pmem_size => 400000Yalnix     Frame table initialization done
+Yalnix     WE ARE SETTING UP THE INTERRUPTM VERCTOR TABLE
+Yalnix     We are setting up the Interrupt vector table
+Hardware       | WriteRegister(REG_VECTOR_BASE,0x0373e0)
+Yalnix     We just finshed writing the Interrupt Vector Table
+Yalnix     WE ARE WRITING THE BASE REGISTER FOR REGION 0
+Yalnix     This is the value of the text_page --> 10 and this is the of with the DOWN_TO_PAGE --> 10 +++++++++++++
+Yalnix     This is the value of the text_end ---> 13
+ ++++++++++++++Yalnix     This is the value of the heapdata_start---> 13
+ ++++++++++++++++Yalnix     This is the value of the heapdata_end ---> 21
+ ++++++++++++++Yalnix     WE ARE GETTING IN THE RED ZONE PAGE
+Yalnix     WE ARE GETTING IN THE RED ZONE PAGE
+Yalnix     This is in the stack loop
+Yalnix      this is the value of stack_start --> 7e and this is stackend --> 80 
+Yalnix     WE ARE in the stack loop
+Yalnix     WE ARE in the stack loop
+Yalnix     THIS IS BEFORE WE ARE WRITING THE PAGE TABLE ADRESSSSSSSSS
+Hardware       | WriteRegister(REG_PTBR0,0x037420)
+Hardware       | WriteRegister(REG_PTLR0,0x000080)
+Yalnix     WE ARE DONE SETTTING UP THE PAGE TABLES FOR STACK, TEXT AND DATA
+Hardware       | WriteRegister(REG_PTBR1,0x037620)
+Hardware       | WriteRegister(REG_PTLR1,0x000080)
+Hardware       | WriteRegister(REG_VM_ENABLE,0x000001)
+Hardware   Enabling VM
+Hardware   _first_kernel_text_page 16
+Hardware   _first_kernel_data_page 19
+Hardware   _orig_kernel_brk_page 33
+Hardware   initializing TLB to be empty
+Hardware   PhysLimit 42000, my_break 42000
+Hardware   clearing TLB
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x37620, PTLR1 0x80
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x37420, PTLR0 0x80
+Hardware   moving kernel text,data,heap into TLB
+Hardware   PageInTLB[16] addr 0x20000: 0 -> 1
+Hardware   PageInTLB[17] addr 0x22000: 0 -> 1
+Hardware   PageInTLB[18] addr 0x24000: 0 -> 1
+Hardware   PageInTLB[19] addr 0x26000: 0 -> 1
+Hardware   PageInTLB[20] addr 0x28000: 0 -> 1
+Hardware   PageInTLB[21] addr 0x2a000: 0 -> 1
+Hardware   PageInTLB[22] addr 0x2c000: 0 -> 1
+Hardware   PageInTLB[23] addr 0x2e000: 0 -> 1
+Hardware   PageInTLB[24] addr 0x30000: 0 -> 1
+Hardware   PageInTLB[25] addr 0x32000: 0 -> 1
+Hardware   PageInTLB[26] addr 0x34000: 0 -> 1
+Hardware   PageInTLB[27] addr 0x36000: 0 -> 1
+Hardware   PageInTLB[28] addr 0x38000: 0 -> 1
+Hardware   PageInTLB[29] addr 0x3a000: 0 -> 1
+Hardware   PageInTLB[30] addr 0x3c000: 0 -> 1
+Hardware   PageInTLB[31] addr 0x3e000: 0 -> 1
+Hardware   PageInTLB[32] addr 0x40000: 0 -> 1
+Hardware   moving kernel stack into TLB
+Yalnix     [SetKernelBrk] Moved break to 0x42000 (VM enabled)
+Yalnix     PCB table initialized 
+Yalnix     I am leaving KernelStart
+Yalnix     Good bye for now friends
+Hardware   ----
+Hardware   | Back from KernelStart
+Stack pointer 0x00200000 value is illegalHardware   
+** Machine Halted **

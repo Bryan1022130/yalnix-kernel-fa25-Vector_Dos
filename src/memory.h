@@ -1,6 +1,5 @@
 #pragma once
-
-#define MAX_FRAMES 8192
+extern unsigned int total_physical_frames;
 
 typedef struct Frame {
     int pfn;          // frame number
