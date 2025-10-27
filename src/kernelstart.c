@@ -28,6 +28,10 @@
  * <<================================
  */
 
+// These globals represent persistent kernel-wide state: 
+// memory mappings, process table, and heap/stack pointers.  
+// They are shared across modules and exist for the kernel’s lifetime.
+
 //Virtual Memory Check
 short int vm_enabled = FALSE;
 
@@ -514,16 +518,20 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	//Initialize the data struct to track the free frames
+	// Builds the frame table and marks kernel-reserved frames as used.
 	frames_init(pmem_size);
 
 	//Set up global variable for the current UserContext
 	KernelUC = uctxt;
+	// KernelStart will copy or modify this to return into user mode later.
 
 	/* <<<------------------------------
 	 * Set up the Interrupt Vector Table
 	 * ------------------------------>>>
 	 */
 
+	// Each trap/interrupt is linked to its handler so hardware can dispatch correctly.
+	// This must be complete before enabling VM or the kernel will fault.
 	TracePrintf(0,"+++++ We are setting up the IVT and im going to call the function\n");
 	setup_trap_handler(Interrupt_Vector_Table);
 	TracePrintf(0,"+++++ We have left the functions and going to set up region 0\n");
@@ -543,7 +551,10 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * #include <yalnix.h>
 	 * _first_kernel_text_page - > low page of kernel text
 	 */
-	
+
+
+	// Build Region 0 mappings for kernel text, data, heap, and stack.  
+	// This must be complete before enabling VM or the kernel will fault.	
 	TracePrintf(0,"------------------------------------------------- Region 0 Set up ----------------------------------------------------\n");
 
 	//Set the Global variable
@@ -629,6 +640,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	
 	TracePrintf(0, "------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------\n");
 	//Write to special register that Virtual Memory is enabled 
+
+	// All Region 0 mappings are ready; now turn on virtual memory.  
+	// From this point, all addresses are translated via the page tables.
 	WriteRegister(REG_VM_ENABLE, TRUE);
 
 	//Set the global variable as true 
@@ -643,6 +657,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(0, "------------------------------------- WE ARE NOW GOING TO CALL KERNELBRK :) -------------------------------------\n");
 
 	//Normalize into byte address
+	// Initialize kernel heap pointer (current_kernel_brk)  
+	// and test SetKernelBrk() to ensure heap pages map correctly under VM.
     	uintptr_t orig_brk_address = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
 	current_kernel_brk = (void *)orig_brk_address;
 	int kbrk_return = SetKernelBrk(current_kernel_brk);
@@ -662,7 +678,12 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(0, "------------------------------------- WE ARE NOW GOING TO CREATE OUR PROCESS :) -------------------------------------\n");
 
 	//Create idle proc
+	//  Initialize the process table and create the first (idle) process.  
+	// This simulates the ‘init’ process until real user loading is implemented.
 	InitPcbTable();
+
+	// Each process needs a private Region 1 page table.  
+	// Allocate one physical frame to hold it.
 	init_proc_create();
 
 	TracePrintf(0, "I am leaving KernelStart\n");

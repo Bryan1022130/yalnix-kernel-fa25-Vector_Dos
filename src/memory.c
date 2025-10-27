@@ -11,7 +11,13 @@ static Frame frame_table[FRAME_COUNT];
 static int total_frames = 0;
 
 
+// Build the frame table representing all physical pages.
+// Each entry tracks ownership and reference count.
+
 void frames_init(unsigned int pmem_size) {
+    // Reserve frames used by the kernel (text, data, heap, stack).
+    // These must never be given to user processes.
+
     // Step 1: Compute total_frames = pmem_size / PAGESIZE
     total_frames = pmem_size / PAGESIZE;
     
@@ -64,7 +70,8 @@ void frames_init(unsigned int pmem_size) {
     TracePrintf(1, "  Marked frames %lu-%lu as kernel stack\n", stack_base_page, stack_limit_page - 1);
 }
 
-
+// Find a free frame and mark it as owned by 'owner_pid'.
+// Returns the physical frame number (PFN), or ERROR if full.
 int frame_alloc(int owner_pid) {
 	TracePrintf(0, "THIS IS THE FRAME ALLOC FUNCTION _____________________________________???????????????\n");
 
@@ -84,6 +91,7 @@ int frame_alloc(int owner_pid) {
     return ERROR;
 }
 
+// Decrement refcount and release the frame if no longer used.
 void frame_free(int pfn) {
 	/*
 	* decrement refcnt, if 0 mark free; run helper_force_free(pfn) if needed later.

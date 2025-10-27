@@ -11,6 +11,8 @@
 // ----------------- Context Switching -----------------------------
 
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
+	// Save current kernel context into its PCB, restore the next PCB’s context,
+	// and return pointer to the next context to run.
 
 	//Check if the process is valid
 	PCB *current_pcb = (PCB *)curr_pcb_p;
@@ -28,6 +30,9 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 }
 
 KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
+	// Copy kernel context (and later, kernel stack) for a newly forked process.
+	// This produces a child that resumes right after Fork().
+
 	//Check if the process is valid
 	PCB *new_pcb = (PCB *)new_pcb_p;
 
