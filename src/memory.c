@@ -66,20 +66,22 @@ void frames_init(unsigned int pmem_size) {
 
 
 int frame_alloc(int owner_pid) {
-	/*
-	* Find first free frame in frame_table, mark it in use, and return its pfn.
-	*/
+	TracePrintf(0, "THIS IS THE FRAME ALLOC FUNCTION _____________________________________???????????????\n");
+
+	TracePrintf(0, "THIS IS THE PID NUMBER THAT WE WERE GIVEN -- %d\n", owner_pid);
+
 	for (int i = 0; i < total_frames; i++) {
-        if (frame_table[i].in_use == 0) {
-            frame_table[i].in_use = 1;
-            frame_table[i].owner_pid = owner_pid;
-            frame_table[i].refcount = 1;
-            return i;
+		if (frame_table[i].in_use == 0) {
+			frame_table[i].in_use = 1;
+           		frame_table[i].owner_pid = owner_pid;
+			frame_table[i].refcount = 1;
+			TracePrintf(0, "THIS IS OUR RETURN VALUE -- %d\n", i);
+            		return i;
         }
     }
 
     printf("ERROR: Out of physical frames!\n");
-    return -1; // indicates failure
+    return ERROR;
 }
 
 void frame_free(int pfn) {

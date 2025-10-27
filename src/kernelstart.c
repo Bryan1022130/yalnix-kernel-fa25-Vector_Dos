@@ -95,6 +95,7 @@ void InitPcbTable(void){
 
 //GOOD --------------------------------------------------------------------
 PCB *pcb_alloc(void){
+	TracePrintf(0, "We are in PCB ALLOC ------------------------------------------------------\n");
 	for (int pid = 0; pid < MAX_PROCS; pid++) {
 		if (process_table[pid].currState == FREE) {
 	
@@ -105,10 +106,11 @@ PCB *pcb_alloc(void){
 			process_table[pid].pid = pid;
 			
 			TracePrintf(0, "We are going to return to you a free process with PID --> %d\n", pid);
+			TracePrintf(0, "We are now leaving PCB ALLOC ---->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--------------------------------------------------\n");
 			return &process_table[pid];
 		}
 	}
-	
+	TracePrintf(0, "We are now  leaving with AND ERRRORRR in PCB ALLOC >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>------------------------------------------------------\n");	
 	TracePrintf(0, "Error there are no free processes\n");
 	return NULL;
 }
@@ -188,9 +190,11 @@ int pcb_free(int pid){
     memset(proc, 0, sizeof(PCB));
     proc->currState = FREE;
     
-    TracePrintf(0, "I have freed your process from the proc table :)");
+    TracePrintf(0, "I have freed your process from the proc table :)\n");
     return 0;
 }
+
+
 
 void init_proc_create(void){
 
@@ -198,16 +202,17 @@ void init_proc_create(void){
 	idle_process = pcb_alloc();
 
 	if(idle_process == NULL){
-		TracePrintf(0, "There was an error when trying with pcb_alloc, NULL returned!");
+		TracePrintf(0, "There was an error when trying with pcb_alloc, NULL returned!\n");
 		return;
 	}
 
-    /* =======================
-     * Allocate a new page table for idle process
-     * =======================
-     */
-   	 
-    
+  	/* =======================
+    	 * Allocate a new page table for idle process
+     	 * =======================
+     	 */
+   	
+	TracePrintf(0, "WE ARE GOING TO ALLOCATED A PHYSICAL FRAME NOW \n");
+
     	// Allocate physical frame for the page table
    	 int pt_pfn = frame_alloc(idle_process->pid);
 
@@ -254,7 +259,8 @@ void init_proc_create(void){
        	   	idle_pt[i].pfn = i;
     	}
    	
-	 memset(idle_pt, 0, PAGESIZE);
+	 TracePrintf(0, "WE ARE CALLING THE FRAME ALLOC TO BE ABLE TO GET A STACK FRAME FOR OUR IDLE PROCESS \n");
+
 
    	 // Allocate stack for idle process
    	 int idle_stack_pfn = frame_alloc(idle_process->pid);
@@ -269,22 +275,21 @@ void init_proc_create(void){
     	idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
    	idle_pt[stack_page_index].pfn = idle_stack_pfn;
 
-
-   	kernel_page_table[temp_vpn].valid = 0;
-   	kernel_page_table[temp_vpn].prot = 0;
-   	kernel_page_table[temp_vpn].pfn = 0;
-   	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-	
 	/* =======================
 	 * Pid Logic
 	 * =======================
 	 */
 	
 	//Get a pid for the process
-	//idle_process->pid = helper_new_pid(user_page_table);
+	idle_process->pid = helper_new_pid(idle_pt);
 
 	//To indicate that its the kernel process itself
 	idle_process->ppid = 0;
+
+   	kernel_page_table[temp_vpn].valid = 0;
+   	kernel_page_table[temp_vpn].prot = 0;
+   	kernel_page_table[temp_vpn].pfn = 0;
+   	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 	
 	/* ======================================================
 	 * Copy in UserContext from KernelStart into the idle PCB
@@ -302,23 +307,15 @@ void init_proc_create(void){
 	
 	//Set sp to the top of the user stack that we set up
 	idle_process->curr_uc.pc = (void*)DoIdle;
-	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - PAGESIZE);
+	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT);
 
 	//Set as running
 	idle_process->currState = READY;
 
- 	int pid = helper_new_pid((pte_t *)(temp_vpn << PAGESHIFT));
-   	if (pid < 0) {
-		TracePrintf(0, "Failed to get PID from helper!\n");
-		return;
-	}
-
-    	idle_process->pid = pid;
-	
 	//Set global variable for current process as the idle process
 	current_process = idle_process;
 
-	WriteRegister(REG_PTBR1, pt_pfn << PAGESHIFT);
+	WriteRegister(REG_PTBR1, (unsigned int) pt_pfn << PAGESHIFT);
     	WriteRegister(REG_PTLR1, MAX_PT_LEN);
     	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
@@ -334,10 +331,6 @@ void init_proc_create(void){
 	TracePrintf(0, "==========================\n");
 
 }
-
-
-
-
 
 
 

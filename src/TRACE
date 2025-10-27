@@ -20,34 +20,34 @@ Yalnix       Marked frames 16-32 as kernel text/data
 Yalnix       Marked frames 126-127 as kernel stack
 Yalnix     +++++ We are setting up the IVT and im going to call the function
 Yalnix     We are setting up the Interrupt vector table
-Hardware       | WriteRegister(REG_VECTOR_BASE,0x0384e0)
+Hardware       | WriteRegister(REG_VECTOR_BASE,0x0387c0)
 Yalnix     We just finshed writing the Interrupt Vector Table
 Yalnix     +++++ We have left the functions and going to set up region 0
 Yalnix     ------------------------------------------------- Region 0 Set up ----------------------------------------------------
-Yalnix     This is where my array is located --> 0x38520
+Yalnix     This is where my array is located --> 0x38800
 Yalnix     This is the value of the text_start --> 10 ++++++++++++++= 
-Yalnix     This is the value of the text_end ---> 13++++++++++++++
-Yalnix     This is the value of the heapdata_start---> 13++++++++++++++++
+Yalnix     This is the value of the text_end ---> 14++++++++++++++
+Yalnix     This is the value of the heapdata_start---> 14++++++++++++++++
 Yalnix     This is the value of the heapdata_end ---> 21 ++++++++++++++++++++
 Yalnix     This is in the stack loop logic
 Yalnix      this is the value of stack_start --> 7e and this is stackend --> 80 
 Yalnix     WE ARE in the stack loop
 Yalnix     WE ARE in the stack loop
 Yalnix     THIS IS BEFORE WE ARE WRITING THE PAGE TABLE ADRESSS TO THE HARDWARE
-Hardware       | WriteRegister(REG_PTBR0,0x038520)
+Hardware       | WriteRegister(REG_PTBR0,0x038800)
 Hardware       | WriteRegister(REG_PTLR0,0x000080)
 Yalnix     |||||||||||||||||||||| WE ARE DONE SETTTING UP THE PAGE TABLES FOR STACK, TEXT AND DATA ||||||||||||||||||||||||||||||||||||||||||
 Yalnix     ------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------
 Hardware       | WriteRegister(REG_VM_ENABLE,0x000001)
 Hardware   Enabling VM
 Hardware   _first_kernel_text_page 16
-Hardware   _first_kernel_data_page 19
+Hardware   _first_kernel_data_page 20
 Hardware   _orig_kernel_brk_page 33
 Hardware   initializing TLB to be empty
 Hardware   PhysLimit 42000, my_break 42000
 Hardware   clearing TLB
 Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x0, PTLR1 0x0
-Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38520, PTLR0 0x80
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38800, PTLR0 0x80
 Hardware   moving kernel text,data,heap into TLB
 Hardware   PageInTLB[16] addr 0x20000: 0 -> 1
 Hardware   PageInTLB[17] addr 0x22000: 0 -> 1
@@ -78,39 +78,38 @@ Yalnix     [SetKernelBrk] Moved break to 0x42000 (VM enabled)
 Yalnix     We have called set KernelBrk : )
 Yalnix     ------------------------------------- WE ARE NOW GOING TO CREATE OUR PROCESS :) -------------------------------------
 Yalnix     We went through the whole PCB Table and they are all free now! :) 
+Yalnix     We are in PCB ALLOC ------------------------------------------------------
 Yalnix     We are going to return to you a free process with PID --> 0
+Yalnix     We are now leaving PCB ALLOC ---->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>--------------------------------------------------
+Yalnix     WE ARE GOING TO ALLOCATED A PHYSICAL FRAME NOW 
+Yalnix     THIS IS THE FRAME ALLOC FUNCTION _____________________________________???????????????
+Yalnix     THIS IS THE PID NUMBER THAT WE WERE GIVEN -- 0
+Yalnix     THIS IS OUR RETURN VALUE -- 33
 Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
-Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38520, PTLR0 0x80
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38800, PTLR0 0x80
 Hardware   ========= Hardware receives signal ==============
 Hardware   FrameworkSignalHandler(11), depth 2
+Yalnix     WE ARE CALLING THE FRAME ALLOC TO BE ABLE TO GET A STACK FRAME FOR OUR IDLE PROCESS 
+Yalnix     THIS IS THE FRAME ALLOC FUNCTION _____________________________________???????????????
+Yalnix     THIS IS THE PID NUMBER THAT WE WERE GIVEN -- 0
+Yalnix     THIS IS OUR RETURN VALUE -- 34
 Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
-Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38520, PTLR0 0x80
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38800, PTLR0 0x80
 Hardware       | WriteRegister(REG_PTBR1,0x042000)
 Hardware       | WriteRegister(REG_PTLR1,0x000080)
 Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1)
 Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x42000, PTLR1 0x80
 Yalnix     ===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====
-Yalnix     idle_process ptr: 0x292c0
+Yalnix     idle_process ptr: 0x295a0
 Yalnix     idle_process->pid: 0
 Yalnix     idle_process->AddressSpace: 0x42000
 Yalnix     pt_pfn: 33 (0x21)
 Yalnix     physical addr: 0x42000
-Yalnix     current_process ptr: 0x292c0
+Yalnix     current_process ptr: 0x295a0
 Yalnix     ==========================
 Yalnix     I am leaving KernelStart
 Yalnix     Good bye for now friends
 Hardware   ----
 Hardware   | Back from KernelStart
-Hardware   ========= Hardware receives signal ==============
-Hardware   FrameworkSignalHandler(11), depth 2
-Hardware   ----
-Hardware   | Trap Segmentation fault
-Hardware   | From usermode  SP [region 0] 0xff260 | PC [libhardware.so] 0xf13c1e45
-Hardware   | pid 0 | PTBR1 0x042000 | kstack 126 127
-Hardware   The kernel has an unsresolved trap, depth = 2
-Hardware   | 
-
-
- BIG GREEN SCREEN O' DEATH!!!!!!
-
-
+Stack pointer 0x00200000 value is illegalHardware   
+** Machine Halted **
