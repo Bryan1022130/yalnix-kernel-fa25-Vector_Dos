@@ -170,10 +170,10 @@ int pcb_free(int pid){
         }
         
         // Unmap the temporary mapping
-        kernel_page_table[temp_vpn].valid = FALSE;
-        kernel_page_table[temp_vpn].prot = 0;
-        kernel_page_table[temp_vpn].pfn = 0;
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        //kernel_page_table[temp_vpn].valid = FALSE;
+       // kernel_page_table[temp_vpn].prot = 0;
+      //  kernel_page_table[temp_vpn].pfn = 0;
+      //  WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
 	WriteRegister(REG_TLB_FLUSH, (unsigned int)(temp_vpn << PAGESHIFT));
         
@@ -197,6 +197,8 @@ int pcb_free(int pid){
 
 
 void init_proc_create(void){
+	TracePrintf(0, ">>>>> RUNNING VERSION FROM 00:24 <<<<<\n");
+
 
 	//Get a process from our PCB free list
 	idle_process = pcb_alloc();
@@ -241,14 +243,17 @@ void init_proc_create(void){
    	kernel_page_table[temp_vpn].pfn = pt_pfn;
     	kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
     	kernel_page_table[temp_vpn].valid = 1;
-    	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+    //	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
     
    	 // Get pointer to the page table
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
-    
+   	
+	TracePrintf(0, "About to memset idle_pt: temp_vpn=%d, idle_pt=%p\n", temp_vpn, idle_pt);
     	// Initialize the page table (clear it first)
     	memset(idle_pt, 0, PAGESIZE);
-    
+	TracePrintf(0, "DEBUG: memset completed successfully.\n");
+   	
+	
    	 // Copy kernel text pages (shared, read-only)
    	unsigned long int text_start = _first_kernel_text_page;
     	unsigned long int text_end = _first_kernel_data_page;
@@ -285,29 +290,35 @@ void init_proc_create(void){
 
 	//To indicate that its the kernel process itself
 	idle_process->ppid = 0;
-
-   	kernel_page_table[temp_vpn].valid = 0;
-   	kernel_page_table[temp_vpn].prot = 0;
-   	kernel_page_table[temp_vpn].pfn = 0;
-   	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 	
 	/* ======================================================
 	 * Copy in UserContext from KernelStart into the idle PCB
 	 * ======================================================
 	 */
 
-	memcpy(&idle_process->curr_uc, KernelUC, sizeof(UserContext));
+	memset(&idle_process->curr_uc, 0, sizeof(UserContext));
+//	memcpy(&idle_process->curr_uc, KernelUC, sizeof(UserContext));
 	
 	/* =======================================
 	 * Store AddressSpace for region 1 table
 	 * =======================================
 	 */
 
+
+
+	WriteRegister(REG_PTBR1, (unsigned int)(pt_pfn << PAGESHIFT));
+	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
+
+
 	idle_process->AddressSpace = (void *)(uintptr_t)(pt_pfn << PAGESHIFT);
 	
 	//Set sp to the top of the user stack that we set up
+	TracePrintf(0, "DEBUG: VMEM_1_LIMIT = %p\n", (void*)VMEM_1_LIMIT);
 	idle_process->curr_uc.pc = (void*)DoIdle;
-	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT);
+	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
+
 
 	//Set as running
 	idle_process->currState = READY;
@@ -315,11 +326,13 @@ void init_proc_create(void){
 	//Set global variable for current process as the idle process
 	current_process = idle_process;
 
-	WriteRegister(REG_PTBR1, (unsigned int) pt_pfn << PAGESHIFT);
-    	WriteRegister(REG_PTLR1, MAX_PT_LEN);
-    	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	//memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
 
+//	KernelUC->pc = idle_process->curr_uc.pc;
+ //   	KernelUC->sp = idle_process->curr_uc.sp;
+ 	TracePrintf(0, "DEBUG: About to assign sp. idle_process->curr_uc.sp = %p\n", idle_process->curr_uc.sp);
 	memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
+	
 
 	TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====\n");
 	TracePrintf(0, "idle_process ptr: %p\n", idle_process);
@@ -675,7 +688,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Create idle proc
 	InitPcbTable();
 	init_proc_create();
-
+	
+	TracePrintf(0, "Final check before return: KernelUC->pc = %p, KernelUC->sp = %p\n", KernelUC->pc, KernelUC->sp);
 	TracePrintf(0, "I am leaving KernelStart\n");
 	TracePrintf(0, "Good bye for now friends\n");
 	return;

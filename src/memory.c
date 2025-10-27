@@ -4,7 +4,7 @@
 #include <hardware.h> 
 #include <ykernel.h> 
 
-#define FRAME_COUNT 100
+#define FRAME_COUNT 1000
 
 
 static Frame frame_table[FRAME_COUNT];
