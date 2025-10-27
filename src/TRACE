@@ -1,0 +1,116 @@
+** Hardware level 1 tracing enabled **
+** Yalnix level 1 tracing enabled **
+** User Prog level 1 tracing enabled **
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 6 blocks allocated, 1848 bytes total
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(10), depth 1
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 1
+Hardware   ----
+Hardware   | Calling KernelStart
+Hardware   ----
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 7 blocks allocated, 1936 bytes total
+Yalnix     ========> This is the start of the KernelStart function <=====================
+Yalnix     <<<<<<<<<<<<<<<< this is the size pmem_size => 400000 and this is the stack frames ==> 512 >>>>>>>>>>>>>>>>>>>>>>>>
+Yalnix     Frame table initialization done
+Yalnix       Marked frames 0-15 as low memory (reserved)
+Yalnix       Marked frames 16-32 as kernel text/data
+Yalnix       Marked frames 126-127 as kernel stack
+Yalnix     +++++ We are setting up the IVT and im going to call the function
+Yalnix     We are setting up the Interrupt vector table
+Hardware       | WriteRegister(REG_VECTOR_BASE,0x0384e0)
+Yalnix     We just finshed writing the Interrupt Vector Table
+Yalnix     +++++ We have left the functions and going to set up region 0
+Yalnix     ------------------------------------------------- Region 0 Set up ----------------------------------------------------
+Yalnix     This is where my array is located --> 0x38520
+Yalnix     This is the value of the text_start --> 10 ++++++++++++++= 
+Yalnix     This is the value of the text_end ---> 13++++++++++++++
+Yalnix     This is the value of the heapdata_start---> 13++++++++++++++++
+Yalnix     This is the value of the heapdata_end ---> 21 ++++++++++++++++++++
+Yalnix     This is in the stack loop logic
+Yalnix      this is the value of stack_start --> 7e and this is stackend --> 80 
+Yalnix     WE ARE in the stack loop
+Yalnix     WE ARE in the stack loop
+Yalnix     THIS IS BEFORE WE ARE WRITING THE PAGE TABLE ADRESSS TO THE HARDWARE
+Hardware       | WriteRegister(REG_PTBR0,0x038520)
+Hardware       | WriteRegister(REG_PTLR0,0x000080)
+Yalnix     |||||||||||||||||||||| WE ARE DONE SETTTING UP THE PAGE TABLES FOR STACK, TEXT AND DATA ||||||||||||||||||||||||||||||||||||||||||
+Yalnix     ------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------
+Hardware       | WriteRegister(REG_VM_ENABLE,0x000001)
+Hardware   Enabling VM
+Hardware   _first_kernel_text_page 16
+Hardware   _first_kernel_data_page 19
+Hardware   _orig_kernel_brk_page 33
+Hardware   initializing TLB to be empty
+Hardware   PhysLimit 42000, my_break 42000
+Hardware   clearing TLB
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x0, PTLR1 0x0
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38520, PTLR0 0x80
+Hardware   moving kernel text,data,heap into TLB
+Hardware   PageInTLB[16] addr 0x20000: 0 -> 1
+Hardware   PageInTLB[17] addr 0x22000: 0 -> 1
+Hardware   PageInTLB[18] addr 0x24000: 0 -> 1
+Hardware   PageInTLB[19] addr 0x26000: 0 -> 1
+Hardware   PageInTLB[20] addr 0x28000: 0 -> 1
+Hardware   PageInTLB[21] addr 0x2a000: 0 -> 1
+Hardware   PageInTLB[22] addr 0x2c000: 0 -> 1
+Hardware   PageInTLB[23] addr 0x2e000: 0 -> 1
+Hardware   PageInTLB[24] addr 0x30000: 0 -> 1
+Hardware   PageInTLB[25] addr 0x32000: 0 -> 1
+Hardware   PageInTLB[26] addr 0x34000: 0 -> 1
+Hardware   PageInTLB[27] addr 0x36000: 0 -> 1
+Hardware   PageInTLB[28] addr 0x38000: 0 -> 1
+Hardware   PageInTLB[29] addr 0x3a000: 0 -> 1
+Hardware   PageInTLB[30] addr 0x3c000: 0 -> 1
+Hardware   PageInTLB[31] addr 0x3e000: 0 -> 1
+Hardware   PageInTLB[32] addr 0x40000: 0 -> 1
+Hardware   moving kernel stack into TLB
+Yalnix     ------------------------------------- WE ARE NOW GOING TO CALL KERNELBRK :) -------------------------------------
+Yalnix     KernelStart: Initializing kernel heap manager...
+KernelStart: Initial kernel brk address calculated as: 0x42000
+KernelStart: Calling SetKernelBrk(0x42000) to set initial heap top.
+Yalnix     We are in the function SetKernelBrk
+Yalnix     VIRTUAL MEMORY HAS BEEN ENABLED 
+Yalnix     [SetKernelBrk-VM] Comparing new_brk: 0x42000 against heap_start: 0x42000
+Yalnix     [SetKernelBrk] Moved break to 0x42000 (VM enabled)
+Yalnix     We have called set KernelBrk : )
+Yalnix     ------------------------------------- WE ARE NOW GOING TO CREATE OUR PROCESS :) -------------------------------------
+Yalnix     We went through the whole PCB Table and they are all free now! :) 
+Yalnix     We are going to return to you a free process with PID --> 0
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38520, PTLR0 0x80
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 2
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38520, PTLR0 0x80
+Hardware       | WriteRegister(REG_PTBR1,0x042000)
+Hardware       | WriteRegister(REG_PTLR1,0x000080)
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1)
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x42000, PTLR1 0x80
+Yalnix     ===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====
+Yalnix     idle_process ptr: 0x292c0
+Yalnix     idle_process->pid: 0
+Yalnix     idle_process->AddressSpace: 0x42000
+Yalnix     pt_pfn: 33 (0x21)
+Yalnix     physical addr: 0x42000
+Yalnix     current_process ptr: 0x292c0
+Yalnix     ==========================
+Yalnix     I am leaving KernelStart
+Yalnix     Good bye for now friends
+Hardware   ----
+Hardware   | Back from KernelStart
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 2
+Hardware   ----
+Hardware   | Trap Segmentation fault
+Hardware   | From usermode  SP [region 0] 0xff260 | PC [libhardware.so] 0xf13c1e45
+Hardware   | pid 0 | PTBR1 0x042000 | kstack 126 127
+Hardware   The kernel has an unsresolved trap, depth = 2
+Hardware   | 
+
+
+ BIG GREEN SCREEN O' DEATH!!!!!!
+
+
