@@ -69,8 +69,10 @@ HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
  * =======================================
  */
 void DoIdle(void) { 
+	int count = 0;
 	while(1) {
-		TracePrintf(1,"DoIdle\n");
+		TracePrintf(1,"DoIdle %d\n", count);
+		count++;
 		//Pause();
 	}
 }
