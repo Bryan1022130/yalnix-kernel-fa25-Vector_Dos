@@ -1,21 +1,15 @@
 //Header files from yalnix_framework
-#include <sys/types.h>
-#include <ctype.h>
-#include <load_info.h>
-#include <ykernel.h>
-#include <hardware.h>
-#include <yalnix.h>
-#include <ylib.h>
-#include <yuser.h>
+#include <sys/types.h> //For u_long
+#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
+#include <load_info.h> //The struct for load_info
+#include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
+#include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
+#include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
+#include <ylib.h> // Function declarations for many libc functions, Macro for NULL
+#include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 
-#include "trap.h"
-
-//Declaration of the default place holder function
-void HandleTrap(UserContext *CurrUC){
-	TracePrintf(0, "This is a placeholder function\n");
-	return;
-}
+#include "trap.h" //For function declarations for other files
 
 /*|==================================|
  *| Trap Handlers for Check Point 2  |
@@ -23,6 +17,12 @@ void HandleTrap(UserContext *CurrUC){
  *| -> TRAP_KERNEL		     |
  *|==================================|
  */
+
+//declaration of the default place holder function
+void HandleTrap(UserContext *CurrUc){
+	TracePrintf(0, "################---------------------This is a placeholder function--------###########################3\n");
+	return;
+}
 
 /* <<<---------------------------------
  * General Flow
@@ -34,7 +34,7 @@ void HandleTrap(UserContext *CurrUC){
  */
 
 void HandleKernelTrap(UserContext *CurrUC){
-	TracePrintf(0, "In HandleKernelTrap");
+	TracePrintf(0, "In HandleKernelTrap function :) \n");
 	
 	//Get the code from the struct
 	int extract_code = CurrUC->code;
@@ -107,7 +107,7 @@ void HandleKernelTrap(UserContext *CurrUC){
 	//Store the value that we get from the syscall into the regs[0];
 	CurrUC->regs[0] = sys_return;
 
-	TracePrintf(0, "Leaving HandleKernelTrap");
+	TracePrintf(0, "Leaving HandleKernelTrap :)\n");
 
 	return;
 	}
@@ -154,9 +154,15 @@ void HandleDiskTrap(UserContext *CurrUC) {
     TracePrintf(0, "TRAP: Disk called.\n");
 }
 
+/* <<<----------------------------------------------
+ *  Function to create the Interrupt Vector Table
+ *  -> Good for now
+ * ---------------------------------------------->>>
+ */
 void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]){
 	TracePrintf(0, "We are setting up the Interrupt vector table\n");
-	//Setup the table!
+
+	//Setup the table with default func
 	for(int i = 0; i < TRAP_VECTOR_SIZE; i++){
 		Interrupt_Vector_Table[i] = &HandleTrap;
 	}
