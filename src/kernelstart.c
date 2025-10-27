@@ -1,14 +1,11 @@
 //Header files from yalnix_framework && libc library
-#include <stdint.h>
-#include <stddef.h>
 #include <sys/types.h> //For u_long
-
 #include <ctype.h> // <----- NOT USED RIGHT NOW ----->
 #include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ... 
 #include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
-#include <ylib.h> // Function declarations for many libc functions 
+#include <ylib.h> // Function declarations for many libc functions, Macro for NULL 
 #include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 
@@ -21,6 +18,9 @@
 //Macros for if VM is enabled
 #define TRUE 1
 #define FALSE 0
+
+//Kernel Stack Macros {Same as PCB struct}
+#define KERNEL_STACK_PAGES (KERNEL_STACK_MAXSIZE / PAGESIZE) 
 
 /*
  * ================================>>
@@ -68,11 +68,10 @@ HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
  * Idle Function that runs in Kernel Space
  * =======================================
  */
-
 void DoIdle(void) { 
 	while(1) {
 		TracePrintf(1,"DoIdle\n");
-		Pause();
+		//Pause();
 	}
 }
 
@@ -81,6 +80,7 @@ void DoIdle(void) {
  * =======================================
  */
 
+// GOOD ----------------------
 void InitPcbTable(void){
     // Zero out the entire array
     memset(process_table, 0, sizeof(process_table));
@@ -90,79 +90,106 @@ void InitPcbTable(void){
         process_table[i].currState = FREE;
     }
 
-    TracePrintf(1, "PCB table initialized \n");
+    TracePrintf(0, "We went through the whole PCB Table and they are all free now! :) \n");
 }
 
-
+//GOOD --------------------------------------------------------------------
 PCB *pcb_alloc(void){
 	for (int pid = 0; pid < MAX_PROCS; pid++) {
 		if (process_table[pid].currState == FREE) {
-
-			//Clear out the data from prev processes
+	
+			//Clear out the data in case there is left over data
 			memset(&process_table[pid], 0, sizeof(PCB));
 
 			process_table[pid].currState = READY; 
 			process_table[pid].pid = pid;
-
+			
+			TracePrintf(0, "We are going to return to you a free process with PID --> %d", pid);
 			return &process_table[pid];
 		}
 	}
 	
-	TracePrintf(0, "ERROR! No free PCBs available.\n");
+	TracePrintf(0, "Error there are no free processes\n");
 	return NULL;
 }
 
+//
 int pcb_free(int pid){
 
-    	if(pid < 0 || pid >= MAX_PROCS){ 
-        	TracePrintf(0, "This is a invalid pid");
-		return -1;
-	}
+    if(pid < 0 || pid >= MAX_PROCS){
+        TracePrintf(0, "This is a invalid pid!\n");
+        return ERROR;
+    }
 
-	if(process_table[pid].currState == FREE){
-		TracePrintf(0, "Your process is already free");
-		return -1;
-	}
+    if(process_table[pid].currState == FREE){
+        TracePrintf(0, "Your process is already free\n");
+        return ERROR;
+    }
 
-	PCB *proc = &process_table[pid];
+    //Index into buffer to get the PCB at index pid 
+    PCB *proc = &process_table[pid];
 
-	pte_t *pt_r1 = (pte_t *)proc->AddressSpace;
+    if (proc->AddressSpace != NULL) {
+        // Extract PFN from the physical address stored in AddressSpace
+        int pt_pfn = (uintptr_t)proc->AddressSpace >> PAGESHIFT;
+	TracePrintf(0, "This is pt_pfn --> %d", pt_pfn);
+        
+        // Find a free kernel virtual page to temporarily map the page table
+        int temp_vpn = -1;
+        for (int i = _orig_kernel_brk_page; i < (KERNEL_STACK_BASE >> PAGESHIFT); i++) {
+		TracePrintf(0, "This is the value of org_kernel_brk ==> %d and its end %d\n\n\n", _orig_kernel_brk_page, (KERNEL_STACK_BASE >> PAGESHIFT));
+            if (!kernel_page_table[i].valid) {
+                temp_vpn = i;
+                break;
+            }
+        }
+        
+        if (temp_vpn < 0) {
+            TracePrintf(0, "No free kernel virtual page for unmapping process PT!\n");
+            return ERROR;
+        }
+        
+        // Temporarily map the page table
+        kernel_page_table[temp_vpn].pfn = pt_pfn;
+        kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
+        kernel_page_table[temp_vpn].valid = 1;
+        WriteRegister(REG_TLB_FLUSH, (unsigned int)(temp_vpn << PAGESHIFT)); 
 
-	if (pt_r1 != NULL) {
-		//Index to be able to loop through each pte and free 
-		int num_r1_pages = (VMEM_1_SIZE >> PAGESHIFT);
 
-		for (int vpn = 0; vpn < num_r1_pages; vpn++) {
-			if (pt_r1[vpn].valid) {
-				frame_free(pt_r1[vpn].pfn);
-           		}
-		}
-	
-	//Free the page table
-	uintptr_t pt_vaddr = (uintptr_t)pt_r1;
+        // Now access the page table
+        pte_t *pt_r1 = (pte_t *)(temp_vpn << PAGESHIFT);
+        
+        // Free all frames mapped in the process's Region 1
+        int num_r1_pages = MAX_PT_LEN;
+        for (int vpn = 0; vpn < num_r1_pages; vpn++) {
+            if (pt_r1[vpn].valid) {
+                frame_free(pt_r1[vpn].pfn);
+            }
+        }
+        
+        // Unmap the temporary mapping
+        kernel_page_table[temp_vpn].valid = FALSE;
+        kernel_page_table[temp_vpn].prot = 0;
+        kernel_page_table[temp_vpn].pfn = 0;
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
-	process_table[pid].currState = FREE;
-
-	//Get the pfn for the page table inside of Region 0
-	int pt_vpn_r0 = (int)(pt_vaddr >> PAGESHIFT);
-        int pt_pfn = kernel_page_table[pt_vpn_r0].pfn;
-
-        // Free the physical frame that held the page table
+	WriteRegister(REG_TLB_FLUSH, (unsigned int)(temp_vpn << PAGESHIFT));
+        
+        // Free the physical frame that held the page table itself
         frame_free(pt_pfn);
-	
-	//Mark the virtual mapping as invalid for physical memmory
-	kernel_page_table[pt_vpn_r0].valid = FALSE;
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+    }
+    for (int i = 0; i < KERNEL_STACK_PAGES; i++) {
+	    if (proc->kernel_stack_frames[i] > 0) {
+            frame_free(proc->kernel_stack_frames[i]);
+        }
+    }
 
-	memset(proc, 0, sizeof(PCB));
-
-	}
-	memset(proc, 0, sizeof(PCB));
-	proc->currState = FREE;
-
-	TracePrintf(0, "I have freed your process from the proc table :)");	
-	return 0;
-
+    // Clear the PCB
+    memset(proc, 0, sizeof(PCB));
+    proc->currState = FREE;
+    
+    TracePrintf(0, "I have freed your process from the proc table :)");
+    return 0;
 }
 
 void init_proc_create(void){
@@ -174,6 +201,79 @@ void init_proc_create(void){
 		TracePrintf(0, "There was an error when trying with pcb_alloc, NULL returned!");
 		return;
 	}
+
+    /* =======================
+     * Allocate a new page table for idle process
+     * =======================
+     */
+   	 
+    
+    	// Allocate physical frame for the page table
+   	 int pt_pfn = frame_alloc(idle_process->pid);
+
+   	 if (pt_pfn < 0) {
+   	     TracePrintf(0, "Failed to allocate frame for idle process page table!\n");
+	     return;
+   	 }
+    
+    	 // Map it temporarily into kernel space to initialize it
+  	 // Find a free virtual page in kernel space to map this frame
+	 int temp_vpn = -1;
+	 for (int i = _orig_kernel_brk_page; i < (KERNEL_STACK_BASE >> PAGESHIFT); i++) {
+		 if (!kernel_page_table[i].valid) {
+			 temp_vpn = i;
+			 break;
+        	}
+   	 }
+    
+    	if (temp_vpn < 0) {
+		TracePrintf(0, "No free kernel virtual page for mapping idle PT!\n");
+		frame_free(pt_pfn);
+		return;
+    	}
+  	  
+  	  // Map the frame temporarily
+   	kernel_page_table[temp_vpn].pfn = pt_pfn;
+    	kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
+    	kernel_page_table[temp_vpn].valid = 1;
+    	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+    
+   	 // Get pointer to the page table
+   	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
+    
+    	// Initialize the page table (clear it first)
+    	memset(idle_pt, 0, PAGESIZE);
+    
+   	 // Copy kernel text pages (shared, read-only)
+   	unsigned long int text_start = _first_kernel_text_page;
+    	unsigned long int text_end = _first_kernel_data_page;
+    
+    	for(unsigned long int i = text_start; i < text_end; i++){
+		idle_pt[i].prot = PROT_READ | PROT_EXEC;
+      	   	idle_pt[i].valid = TRUE;
+       	   	idle_pt[i].pfn = i;
+    	}
+   	
+	 memset(idle_pt, 0, PAGESIZE);
+
+   	 // Allocate stack for idle process
+   	 int idle_stack_pfn = frame_alloc(idle_process->pid);
+	 if (idle_stack_pfn == -1) {
+		 TracePrintf(0, "FAILED to allocate frame for idle stack!\n");
+		 frame_free(pt_pfn);
+		 return;
+	 }
+    
+    	unsigned long stack_page_index = MAX_PT_LEN - 1;
+    	idle_pt[stack_page_index].valid = 1;
+    	idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
+   	idle_pt[stack_page_index].pfn = idle_stack_pfn;
+
+
+   	kernel_page_table[temp_vpn].valid = 0;
+   	kernel_page_table[temp_vpn].prot = 0;
+   	kernel_page_table[temp_vpn].pfn = 0;
+   	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 	
 	/* =======================
 	 * Pid Logic
@@ -181,7 +281,7 @@ void init_proc_create(void){
 	 */
 	
 	//Get a pid for the process
-	idle_process->pid = helper_new_pid(user_page_table);
+	//idle_process->pid = helper_new_pid(user_page_table);
 
 	//To indicate that its the kernel process itself
 	idle_process->ppid = 0;
@@ -198,23 +298,40 @@ void init_proc_create(void){
 	 * =======================================
 	 */
 
-	idle_process->AddressSpace = user_page_table;
+	idle_process->AddressSpace = (void *)(uintptr_t)(pt_pfn << PAGESHIFT);
 	
-	//Set the pc to DoIdle location
 	//Set sp to the top of the user stack that we set up
 	idle_process->curr_uc.pc = (void*)DoIdle;
 	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - PAGESIZE);
 
 	//Set as running
 	idle_process->currState = READY;
-	
-	//Track Kernel Stack Frames
-	
 
+ 	int pid = helper_new_pid((pte_t *)(temp_vpn << PAGESHIFT));
+   	if (pid < 0) {
+		TracePrintf(0, "Failed to get PID from helper!\n");
+		return;
+	}
+
+    	idle_process->pid = pid;
+	
 	//Set global variable for current process as the idle process
 	current_process = idle_process;
 
+	WriteRegister(REG_PTBR1, pt_pfn << PAGESHIFT);
+    	WriteRegister(REG_PTLR1, MAX_PT_LEN);
+    	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
 	memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
+
+	TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====\n");
+	TracePrintf(0, "idle_process ptr: %p\n", idle_process);
+	TracePrintf(0, "idle_process->pid: %d\n", idle_process->pid);
+	TracePrintf(0, "idle_process->AddressSpace: %p\n", idle_process->AddressSpace);
+	TracePrintf(0, "pt_pfn: %d (0x%x)\n", pt_pfn, pt_pfn);
+	TracePrintf(0, "physical addr: 0x%lx\n", (unsigned long)(pt_pfn << PAGESHIFT));
+	TracePrintf(0, "current_process ptr: %p\n", current_process);
+	TracePrintf(0, "==========================\n");
 
 }
 
@@ -313,14 +430,6 @@ int SetKernelBrk(void * addr){
 		    TracePrintf(1, "[SetKernelBrk] Warning: unaligned address %p; rounding to page boundary.\n",
 		                (void*)new_kbrk_addr);
 		}
-
-		//1.We can now call a function that will set up the page table entries for the new allocated space
-		//2.We have to calculate the page-algned memory space to be able to loop
-		//3.We would have to loop from the start of the old break pointer to the new one (By page size and not actual address value)
-		//4.Try to allocate a new space in physical memory to map the virtual address to
-		//5.On each iteration we need to set up the table entries with correct permissions and information for virtual memory
-		
-		//6.Perform other forms of error checking related to the addr passed in 
 
 		// Step 1: Align old/new break values
 		// ---------------------------------------------------------
@@ -525,33 +634,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
 
 	TracePrintf(0,"WE ARE DONE SETTTING UP THE PAGE TABLES FOR STACK, TEXT AND DATA\n");
-
-	/* <<<-----------------------------------
-	 * Set Up Region 1 for the Idle Process
-	 * ----------------------------------->>>
-	 */
-
-	//Already allocated reginn 1 Page table as global
-	
-	int idle_stack_pfn = frame_alloc(0);
-
-	if (idle_stack_pfn == -1) {
-		TracePrintf(0, "FAILED to allocate frame for idle stack!\n");
-		return;
-	}
-
-	unsigned long stack_page_index = MAX_PT_LEN - 1;
-
-   	 user_page_table[stack_page_index].valid = 1;
-   	 user_page_table[stack_page_index].prot = PROT_READ | PROT_WRITE;
-   	 user_page_table[stack_page_index].pfn = idle_stack_pfn;
-
-
-	//Write the limit of the region 1 memory
-	//Write the base of the region 1 memory
-	WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
-	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
-
 
 	/* <<<--------------------------
 	 * Initialize Virtual Memory
