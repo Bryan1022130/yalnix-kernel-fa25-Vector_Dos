@@ -135,17 +135,21 @@ int pcb_free(int pid){
 
         // Extract PFN from the physical address stored in AddressSpace
         int pt_pfn = (uintptr_t)proc->AddressSpace >> PAGESHIFT;
-	TracePrintf(0, "This is pt_pfn --> %d", pt_pfn);
+
+	TracePrintf(0, "This is the AddressSpace that is in it right now ++++++++++++++++++++++============================================================================> %d\n", proc->AddressSpace);
+	TracePrintf(0, "This is pt_pfn --> %d\n", pt_pfn);
         
-        // Find a free kernel virtual page to temporarily map the page table
+        // Find a free kernel virtual page to map temp
+	// loop by page number and not byte address
         int temp_vpn = -1;
         for (int i = _orig_kernel_brk_page; i < (KERNEL_STACK_BASE >> PAGESHIFT); i++) {
-            if (!kernel_page_table[i].valid) {
+            if (kernel_page_table[i].valid == FALSE) {
                 temp_vpn = i;
                 break;
             }
         }
-        
+       
+	//If no page found then it will remain -1
         if (temp_vpn < 0) {
             TracePrintf(0, "No free kernel virtual page for unmapping process PT!\n");
             return ERROR;
@@ -156,6 +160,7 @@ int pcb_free(int pid){
         kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
         kernel_page_table[temp_vpn].valid = 1;
         WriteRegister(REG_TLB_FLUSH, (unsigned int)(temp_vpn << PAGESHIFT)); 
+	//Write the virtual byte address of the new page
 
 
         // Now access the page table
