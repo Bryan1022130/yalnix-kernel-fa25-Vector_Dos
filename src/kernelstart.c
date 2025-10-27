@@ -67,7 +67,7 @@ HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 /* =======================================
  * Idle Function that runs in Kernel Space
  * =======================================
- */
+*/
 
 void DoIdle(void) { 
 	int count = 0;
@@ -111,7 +111,7 @@ PCB *pcb_alloc(void){
 			return &process_table[pid];
 		}
 	}
-	TracePrintf(0, "We are now leaving PCB ALLOC but in this case there is an error >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");	
+	TracePrintf(0, "We are now leaving PCB ALLOC but in this case there is an error >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 	TracePrintf(0, "Error there are no free processes\n");
 	return NULL;
 }
@@ -206,8 +206,11 @@ int pcb_free(int pid){
 }
 
 void init_proc_create(void){
+	TracePrintf(0, "THIS THE INIT_PROC_CREATE FUNCTION ======================================================================================]]]]}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}]]]\n");
+
 	//Get a process from our PCB free list
 	idle_process = pcb_alloc();
+
 	if(idle_process == NULL){
 		TracePrintf(0, "There was an error when trying with pcb_alloc, NULL returned!\n");
 		return;
@@ -218,7 +221,7 @@ void init_proc_create(void){
      	 * =======================
      	 */
 
-	TracePrintf(0, "WE ARE GOING TO ALLOCATED A PHYSICAL FRAME NOW \n");
+	TracePrintf(0, "WE ARE GOING TO ALLOCATE A PHYSICAL FRAME NOW \n");
 
     	// Allocate physical frame for the page table
    	 int pt_pfn = frame_alloc(idle_process->pid);
@@ -256,15 +259,6 @@ void init_proc_create(void){
     	// Clear out the page table to start fresh
     	memset(idle_pt, 0, PAGESIZE);
    	
-   	// Copy kernel text pages 
-   	unsigned long int text_start = _first_kernel_text_page;
-    	unsigned long int text_end = _first_kernel_data_page;
-    
-    	for(unsigned long int i = text_start; i < text_end; i++){
-		idle_pt[i].prot = PROT_READ | PROT_EXEC;
-      	   	idle_pt[i].valid = TRUE;
-       	   	idle_pt[i].pfn = i;
-    	}
    	
 	 TracePrintf(0, "WE ARE CALLING THE FRAME ALLOC TO BE ABLE TO GET A STACK FRAME FOR OUR IDLE PROCESS \n");
 
@@ -296,8 +290,6 @@ void init_proc_create(void){
 	//To indicate that its the kernel process itself
 	idle_process->ppid = 0;
 	
-	memset(&idle_process->curr_uc, 0, sizeof(UserContext));
-
 	/* =======================================
 	 * Store AddressSpace for region 1 table
 	 * =======================================
@@ -333,6 +325,8 @@ void init_proc_create(void){
 	TracePrintf(0, "physical addr: 0x%lx\n", (unsigned long)(pt_pfn << PAGESHIFT));
 	TracePrintf(0, "current_process ptr: %p\n", current_process);
 	TracePrintf(0, "==========================\n");
+	
+	TracePrintf(0, "THIS THE END OF INIT_PROC_CREATE FUNCTION ======================================================================================]]]]]]");
 
 }
 

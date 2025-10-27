@@ -1,0 +1,178 @@
+** Hardware level 1 tracing enabled **
+** Yalnix level 1 tracing enabled **
+** User Prog level 1 tracing enabled **
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 6 blocks allocated, 1848 bytes total
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(10), depth 1
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 1
+Hardware   ----
+Hardware   | Calling KernelStart
+Hardware   ----
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 7 blocks allocated, 1936 bytes total
+Yalnix     ========> This is the start of the KernelStart function <=====================
+Yalnix     <<<<<<<<<<<<<<<< this is the size pmem_size => 400000 and this is the stack frames ==> 512 >>>>>>>>>>>>>>>>>>>>>>>>
+Yalnix     Frame table initialization done
+Yalnix       Marked frames 0-15 as low memory (reserved)
+Yalnix       Marked frames 16-34 as kernel text/data
+Yalnix       Marked frames 126-127 as kernel stack
+Yalnix     +++++ We are setting up the IVT and im going to call the function
+Yalnix     We are setting up the Interrupt vector table
+Hardware       | WriteRegister(REG_VECTOR_BASE,0x038b20)
+Yalnix     We just finshed writing the Interrupt Vector Table
+Yalnix     +++++ We have left the functions and going to set up region 0
+Yalnix     ------------------------------------------------- Region 0 Set up ----------------------------------------------------
+Yalnix     This is where my array is located --> 0x38b60
+Yalnix     This is the value of the text_start --> 10 ++++++++++++++= 
+Yalnix     This is the value of the text_end ---> 14++++++++++++++
+Yalnix     This is the value of the heapdata_start---> 14++++++++++++++++
+Yalnix     This is the value of the heapdata_end ---> 23 ++++++++++++++++++++
+Yalnix     This is in the stack loop logic
+Yalnix      this is the value of stack_start --> 7e and this is stackend --> 80 
+Yalnix     WE ARE in the stack loop
+Yalnix     WE ARE in the stack loop
+Yalnix     THIS IS BEFORE WE ARE WRITING THE PAGE TABLE ADRESSS TO THE HARDWARE
+Hardware       | WriteRegister(REG_PTBR0,0x038b60)
+Hardware       | WriteRegister(REG_PTLR0,0x000080)
+Yalnix     |||||||||||||||||||||| WE ARE DONE SETTTING UP THE PAGE TABLES FOR STACK, TEXT AND DATA ||||||||||||||||||||||||||||||||||||||||||
+Yalnix     THIS IS THE KERNEL PID ++================================>>>>>>>>>>>>>>>>>>>>>>>>>>>> 0
+Yalnix     ------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------
+Hardware       | WriteRegister(REG_VM_ENABLE,0x000001)
+Hardware   Enabling VM
+Hardware   _first_kernel_text_page 16
+Hardware   _first_kernel_data_page 20
+Hardware   _orig_kernel_brk_page 35
+Hardware   initializing TLB to be empty
+Hardware   PhysLimit 46000, my_break 46000
+Hardware   clearing TLB
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x0, PTLR1 0x0
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38b60, PTLR0 0x80
+Hardware   moving kernel text,data,heap into TLB
+Hardware   PageInTLB[16] addr 0x20000: 0 -> 1
+Hardware   PageInTLB[17] addr 0x22000: 0 -> 1
+Hardware   PageInTLB[18] addr 0x24000: 0 -> 1
+Hardware   PageInTLB[19] addr 0x26000: 0 -> 1
+Hardware   PageInTLB[20] addr 0x28000: 0 -> 1
+Hardware   PageInTLB[21] addr 0x2a000: 0 -> 1
+Hardware   PageInTLB[22] addr 0x2c000: 0 -> 1
+Hardware   PageInTLB[23] addr 0x2e000: 0 -> 1
+Hardware   PageInTLB[24] addr 0x30000: 0 -> 1
+Hardware   PageInTLB[25] addr 0x32000: 0 -> 1
+Hardware   PageInTLB[26] addr 0x34000: 0 -> 1
+Hardware   PageInTLB[27] addr 0x36000: 0 -> 1
+Hardware   PageInTLB[28] addr 0x38000: 0 -> 1
+Hardware   PageInTLB[29] addr 0x3a000: 0 -> 1
+Hardware   PageInTLB[30] addr 0x3c000: 0 -> 1
+Hardware   PageInTLB[31] addr 0x3e000: 0 -> 1
+Hardware   PageInTLB[32] addr 0x40000: 0 -> 1
+Hardware   PageInTLB[33] addr 0x42000: 0 -> 1
+Hardware   PageInTLB[34] addr 0x44000: 0 -> 1
+Hardware   moving kernel stack into TLB
+Yalnix     ------------------------------------- WE ARE NOW GOING TO CALL KERNELBRK :) -------------------------------------
+Yalnix     We are in the function SetKernelBrk
+Yalnix     VIRTUAL MEMORY HAS BEEN ENABLED 
+Yalnix     [SetKernelBrk-VM] Comparing new_brk: 0x46000 against heap_start: 0x46000
+Yalnix     [SetKernelBrk] Moved break to 0x46000 (VM enabled)
+Yalnix     We have called set KernelBrk :)
+Yalnix     ------------------------------------- WE ARE NOW GOING TO CREATE OUR PROCESS :) -------------------------------------
+Yalnix     We went through the whole PCB Table and they are all free now! :) 
+Yalnix     THIS THE INIT_PROC_CREATE FUNCTION ======================================================================================]]]]}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}]]]
+Yalnix     We are in PCB ALLOC ------------------------------------------------------
+Yalnix     We are going to return to you a free process with PID --> 0
+Yalnix     We are now leaving PCB ALLOC >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Yalnix     WE ARE GOING TO ALLOCATE A PHYSICAL FRAME NOW 
+Yalnix     THIS IS THE FRAME ALLOC FUNCTION _____________________________________???????????????
+Yalnix     THIS IS THE PID NUMBER THAT WE WERE GIVEN -- 0
+Yalnix     THIS IS OUR RETURN VALUE -- 35
+Yalnix     OKAY WE NOW HAVE A PHYSICAL FRAME AND WE ARE CHILLING and this is the value --> 35
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 2
+Yalnix     WE ARE CALLING THE FRAME ALLOC TO BE ABLE TO GET A STACK FRAME FOR OUR IDLE PROCESS 
+Yalnix     THIS IS THE FRAME ALLOC FUNCTION _____________________________________???????????????
+Yalnix     THIS IS THE PID NUMBER THAT WE WERE GIVEN -- 0
+Yalnix     THIS IS OUR RETURN VALUE -- 36
+Yalnix     +++++++______________--------------------> This is the value of our allocated stack frame ==> 36
+Yalnix     This is the pid for the process --> 1Hardware       | WriteRegister(REG_PTBR1,0x046000)
+Hardware       | WriteRegister(REG_PTLR1,0x000080)
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1)
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x46000, PTLR1 0x80
+Yalnix     DEBUG: VMEM_1_LIMIT = 0x200000
+Yalnix     ===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====
+Yalnix     idle_process ptr: 0x29900
+Yalnix     idle_process->pid: 1
+Yalnix     idle_process->AddressSpace: 0x46000
+Yalnix     pt_pfn: 35 (0x23)
+Yalnix     physical addr: 0x46000
+Yalnix     current_process ptr: 0x29900
+Yalnix     ==========================
+Yalnix     THIS THE END OF INIT_PROC_CREATE FUNCTION ======================================================================================]]]]]]Yalnix     I am leaving KernelStart
+Yalnix     Good bye for now friends
+Hardware   ----
+Hardware   | Back from KernelStart
+Hardware   | HELPER setting Proc 1 kstack to 126 127
+Hardware   | Off to usermode SP [region 1] 0x1fffff | PC [region 0] 0x20f6f
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   ----
+Yalnix     DoIdle 0
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(14), depth 1
+Hardware   clock tick 1
+Hardware   ----
+Hardware   | Trap Alarm clock
+Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf6dbd579
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   | Calling Yalnix handler 0x23253 for trap TRAP_CLOCK
+Hardware   ----
+Yalnix     In HandleClockTrapYalnix     Leaving HandleKernelTrapHardware   ----
+Hardware   | Back from Yalnix handler 0x23253 for trap TRAP_CLOCK
+Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xf6dbd579
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   ----
+Yalnix     DoIdle 1
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(14), depth 1
+Hardware   clock tick 2
+Hardware   ----
+Hardware   | Trap Alarm clock
+Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf6dbd579
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   | Calling Yalnix handler 0x23253 for trap TRAP_CLOCK
+Hardware   ----
+Yalnix     In HandleClockTrapYalnix     Leaving HandleKernelTrapHardware   ----
+Hardware   | Back from Yalnix handler 0x23253 for trap TRAP_CLOCK
+Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xf6dbd579
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   ----
+Yalnix     DoIdle 2
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(14), depth 1
+Hardware   clock tick 3
+Hardware   ----
+Hardware   | Trap Alarm clock
+Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf6dbd579
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   | Calling Yalnix handler 0x23253 for trap TRAP_CLOCK
+Hardware   ----
+Yalnix     In HandleClockTrapYalnix     Leaving HandleKernelTrapHardware   ----
+Hardware   | Back from Yalnix handler 0x23253 for trap TRAP_CLOCK
+Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xf6dbd579
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   ----
+Yalnix     DoIdle 3
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(14), depth 1
+Hardware   clock tick 4
+Hardware   ----
+Hardware   | Trap Alarm clock
+Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf6dbd579
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   | Calling Yalnix handler 0x23253 for trap TRAP_CLOCK
+Hardware   ----
+Yalnix     In HandleClockTrapYalnix     Leaving HandleKernelTrapHardware   ----
+Hardware   | Back from Yalnix handler 0x23253 for trap TRAP_CLOCK
+Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xf6dbd579
+Hardware   | pid 1 | PTBR1 0x046000 | kstack 126 127
+Hardware   ----
+Yalnix     DoIdle 4
