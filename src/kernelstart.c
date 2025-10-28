@@ -116,7 +116,7 @@ PCB *pcb_alloc(void){
 			//Clear out the data in case there is left over data
 			memset(&process_table[pid], 0, sizeof(PCB));
 			
-			TracePrintf(0, "Creating the Kernel Stack for the Process\n");
+			TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
 
 			for(int i = 0; i < KERNEL_STACK_PAGES; i++){
 
@@ -303,16 +303,22 @@ void init_proc_create(void){
    	kernel_page_table[temp_vpn].pfn = pt_pfn;
     	kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
     	kernel_page_table[temp_vpn].valid = TRUE;
-	TracePrintf(0, "Welcome\n");
+	TracePrintf(0, "FLushing Region 1 memory space so that it knows its updated\n");
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
+	TracePrintf(0, "FLUSH IS DONE.\n");
 
    	// Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
-   	TracePrintf(0, "Segfault?\n");	
+	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
+
     	// Clear out the page table to start fresh
-    	memset(idle_pt, 0, PAGESIZE);
-   	
+    //	memset(idle_pt, 0, PAGESIZE);
+   //	TracePrintf(0, "MEMSET SUCCEEDED.\n");
+
    	// Allocate stack for idle process
+	TracePrintf(0, "About to alloc stack frame...\n");
    	int idle_stack_pfn = frame_alloc(idle_process->pid);
+
 	TracePrintf(0, "Am i being called?\n");
 	if (idle_stack_pfn == ERROR) {
 		TracePrintf(0, "init_proc_create(): ERROR allocating stack frame\n");
@@ -344,21 +350,23 @@ void init_proc_create(void){
 	 * Store AddressSpace for region 1 table
 	 * =======================================
 	 */
-	WriteRegister(REG_PTBR1, (unsigned int)(pt_pfn << PAGESHIFT));
+	WriteRegister(REG_PTBR1, (unsigned int)(temp_vpn << PAGESHIFT));
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
-//	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	//Flush for region 1 since we just wrote its start and limit
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
-	idle_process->AddressSpace = (void *)(uintptr_t)(pt_pfn << PAGESHIFT);
+	idle_process->AddressSpace = (void *)(uintptr_t)(temp_vpn << PAGESHIFT);
 	
 	//Set sp to the top of the user stack that we set up
-	TracePrintf(0, "DEBUG: VMEM_1_LIMIT = %p\n", (void*)VMEM_1_LIMIT);
 	idle_process->curr_uc.pc = (void*)DoIdle;
 	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
+	TracePrintf(0, "This is the value of the idle pc -- > %d and this is the value of the sp --> %d\n", idle_process->curr_uc.pc, idle_process->curr_uc.sp);
 
 	/* ======================================================
 	 * Copy in UserContext from KernelStart into the idle PCB
 	 * ======================================================
 	 */
+
 	memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
 		
 	//Set as running
