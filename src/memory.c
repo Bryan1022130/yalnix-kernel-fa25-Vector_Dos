@@ -89,7 +89,7 @@ int frame_alloc(int owner_pid) {
         }
     }
 
-    TracePrintf(0, "ERROR: Out of physical frames!\n");
+    printf("ERROR: Out of physical frames!\n");
     return ERROR;
 }
 
@@ -99,7 +99,7 @@ void frame_free(int pfn) {
 	* decrement refcnt, if 0 mark free; run helper_force_free(pfn) if needed later.
 	*/
 	if (pfn < 0 || pfn >= total_frames) {
-        TracePrintf(0, "ERROR: invalid frame number %d\n", pfn);
+        printf("ERROR: invalid frame number %d\n", pfn);
         return;
     }
 
