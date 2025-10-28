@@ -9,6 +9,7 @@
 #include "process.h"
 
 // ----------------- Context Switching -----------------------------
+// WE NEED TO THIS DONE FOR CHECK POINT 3
 
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
 	// Save current kernel context into its PCB, restore the next PCB’s context,
