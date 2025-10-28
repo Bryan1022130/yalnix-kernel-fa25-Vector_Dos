@@ -68,11 +68,11 @@ static unsigned int terminal_array[NUM_TERMINALS];
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
-/* =======================================
+/* ===================================================================================================================
  * Idle Function that runs in Kernel Space
  * Simple idle loop that runs when no processes are ready.
  * Continuously calls Pause() to yield CPU.
- * =======================================
+ * ===================================================================================================================
  */
 
 void DoIdle(void) { 
@@ -83,11 +83,11 @@ void DoIdle(void) {
 	}
 }
 
-/* =======================================
+/* ===================================================================================================================
  * Process Logic Functions 
  * InitPcbTable()
  * Clears all PCBs in the process table and marks them as FREE.
- * =======================================
+ * ===================================================================================================================
  */
 
 void InitPcbTable(void){
@@ -101,11 +101,12 @@ void InitPcbTable(void){
 
     TracePrintf(0, "Initialized PCB table: all entries marked FREE.\n");
 }
-/* =========================================================================
+
+/* ===============================================================================================================
  * pcb_alloc()
  * Returns a pointer to the first FREE PCB in the table.
  * Sets the state to READY and assigns its PID.
- * =========================================================================
+ * ===============================================================================================================
  */
 PCB *pcb_alloc(void){
 	TracePrintf(1, "Allocating new PCB...\n");
@@ -125,13 +126,13 @@ PCB *pcb_alloc(void){
 	TracePrintf(0, "ERROR: No free PCBs available.\n");
 	return NULL;
 }
-/* =========================================================================
+/* ===============================================================================================================
  * pcb_free(pid)
  * Frees all resources associated with a process:
  *  - Unmaps Region 1 frames
  *  - Frees its kernel stack frames
  *  - Resets PCB state to FREE
- * =========================================================================
+ * ===============================================================================================================
  */
 int pcb_free(int pid){
 
@@ -221,6 +222,7 @@ int pcb_free(int pid){
     return 0;
 }
 
+//==================================================================================================================
 void init_proc_create(void){
 	TracePrintf(1, "init_proc_create(): begin\n");
 
@@ -342,9 +344,9 @@ void init_proc_create(void){
 
 }
 
-/* ========================================================
+/* ==============================================================================================
  * SetKernelBrk Function Logic
- * ========================================================
+ * ==============================================================================================
  */ 
 
 int SetKernelBrk(void * addr){
