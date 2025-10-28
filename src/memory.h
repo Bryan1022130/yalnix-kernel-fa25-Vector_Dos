@@ -1,5 +1,5 @@
 #pragma once
-extern unsigned int total_physical_frames;
+extern int total_frames;
 
 typedef struct Frame {
     int pfn;          // frame number
