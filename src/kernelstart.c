@@ -290,7 +290,8 @@ void init_proc_create(void){
 			 break;
         	}
    	 }
-    
+	 TracePrintf(0, "HELLO\n");
+
     	if (temp_vpn < 0) {
 		TracePrintf(0, "init_proc_create(): ERROR no free kernel vpn for PT mapping\n");
 		frame_free(pt_pfn);
@@ -302,17 +303,17 @@ void init_proc_create(void){
    	kernel_page_table[temp_vpn].pfn = pt_pfn;
     	kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
     	kernel_page_table[temp_vpn].valid = TRUE;
+	TracePrintf(0, "Welcome\n");
 
    	// Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
-   	
+   	TracePrintf(0, "Segfault?\n");	
     	// Clear out the page table to start fresh
     	memset(idle_pt, 0, PAGESIZE);
    	
    	// Allocate stack for idle process
    	int idle_stack_pfn = frame_alloc(idle_process->pid);
-
-
+	TracePrintf(0, "Am i being called?\n");
 	if (idle_stack_pfn == ERROR) {
 		TracePrintf(0, "init_proc_create(): ERROR allocating stack frame\n");
 		frame_free(pt_pfn);

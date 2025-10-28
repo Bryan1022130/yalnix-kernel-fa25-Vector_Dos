@@ -21,24 +21,24 @@ Yalnix       Marked frames 16-32 as kernel text/data
 Yalnix       Marked frames 126-127 as kernel stack
 Yalnix     +++++ We are setting up the IVT and im going to call the function
 Yalnix     We are setting up the Interrupt vector table
-Hardware       | WriteRegister(REG_VECTOR_BASE,0x038760)
+Hardware       | WriteRegister(REG_VECTOR_BASE,0x0387e0)
 Yalnix     We just finshed writing the Interrupt Vector Table
 Yalnix     +++++ We have left the functions and going to set up region 0
 Yalnix     -------------A------------------------------------ Region 0 Set up ----------------------------------------------------
-Hardware       | WriteRegister(REG_PTBR0,0x0387a0)
+Hardware       | WriteRegister(REG_PTBR0,0x038820)
 Hardware       | WriteRegister(REG_PTLR0,0x000080)
 Yalnix     Region 0 setup complete (stack, text, data, heap)
 Yalnix     ------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------
 Hardware       | WriteRegister(REG_VM_ENABLE,0x000001)
 Hardware   Enabling VM
 Hardware   _first_kernel_text_page 16
-Hardware   _first_kernel_data_page 19
+Hardware   _first_kernel_data_page 20
 Hardware   _orig_kernel_brk_page 33
 Hardware   initializing TLB to be empty
 Hardware   PhysLimit 42000, my_break 42000
 Hardware   clearing TLB
 Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x0, PTLR1 0x0
-Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x387a0, PTLR0 0x80
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x38820, PTLR0 0x80
 Hardware   moving kernel text,data,heap into TLB
 Hardware   PageInTLB[16] addr 0x20000: 0 -> 1
 Hardware   PageInTLB[17] addr 0x22000: 0 -> 1
@@ -78,41 +78,17 @@ Yalnix     THIS IS THE FRAME ALLOC FUNCTION ____________________________________
 Yalnix     THIS IS THE PID NUMBER THAT WE WERE GIVEN -- 0
 Yalnix     THIS IS OUR RETURN VALUE -- 35
 Yalnix     init_proc_create(): PT frame pfn=35
+Yalnix     HELLO
+Yalnix     Welcome
+Yalnix     Segfault?
 Hardware   ========= Hardware receives signal ==============
 Hardware   FrameworkSignalHandler(11), depth 2
 Yalnix     THIS IS THE FRAME ALLOC FUNCTION _____________________________________???????????????
 Yalnix     THIS IS THE PID NUMBER THAT WE WERE GIVEN -- 0
 Yalnix     THIS IS OUR RETURN VALUE -- 36
+Yalnix     Am i being called?
 Yalnix     init_proc_create(): stack frame pfn=36
 Yalnix     init_proc_create(): assigned pid=1
 Hardware       | WriteRegister(REG_PTBR1,0x046000)
 Hardware   | HELPER WARNING: current PTBR1 does not match any process
-Hardware       | WriteRegister(REG_PTLR1,0x000080)
-Yalnix     DEBUG: VMEM_1_LIMIT = 0x200000
-Yalnix     ===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====
-Yalnix     idle_process ptr: 0x29540
-Yalnix     idle_process->pid: 1
-Yalnix     idle_process->AddressSpace: 0x46000
-Yalnix     pt_pfn: 35 (0x23)
-Yalnix     physical addr: 0x46000
-Yalnix     current_process ptr: 0x29540
-Yalnix     ==========================
-Yalnix     init_proc_create(): done (pid=1, aspace=0x46000)
-Yalnix     KernelStart complete.
-Hardware   ----
-Hardware   | HELPER WARNING: current PTBR1 does not match any process
-Hardware   | Back from KernelStart
-Hardware   ========= Hardware receives signal ==============
-Hardware   FrameworkSignalHandler(11), depth 2
-Hardware   ----
-Hardware   | HELPER WARNING: current PTBR1 does not match any process
-Hardware   | Trap Segmentation fault
-Hardware   | From usermode  SP [region 0] 0xff260 | PC [libhardware.so] 0xea4e5e45
-Hardware   | PTBR1 0x046000 | kstack 126 127
-Hardware   The kernel has an unsresolved trap, depth = 2
-Hardware   | 
-
-
- BIG GREEN SCREEN O' DEATH!!!!!!
-
-
+Hardware   | helper_maybort("unknown PTBR1"), ret addr = 0xf31c967d [libhardware.so].

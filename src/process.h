@@ -19,6 +19,7 @@ typedef enum{
 struct pcb{
 
 	//Kernel Stack Frames
+	//Holds pfns
 	unsigned int kernel_stack_frames[KERNEL_STACK_MAXSIZE / PAGESIZE];
 
 	//Context Switch Logic
