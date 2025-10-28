@@ -653,9 +653,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	// From this point, all addresses are translated via the page tables.
 	WriteRegister(REG_VM_ENABLE, TRUE);
 
-	//Set the global variable as true 
-	vm_enabled = TRUE;
-
 	/* <<<------------------------------
 	 * Call SetKernelBrk()
 	 * ------------------------------>>>
@@ -677,6 +674,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	}
 
 	TracePrintf(1, "We have called set KernelBrk :)\n");
+
+	//Set the global variable as true 
+	vm_enabled = TRUE;
 
 	/* <<<-------------------------------------
 	 * Create Process
