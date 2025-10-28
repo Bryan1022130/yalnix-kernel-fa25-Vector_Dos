@@ -4,12 +4,8 @@
 #include <hardware.h> 
 #include <ykernel.h> 
 
-#define FRAME_COUNT 1000
-
-
-static Frame frame_table[FRAME_COUNT];
-static int total_frames = 0;
-
+static Frame *frame_table = NULL;
+int total_frames = 0;
 
 // Build the frame table representing all physical pages.
 // Each entry tracks ownership and reference count.
@@ -20,6 +16,12 @@ void frames_init(unsigned int pmem_size) {
 
     // Step 1: Compute total_frames = pmem_size / PAGESIZE
     total_frames = pmem_size / PAGESIZE;
+
+    frame_table = (Frame *)malloc(sizeof(Frame) * total_frames);
+    if (frame_table == NULL) {
+        TracePrintf(0, "frames_init: malloc failed for %d frames\n", total_frames);
+        Halt();
+    }
     
     // Step 2: Initialize all frames as free first
     for (int i = 0; i < total_frames; i++) {
@@ -87,7 +89,7 @@ int frame_alloc(int owner_pid) {
         }
     }
 
-    TracePrintf(0, "ERROR: Out of physical frames!\n");
+    printf("ERROR: Out of physical frames!\n");
     return ERROR;
 }
 
@@ -97,7 +99,7 @@ void frame_free(int pfn) {
 	* decrement refcnt, if 0 mark free; run helper_force_free(pfn) if needed later.
 	*/
 	if (pfn < 0 || pfn >= total_frames) {
-        TracePrintf(0, "ERROR: invalid frame number %d\n", pfn);
+        printf("ERROR: invalid frame number %d\n", pfn);
         return;
     }
 

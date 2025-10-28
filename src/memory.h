@@ -1,10 +1,10 @@
 #pragma once
-extern unsigned int total_physical_frames;
+extern int total_frames;
 
 typedef struct Frame {
     int pfn;          // frame number
     int in_use;       // 0 = free, 1 = used
-    int owner_pid;    // -1 for kernel
+    int owner_pid;   
     int refcount;
 } Frame;
 
