@@ -44,7 +44,7 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 
 	//Copy over the the KernelContext into the new_pcb with a memcpy
 	//Copy the Kernel Context into the new pcb
-	memcpy(new_pcb.curr_kc, kc_in, sizeof(KernelContext);
+	memcpy(new_pcb.curr_kc, kc_in, sizeof(KernelContext));
 	
 	//find a temp vpn to map data from the current kernel stack into the frames that have been allocated for the new process's kernel stack 
 	// We need to make a better way for this
