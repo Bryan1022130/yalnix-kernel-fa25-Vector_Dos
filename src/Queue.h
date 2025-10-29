@@ -24,7 +24,7 @@ typedef struct{
 }Queue;
 
 //Get a clean and freshly made Queue struct 
-Queue *initalizeQueue(void);
+Queue *initializeQueue(void);
 
 // Get the total size of the queue currently
 int getSize(Queue *MQueue);

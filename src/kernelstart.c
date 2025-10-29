@@ -41,6 +41,10 @@ PCB *idle_process = NULL;
 PCB *process_ready_head = NULL;
 PCB process_table[MAX_PROCS];
 
+// global process queues
+Queue *readyQueue;    // holds READY processes waiting for CPU
+Queue *sleepQueue;    // holds BLOCKED processes waiting for Delay to expire
+
 //Brk Location
 void *current_kernel_brk;
 
@@ -51,6 +55,9 @@ UserContext *KernelUC;
 
 //Frames available in physical memory {pmem_size / PAGESIZE}
 unsigned long int frame_count;
+
+//how many hardware clock ticks have occurred since boot
+unsigned long current_tick = 0;
 
 //Virtual Memory look up logic
 // Something like -----> (vpn >= vp1) ? vpn - vp1 : vpn - vp0;
@@ -562,6 +569,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Initialize the data struct to track the free frames
 	// Builds the frame table and marks kernel-reserved frames as used.
 	frames_init(pmem_size);
+	
+	// initialize process queues
+	readyQueue = initializeQueue();
+	sleepQueue = initializeQueue();
+
 
 	//Set up global variable for the current UserContext
 	KernelUC = uctxt;

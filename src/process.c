@@ -6,11 +6,29 @@
 #include <yalnix.h>
 #include <ylib.h>
 #include <yuser.h>
+#include <string.h>
 #include "process.h"
+#include "Queue.h"
+
+// extern globals defined in kernelstart.c
+extern PCB *current_process;
+extern PCB *idle_process;
+extern Queue *readyQueue;
+extern Queue *sleepQueue;
+extern pte_t kernel_page_table[MAX_PT_LEN];
+extern int _orig_kernel_brk_page;
+
 
 #define KSTACKS (KERNEL_STACK_MAXSIZE / PAGESIZE) 
 #define TRUE 1
 #define FALSE 0
+
+PCB *get_next_ready_process(void) {
+    if (isEmpty(readyQueue)) {
+        return idle_process;   // nothing ready? run idle
+    }
+    return Dequeue(readyQueue);
+}
 
 // ----------------- Context Switching -----------------------------
 // WE NEED TO THIS DONE FOR CHECK POINT 3
@@ -20,17 +38,24 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 	// and return pointer to the next context to run.
 
 	//Check if the process is valid
-	PCB *current_pcb = (PCB *)curr_pcb_p;
-	PCB *next_pcb = (PCB *)next_pcb_p;
+	PCB *curr = (PCB *)curr_pcb_p;
+	PCB *next = (PCB *)next_pcb_p;
 
-	if(current_pcb == NULL || next_pcb == NULL){
-		TracePrintf(0, "Error with one of the PCB being NULL!");
+	if(!curr || !next){
+		TracePrintf(0, "KCSwitch: invalid PCB pointers\n");
+		return kc_in;
 	}
+	if (curr == next) return kc_in;
+	// Save current kernel context into PCB
+	memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
-	//1. Copy over the current Contents of the KernelContext into the current PCB
-	//1. This will be done using a memcpy into the PCB struct )
-	
-	//2. Return a Pointer to the KernelContext
+	if (curr->currState == RUNNING) curr->currState = READY;
+	next->currState = RUNNING;
+
+	current_process = next;
+
+    // Update global
+	return &next->curr_kc;
 	
 }
 

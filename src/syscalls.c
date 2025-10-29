@@ -1,10 +1,26 @@
 #include "syscalls.h"
-#include "trap.h"
-#include <ykernel.h>
+#include "process.h"
+#include "Queue.h"
+// #include "kernel.h"
 #include <yalnix.h>
 #include <hardware.h>
+#include <ykernel.h>
 
-int sys_fork(void) {
+// extern globals from kernelstart.c
+extern PCB *current_process;
+extern Queue *sleepQueue;
+extern unsigned long current_tick;
+
+int GetPid(void) {
+    if (current_process == NULL) {
+        TracePrintf(0, "GetPid called but current_process NULL\n");
+        return ERROR;
+    }
+    return current_process->pid;
+}
+
+
+int Fork(void) {
     /*
      * GOAL:
      *  Create a new process that is a copy of the current one.
@@ -19,7 +35,7 @@ int sys_fork(void) {
 
     return 0;
 }
-int sys_exec(char *filename, char *argv[]) {
+int Exec(char *filename, char *argv[]) {
     /*
      * GOAL:
      *  Replace current process’s memory image with a new program.
@@ -33,7 +49,7 @@ int sys_exec(char *filename, char *argv[]) {
     return 0;
 }
 
-void sys_exit(int status) {
+void Exit(int status) {
     /*
      * GOAL:
      *  Terminate the current process and notify parent.
@@ -45,7 +61,7 @@ void sys_exit(int status) {
      */
 }
 
-int sys_wait(int *status_ptr) {
+int Wait(int *status_ptr) {
     /*
      * GOAL:
      *  Wait for a child process to exit and collect its status.
@@ -60,7 +76,7 @@ int sys_wait(int *status_ptr) {
     return 0;
 }
 
-int sys_brk(void *addr) {
+int Brk(void *addr) {
     /*
      * GOAL:
      *  Adjust end of data segment for the calling process.
@@ -69,9 +85,36 @@ int sys_brk(void *addr) {
      *  2. Or adjust process heap in Region 1 via vm subsystem.
      *  3. Return 0 on success, ERROR otherwise.
      */
+     TracePrintf(1, "sys_brk called: %p\n", addr);
+
+    // get current process
+    PCB *proc = current_process;
+    if (proc == NULL) return ERROR;
+
+    // check address sanity
+    if (addr == NULL) return ERROR;
+
+    // For now, pretend success and record where the heap ends
+    proc->user_heap_end = (unsigned int)addr;
+
+    // later (CP4) you’ll map/unmap frames here
     return 0;
 }
 
+int Delay(int clock_ticks) {
+    if (clock_ticks <= 0) return 0;
+
+    current_process->wake_tick = current_tick + clock_ticks;
+    current_process->currState = BLOCKED;
+
+    // put it on a "sleep queue" (you can use your Queue)
+    Enqueue(sleepQueue, current_process);
+
+    // switch to another process (scheduler)
+    KernelContextSwitch(KCSwitch, current_process, get_next_ready_process());
+    return 0;
+}
+/*
 int Fork(void) {
     TracePrintf(0, "Fork()\n");
     return ERROR;
@@ -91,7 +134,7 @@ int Wait(int *status_ptr) {
     TracePrintf(0, "Wait()\n");
     return ERROR;
 }
-
+/*
 int GetPid(void) {
     TracePrintf(0, "GetPid()\n");
     return ERROR;
@@ -106,6 +149,7 @@ int Delay(int clock_ticks) {
     TracePrintf(0, "Delay()\n");
     return ERROR;
 }
+*/
 
 int TtyRead(int tty_id, void *buf, int len) {
     TracePrintf(0, "TtyRead()\n");

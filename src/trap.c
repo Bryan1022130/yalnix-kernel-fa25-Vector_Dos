@@ -8,7 +8,8 @@
 #include <ylib.h> // Function declarations for many libc functions, Macro for NULL
 #include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
-
+#include "Queue.h"     
+#include "process.h"   
 #include "trap.h" //For function declarations for other files
 
 /*|==================================|
@@ -17,6 +18,12 @@
  *| -> TRAP_KERNEL		     |
  *|==================================|
  */
+
+extern unsigned long current_tick;
+extern Queue *readyQueue;
+extern Queue *sleepQueue;
+extern PCB *current_process;
+
 
 //declaration of the default place holder function
 void HandleTrap(UserContext *CurrUc){
@@ -103,14 +110,14 @@ void HandleKernelTrap(UserContext *CurrUC){
 		default:
 			TracePrintf(0,"The current code did not match any syscall");
 			break;
-
+	}
 	//Store the value that we get from the syscall into the regs[0];
 	CurrUC->regs[0] = sys_return;
 
 	TracePrintf(0, "Leaving HandleKernelTrap :)\n");
 
 	return;
-	}
+	
 }
 
 /* <<<---------------------------------
@@ -121,9 +128,23 @@ void HandleKernelTrap(UserContext *CurrUC){
  */
 
 void HandleClockTrap(UserContext *CurrUC){
+	current_tick++;
 	TracePrintf(0, "In HandleClockTrap");
 
-	TracePrintf(0, "Leaving HandleKernelTrap");
+	QueueNode *node = peek(sleepQueue);
+	// wake up processes whose Delay expired
+	PCB *p = (node ?(PCB *)node->data : NULL);
+
+	while (p && p->wake_tick <= current_tick) {
+		Dequeue(sleepQueue);
+		p->currState = READY;
+		Enqueue(readyQueue, p);
+
+		node = peek(sleepQueue);
+		p = (node ? (PCB *)node->data : NULL);
+	}
+	
+	TracePrintf(0, "Leaving HandleClockTrap");
 	return;
 }
 
