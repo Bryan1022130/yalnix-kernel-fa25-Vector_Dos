@@ -32,9 +32,8 @@ struct pcb{
 	int exitstatus; // When a process is going to exit
 
         ProcessState currState; //Enum states for process
-        void *AddressSpace; // to keep track of where it is currently in its address space for region1 {Page Table}
-	
-	
+        void *AddressSpace; // to keep track of where it is currently in its address space for region 1 {Page Table}
+				
 	unsigned int user_heap_end; //The top of heap
 	unsigned int user_stack_end; //Lowest stack address
 	

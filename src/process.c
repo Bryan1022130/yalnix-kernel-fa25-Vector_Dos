@@ -8,6 +8,8 @@
 #include <yuser.h>
 #include "process.h"
 
+#define KSTACKS (KERNEL_STACK_MAXSIZE / PAGESIZE) 
+
 // ----------------- Context Switching -----------------------------
 
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
@@ -41,10 +43,13 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 	}
 
 	//1. Copy over the the KernelContext into the new_pcb with a memcpy
+	//Copy the Kernel Context into the new pcb
+	memcpy(new_pcb.curr_kc, kc_in, sizeof(KernelContext);
 	
 	//2.Copy over the content of the kernel stack into frames that have been allocated
-	//2.This will be in a loop and using a memcpy
-	
-	
+	for(int t = 0; t < KSTACKS; t++){
+		new_pcb.kernel_stack_frames[t] = ;
+	}
+
 	return kc_in;
 }
