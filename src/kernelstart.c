@@ -159,98 +159,66 @@ PCB *pcb_alloc(void){
  *  - Resets PCB state to FREE
  * ===============================================================================================================
  */
-
 int pcb_free(int pid){
-	
-	//Invalid pid check
-	if(pid < 0 || pid >= MAX_PROCS){
-        	TracePrintf(0, "Invalid PID passed to pcb_free().\n");
-        	return ERROR;
-    	}
-	
-	//if the process is already free
-    	if(process_table[pid].currState == FREE){
-        	TracePrintf(1, "Process %d already FREE.\n");
-        	return ERROR;
-    	}
 
-    	//Index into buffer to get the PCB at index pid 
-   	PCB *proc = &process_table[pid];
+    if(pid < 0 || pid >= MAX_PROCS){
+        TracePrintf(0, "Invalid PID passed to pcb_free().\n");
+        return ERROR;
+    }
 
-    	if (proc->AddressSpace != NULL) {
+    if(process_table[pid].currState == FREE){
+        TracePrintf(1,  "Process %d already FREE.\n");
+        return ERROR;
+    }
 
-        // Extract PFN from the physical address stored in AddressSpace
-        long int pt_pfn = (uintptr_t)proc->AddressSpace >> PAGESHIFT;
+    //Index into buffer to get the PCB at index pid
+    PCB *proc = &process_table[pid];
 
-	TracePrintf(1, "Freeing Region 1 for PID %d (PT PFN=%d)\n", pid, pt_pfn);
-        
-        // Find a free kernel virtual page to map temp && loop by page number and not byte address
-        int temp_vpn = -1;
-        for (int i = _orig_kernel_brk_page; i < (KERNEL_STACK_BASE >> PAGESHIFT); i++) {
-            if (kernel_page_table[i].valid == FALSE) {
-                temp_vpn = i;
-                break;
-            }
-        }
-       
-	//If no page found then it will remain -1
-        if (temp_vpn < 0) {
-            TracePrintf(0, "ERROR: No free kernel page available for temporary mapping.\n");
-            return ERROR;
-        }
-        
-        //Since the Kernel can not read from physical memory, map into virtual
-        kernel_page_table[temp_vpn].pfn = pt_pfn; 
-        kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
-        kernel_page_table[temp_vpn].valid = 1;
-	
-	//Flush so that the new page is valid
-        WriteRegister(REG_TLB_FLUSH, (unsigned int)(temp_vpn << PAGESHIFT)); 
+    if(proc->AddressSpace == NULL){
+	    return ERROR;
+    }
 
-        // Now access the page table
-        pte_t *pt_r1 = (pte_t *)(temp_vpn << PAGESHIFT);
-        
-        // Free all frames mapped in the process's Region 1
-        int region1_pages = MAX_PT_LEN - 1; //BASED ON THE DIAGRAM
-	
-	TracePrintf(1, "This is the value of the frames mapped in this process current region 1 == > %d\n", region1_pages);
-	
-	//If a page is mapped, unmap it
-	for (int vpn = 0; vpn < region1_pages; vpn++) {
-		if (pt_r1[vpn].valid == TRUE) {
-			frame_free(pt_r1[vpn].pfn);
-		}
-	}
-
-	//Set the kernel page that we used as invalid again
-        kernel_page_table[temp_vpn].valid = FALSE;
-        kernel_page_table[temp_vpn].prot = 0;
-	kernel_page_table[temp_vpn].pfn = 0;
-	
-	//WriteRegister need the a byte address, hence why << PAGESHIFT
-	WriteRegister(REG_TLB_FLUSH, (unsigned int)(temp_vpn << PAGESHIFT));
-        
-        // Free the physical frame that held the page table itself
-	// This came from the AddressSpace field in our PCB
-        frame_free(pt_pfn);
-    };
-
-	TracePrintf(1, "This is the value of the KERNEL_STACK_PAGES --> %d\n", KERNEL_STACK_PAGES);
-	
-	//Free physical frames that are associated with the procs kernel stack
-	//The kernel_stack_frame holds pfns for frames in main memory
-	for (int i = 0; i < KERNEL_STACK_PAGES; i++) {
-		if (proc->kernel_stack_frames[i] > 0) {
-			frame_free(proc->kernel_stack_frames[i]);
-		}
-	}
-
-	// Clear the PCB
-	memset(proc, 0, sizeof(PCB));
-    	proc->currState = FREE;
+    //Get the VPN
+    int vpnfind = (uintptr_t)proc->AddressSpace >> PAGESHIFT;
     
-    	TracePrintf(1, "Freed PCB for PID %d.\n");
-    	return 0;
+    //Get the PFN from the VPN in the kernel page table
+    int kernel_proc_pfn = kernel_page_table[vpnfind].pfn;
+
+    // Now access the page table
+    pte_t *pt_r1 = (pte_t *)proc->AddressSpace;
+
+    // Free all frames mapped in the process's Region 1
+    int num_r1_pages = MAX_PT_LEN - 1; // This is based on the diagram but can be changed if causes problems
+
+    for (int vpn = 0; vpn < num_r1_pages; vpn++) {
+	    if (pt_r1[vpn].valid) {
+		    frame_free(pt_r1[vpn].pfn);
+	    }
+    }
+
+    //Set the kernel page that we used as invalid again
+    kernel_page_table[vpnfind].valid = FALSE;
+    kernel_page_table[vpnfind].prot = 0;
+    kernel_page_table[vpnfind].pfn = 0;
+
+    WriteRegister(REG_TLB_FLUSH, (unsigned int)proc->AddressSpace);
+
+    // Free the physical frame that held the page table itself
+    frame_free(kernel_proc_pfn);
+
+    //Free the PCBs Kernel Stack Frame
+    for (int i = 0; i < KERNEL_STACK_PAGES; i++) {
+	    if (proc->kernel_stack_frames[i] > 0) {
+		    frame_free(proc->kernel_stack_frames[i]);
+	    }
+    }
+
+    // Clear the PCB
+    memset(proc, 0, sizeof(PCB));
+    proc->currState = FREE;
+
+    TracePrintf(1, "Freed PCB for PID %d.\n");
+    return 0;
 }
 
 //==================================================================================================================
