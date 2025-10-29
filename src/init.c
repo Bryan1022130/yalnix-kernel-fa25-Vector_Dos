@@ -14,5 +14,13 @@
 // Angel:  Write KCCopy() function this is in proceces.h and process.c
 // Angel: Fix any of the other things we left unsued in check point 1
 // in this function we also need to flush since it keeps track of different address
+<<<<<<< HEAD
 //
 //
+=======
+// KCCopy is currently done right now ------- :) 
+
+
+
+
+>>>>>>> cp2

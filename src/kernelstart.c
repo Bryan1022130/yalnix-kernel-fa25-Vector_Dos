@@ -68,11 +68,11 @@ static unsigned int terminal_array[NUM_TERMINALS];
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
-/* =======================================
+/* ===================================================================================================================
  * Idle Function that runs in Kernel Space
  * Simple idle loop that runs when no processes are ready.
  * Continuously calls Pause() to yield CPU.
- * =======================================
+ * ===================================================================================================================
  */
 
 void DoIdle(void) { 
@@ -83,11 +83,11 @@ void DoIdle(void) {
 	}
 }
 
-/* =======================================
+/* ===================================================================================================================
  * Process Logic Functions 
  * InitPcbTable()
  * Clears all PCBs in the process table and marks them as FREE.
- * =======================================
+ * ===================================================================================================================
  */
 
 void InitPcbTable(void){
@@ -101,11 +101,12 @@ void InitPcbTable(void){
 
     TracePrintf(0, "Initialized PCB table: all entries marked FREE.\n");
 }
-/* =========================================================================
+
+/* ===============================================================================================================
  * pcb_alloc()
  * Returns a pointer to the first FREE PCB in the table.
  * Sets the state to READY and assigns its PID.
- * =========================================================================
+ * ===============================================================================================================
  */
 PCB *pcb_alloc(void){
 	TracePrintf(1, "Allocating new PCB...\n");
@@ -114,24 +115,49 @@ PCB *pcb_alloc(void){
 	
 			//Clear out the data in case there is left over data
 			memset(&process_table[pid], 0, sizeof(PCB));
+			
+			TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
+
+			for(int i = 0; i < KERNEL_STACK_PAGES; i++){
+
+				int pfn = frame_alloc(pid);
+
+				if(pfn == ERROR){
+
+					TracePrintf(0, "We ran out of frames to give!\n");
+
+					//Unmap any previous frames that we allocated
+
+					for(int f = 0; f < i; f++){
+						frame_free(process_table[pid].kernel_stack_frames[f]);
+					}
+
+					return NULL;
+				}
+
+				process_table[pid].kernel_stack_frames[i] = pfn;
+
+			}
 
 			process_table[pid].currState = READY; 
 			process_table[pid].pid = pid;
 			
-			TracePrintf(1, "Allocated PCB with PID %d.\n", pid);
+			TracePrintf(1, "Allocated PCB with PID %d \n", pid);
 			return &process_table[pid];
 		}
 	}
+
 	TracePrintf(0, "ERROR: No free PCBs available.\n");
 	return NULL;
 }
-/* =========================================================================
+
+/* ===============================================================================================================
  * pcb_free(pid)
  * Frees all resources associated with a process:
  *  - Unmaps Region 1 frames
  *  - Frees its kernel stack frames
  *  - Resets PCB state to FREE
- * =========================================================================
+ * ===============================================================================================================
  */
 int pcb_free(int pid){
 
@@ -145,58 +171,66 @@ int pcb_free(int pid){
         return ERROR;
     }
 
-    //Index into buffer to get the PCB at index pid 
+    //Index into buffer to get the PCB at index pid
     PCB *proc = &process_table[pid];
 
-    for(int i = 0; i < 
+    if(proc->AddressSpace == NULL){
+	    return ERROR;
+    }
 
-    if (proc->AddressSpace != NULL) {
+    //Get the VPN
+    int vpnfind = (uintptr_t)proc->AddressSpace >> PAGESHIFT;
+    
+    //Get the PFN from the VPN in the kernel page table
+    int kernel_proc_pfn = kernel_page_table[vpnfind].pfn;
 
-    	vpn = proc->AddressSpace >> PAGESHIFT;
+    // Now access the page table
+    pte_t *pt_r1 = (pte_t *)proc->AddressSpace;
 
-        // Now access the page table
-        pte_t *pt_r1 = (pte_t *)proc->AddressSpace;
-        
-        // Free all frames mapped in the process's Region 1
-        int num_r1_pages = MAX_PT_LEN;
-	
-	TracePrintf(2, "This is the value of the frames mapped in this process current region 1 == > %d\n", num_r1_pages);
+    // Free all frames mapped in the process's Region 1
+    int num_r1_pages = MAX_PT_LEN - 1; // This is based on the diagram but can be changed if causes problems
 
-	int kernel_proc_pfn = kernel_page_table[pid].pfn;
+    for (int vpn = 0; vpn < num_r1_pages; vpn++) {
+	    if (pt_r1[vpn].valid) {
+		    frame_free(pt_r1[vpn].pfn);
+	    }
+    }
 
-        for (int vpn = 0; vpn < num_r1_pages; vpn++) {
-            if (pt_r1[vpn].valid) {
-                frame_free(pt_r1[vpn].pfn);
-            }
-        }
+    //Set the kernel page that we used as invalid again
+    kernel_page_table[vpnfind].valid = FALSE;
+    kernel_page_table[vpnfind].prot = 0;
+    kernel_page_table[vpnfind].pfn = 0;
 
-	//Set the kernel page that we used as invalid again
-        kernel_page_table[vpn].valid = FALSE;
-        kernel_page_table[vpn].prot = 0;
-	kernel_page_table[vpn].pfn = 0;
+    WriteRegister(REG_TLB_FLUSH, (unsigned int)proc->AddressSpace);
 
-	WriteRegister(REG_TLB_FLUSH, (unsigned int)(temp_vpn << PAGESHIFT));
-        
-        // Free the physical frame that held the page table itself
-        frame_free(kernel_proc_pfn);
-    };
+    // Free the physical frame that held the page table itself
+    // This is a field inside of the pte_t.pfn
+    frame_free(kernel_proc_pfn);
 
-    TracePrintf(2, "This is the value of the KERNEL_STACK_PAGES --> %d\n", KERNEL_STACK_PAGES);
+    //Free the PCBs Kernel Stack Frame
     for (int i = 0; i < KERNEL_STACK_PAGES; i++) {
 	    if (proc->kernel_stack_frames[i] > 0) {
-            frame_free(proc->kernel_stack_frames[i]);
-        }
+		    frame_free(proc->kernel_stack_frames[i]);
+	    }
     }
 
     // Clear the PCB
     memset(proc, 0, sizeof(PCB));
     proc->currState = FREE;
-    
+
     TracePrintf(1, "Freed PCB for PID %d.\n");
     return 0;
 }
 
+/* ==================================================================================================================
+ * Proc Create Flow
+ *
+ *
+ * ==================================================================================================================
+ */
+
 void init_proc_create(void){
+
 	TracePrintf(1, "init_proc_create(): begin\n");
 
 	//Get a process from our PCB free list
@@ -212,52 +246,65 @@ void init_proc_create(void){
      	 * =======================
      	 */
 
-    	// Allocate physical frame for the page table
-   	 int pt_pfn = frame_alloc(idle_process->pid);
+    	// Allocate a physical frame for the page table
+   	int pt_pfn = frame_alloc(idle_process->pid);
 
-   	 if (pt_pfn < 0) {
+	//WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
+   	 if (pt_pfn == ERROR) {
    	     TracePrintf(0, "init_proc_create(): ERROR allocating PT frame\n");
 	     return;
    	 }
 
-	 TracePrintf(2, "init_proc_create(): PT frame pfn=%d\n", pt_pfn);
+	 TracePrintf(1, "init_proc_create(): PT frame pfn=%d\n", pt_pfn);
 
     	 // Map it temporarily into kernel space to initialize it
   	 // Find a free virtual page in kernel space to map this frame
+	 // Create a better way to keep this 
+	
 	 int temp_vpn = -1;
-	 for (int i = _orig_kernel_brk_page; i < (KERNEL_STACK_BASE >> PAGESHIFT); i++) {
-		 if (!kernel_page_table[i].valid) {
+	 //Look downward for free space to not reused pages by accident
+	 //Once again make this with a data structure
+	 for (int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--) {
+		 if (kernel_page_table[i].valid == FALSE) {
 			 temp_vpn = i;
 			 break;
-        	}
-   	 }
-    
+		 }
+	 }
+
     	if (temp_vpn < 0) {
 		TracePrintf(0, "init_proc_create(): ERROR no free kernel vpn for PT mapping\n");
 		frame_free(pt_pfn);
 		return;
     	}
   	
-	//Map it into kernel table for now
+	//Map the pfn into the kernel_page_table so that it can be accessed by MMU
    	kernel_page_table[temp_vpn].pfn = pt_pfn;
     	kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
-    	kernel_page_table[temp_vpn].valid = 1;
+    	kernel_page_table[temp_vpn].valid = TRUE;
 
-   	// Get pointer to the page table
+	TracePrintf(0, "FLushing Region 1 memory space so that it knows its updated\n");
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	TracePrintf(0, "FLUSH IS DONE.\n");
+
+	// Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
+	//This serves as the blueprint to talk to physical memory
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
-   	
-    	// Clear out the page table to start fresh
-    	memset(idle_pt, 0, PAGESIZE);
-   	
-   	 // Allocate stack for idle process
-   	 int idle_stack_pfn = frame_alloc(idle_process->pid);
+	
+	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
 
-	 if (idle_stack_pfn == ERROR) {
-		 TracePrintf(0, "init_proc_create(): ERROR allocating stack frame\n");
-		 frame_free(pt_pfn);
-		 return;
+	memset(idle_pt, 0, MAX_PT_LEN * sizeof(pte_t));
+
+   	// Allocate stack for idle process
+	TracePrintf(0, "About to alloc stack frame...\n");
+   	int idle_stack_pfn = frame_alloc(idle_process->pid);
+
+	if (idle_stack_pfn == ERROR) {
+		TracePrintf(0, "init_proc_create(): ERROR allocating stack frame\n");
+		frame_free(pt_pfn);
+		return;
 	}
-	TracePrintf(2, "init_proc_create(): stack frame pfn=%d\n", idle_stack_pfn);
+
+	TracePrintf(1, "init_proc_create(): stack frame pfn=%d\n", idle_stack_pfn);
     	
 	//Map into kernel 
     	unsigned long stack_page_index = MAX_PT_LEN - 1;
@@ -272,35 +319,42 @@ void init_proc_create(void){
 	
 	//Get a pid for the process
 	idle_process->pid = helper_new_pid(idle_pt);
-	TracePrintf(0, "init_proc_create(): assigned pid=%d\n", idle_process->pid);
 
 	//To indicate that its the kernel process itself
 	idle_process->ppid = 0;
+
+	//Flush for region 1 since we just wrote its start and limit
+//	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
+	//Store the byte address of the start of region 1 table
+	idle_process->AddressSpace = (void *)(uintptr_t)(temp_vpn << PAGESHIFT);
 	
+	//Set sp to the top of the user stack that we set up
+	memcpy(&idle_process->curr_uc, KernelUC, sizeof(UserContext));
+
+	idle_process->curr_uc.pc = (void*)DoIdle;
+	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
+
+	TracePrintf(0, "This is the value of the idle pc -- > %d and this is the value of the sp --> %d\n", idle_process->curr_uc.pc, idle_process->curr_uc.sp);
+	
+	/* ======================================================
+	 * Copy in idle PCB properties into the KernelUC
+	 * ======================================================
+	 */
+
+	memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
+
 	/* =======================================
 	 * Store AddressSpace for region 1 table
 	 * =======================================
 	 */
-	
-	//We pass the base as the virtual addr in bytes of the VPN where map the pfn
-	WriteRegister(REG_PTBR1, (unsigned int)(temp_vpn << PAGESHIFT));
-	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN); //This is correct since it need to number of pages
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-	
-	//This will point to the VPN byte address where our pfn is stored in
-	idle_process->AddressSpace = (void *)(uintptr_t)(temp_vpn<< PAGESHIFT);
-	
-	//Set sp to the top of the user stack that we set up
-	TracePrintf(0, "DEBUG: VMEM_1_LIMIT = %p\n", (void*)VMEM_1_LIMIT);
-	idle_process->curr_uc.pc = (void*)DoIdle;
-	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
 
-	/* ======================================================
-	 * Copy in UserContext from KernelStart into the idle PCB
-	 * ======================================================
-	 */
-	memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
-		
+	WriteRegister(REG_PTBR1, (unsigned int)(temp_vpn << PAGESHIFT));
+	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+	
+	//Flush for region 1 since we just wrote its start and limit
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
 	//Set as running
 	idle_process->currState = READY;
 
@@ -322,9 +376,9 @@ void init_proc_create(void){
 
 }
 
-/* ========================================================
+/* ==============================================================================================
  * SetKernelBrk Function Logic
- * ========================================================
+ * ==============================================================================================
  */ 
 
 int SetKernelBrk(void * addr){
@@ -633,9 +687,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	// From this point, all addresses are translated via the page tables.
 	WriteRegister(REG_VM_ENABLE, TRUE);
 
-	//Set the global variable as true 
-	vm_enabled = TRUE;
-
 	/* <<<------------------------------
 	 * Call SetKernelBrk()
 	 * ------------------------------>>>
@@ -657,6 +708,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	}
 
 	TracePrintf(1, "We have called set KernelBrk :)\n");
+
+	//Set the global variable as true 
+	vm_enabled = TRUE;
 
 	/* <<<-------------------------------------
 	 * Create Process

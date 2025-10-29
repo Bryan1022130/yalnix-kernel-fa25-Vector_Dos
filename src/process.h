@@ -19,6 +19,7 @@ typedef enum{
 struct pcb{
 
 	//Kernel Stack Frames
+	//Holds pfns
 	unsigned int kernel_stack_frames[KERNEL_STACK_MAXSIZE / PAGESIZE];
 
 	//Context Switch Logic
@@ -31,9 +32,8 @@ struct pcb{
 	int exitstatus; // When a process is going to exit
 
         ProcessState currState; //Enum states for process
-        void *AddressSpace; // to keep track of where it is currently in its address space {Page Table}
-	
-	
+        void *AddressSpace; // to keep track of where it is currently in its address space for region 1 {Page Table}
+				
 	unsigned int user_heap_end; //The top of heap
 	unsigned int user_stack_end; //Lowest stack address
 	
