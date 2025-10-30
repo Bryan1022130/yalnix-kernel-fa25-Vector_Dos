@@ -31,8 +31,6 @@ PCB *get_next_ready_process(void) {
 }
 
 // ----------------- Context Switching -----------------------------
-// WE NEED TO THIS DONE FOR CHECK POINT 3
-
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
 	// Save current kernel context into its PCB, restore the next PCB’s context,
 	// and return pointer to the next context to run.

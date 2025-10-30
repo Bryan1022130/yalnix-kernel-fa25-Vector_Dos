@@ -145,6 +145,21 @@ void HandleClockTrap(UserContext *CurrUC){
 	}
 	
 	TracePrintf(0, "Leaving HandleClockTrap");
+	
+	/*
+	PCB *old_pcb = current_process;
+	
+	//Copy the current UserContext into the PCB of curr process
+	memcpy(&old_pcb->curr_uc, KernelUC, sizeof(UserContext));
+
+	PCB *proc_find = get_proc(); //We will need to implement this
+
+	KernelContextSwitch(KCSwitch, (void *)old_pcb, (void *)proc_find);
+
+	memcpy(
+	TracePrintf(0, "Leaving HandleKernelTrap");
+	*/
+
 	return;
 }
 
