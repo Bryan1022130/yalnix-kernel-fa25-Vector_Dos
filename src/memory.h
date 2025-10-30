@@ -31,4 +31,5 @@ PCB *pcb_alloc(void);
 int pcb_free(int pid);
 void init_proc_create(void);
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt);
+void init(void);
 

@@ -356,7 +356,8 @@ void init_proc_create(void){
 	idle_process->curr_uc.pc = (void*)DoIdle;
 	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
 
-	TracePrintf(0, "This is the value of the idle pc -- > %d and this is the value of the sp --> %d\n", idle_process->curr_uc.pc, idle_process->curr_uc.sp);
+	TracePrintf(0, "This is the value of the idle pc -- > %p and this is the value of the sp --> %p\n", idle_process->curr_uc.pc, idle_process->curr_uc.sp);
+	TracePrintf(0, "idle_process->pid: %d\n", idle_process->pid);
 	
 	/* ======================================================
 	 * Copy in idle PCB properties into the KernelUC
@@ -384,7 +385,7 @@ void init_proc_create(void){
 
 	TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====\n");
 	TracePrintf(0, " This is the num of the array for the kernel_page_table --> %d", MAX_PT_LEN); 
-	TracePrintf(0, "idle_process ptr: %p\n", idle_process);
+	TracePrintf(0, "idle_process ptr =------------->>> : %p\n", idle_process);
 	TracePrintf(0, "idle_process->pid: %d\n", idle_process->pid);
 	TracePrintf(0, "This should be a reference to kernel page since the kernel does not interact with physical memory directly idle_process->AddressSpace: %p\n", idle_process->AddressSpace);
 	TracePrintf(0, "This is the value of the VMEM_1_LIMIT ==> %p and this is the VMEM_1_BASE ==> %p\n", VMEM_1_LIMIT, VMEM_1_BASE);
@@ -741,6 +742,13 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	*/
 
 	TracePrintf(1, "KernelStart: creating idle process\n");
+
+	if(cmd_args[0] == NULL){
+		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
+		init();
+	}
+
+	TracePrintf(0, "This is what is in cmd_args[0] ---- > %p\n", cmd_args[0]);
 
 	// This simulates the ‘init’ process until real user loading is implemented.
 	InitPcbTable();

@@ -1,6 +1,6 @@
+#include <hardware.h>
+
 //This is code for out init process
-
-
 // Bryan: Handle Brk, GetPid, Delay
 // For now our KernelStart is the idle process and it cloning into init
 //
@@ -15,3 +15,13 @@
 // Angel: Fix any of the other things we left unsued in check point 1
 // in this function we also need to flush since it keeps track of different address
 // KCCopy is currently done right now ------- :) 
+
+
+void init(void){
+	while(1){
+		TracePrintf(0, "This called when there is no arguments passed to ./yalnix\n");
+	}
+
+}
+
+
