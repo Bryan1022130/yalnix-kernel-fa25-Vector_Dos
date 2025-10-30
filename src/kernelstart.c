@@ -77,6 +77,8 @@ static unsigned int terminal_array[NUM_TERMINALS];
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
+int pcb_free(int pid);
+
 /* ===================================================================================================================
  * Idle Function that runs in Kernel Space
  * Simple idle loop that runs when no processes are ready.
@@ -106,6 +108,8 @@ void InitPcbTable(void){
     // Set all entries in the pcb table as free 
     for (int i = MAX_PROCS - 1; i >= 0 ; i--) {
         process_table[i].currState = FREE;
+
+	//Set up the internal linked list
 	process_table[i].prev = NULL;
 	process_table[i].next = process_free_head;
 	process_free_head = &process_table[i];
@@ -122,6 +126,8 @@ void InitPcbTable(void){
  * ===============================================================================================================
  */
 PCB *pcb_alloc(void){
+
+	//Check if there is PCBs left to use 
 	if(process_free_head == NULL){
 		TracePrintf(0, "There was an error and no PCB were found! No PCB free!\n");
 		return NULL;
@@ -137,25 +143,27 @@ PCB *pcb_alloc(void){
 	//Disconnect from other nodes
 	free_proc->next = NULL;
 	free_proc->prev = NULL;
-
-	//Assigne the new Pid and set
-	free_proc->currState = READY; 
-
-	int pid_store = pid_count++;
-	free_proc->pid = pid_store;
-			
+	
 	//Clear out the data in case there is left over data
 	memset(free_proc, 0, sizeof(PCB));
 			
-	TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
+	//Assign the new pid and set the state as running
+	free_proc->currState = READY; 
 
+	int pid_store = free_proc - process_table;
+	TracePrintf(0, "This is the value of the pid - > %d", pid_store);
+
+	free_proc->pid = pid_store;
+
+	TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
 	for(int i = 0; i < KERNEL_STACK_PAGES; i++){
+		//Allocate a physical frame for kernel stack
 		int pfn = frame_alloc(pid_store);
 
 		if(pfn == ERROR){
 			TracePrintf(0, "We ran out of frames to give!\n");
-			//Unmap any previous frames that we allocated
 
+			//Unmap any previous frames that we allocated
 			for(int f = 0; f < i; f++){
 				frame_free(free_proc->kernel_stack_frames[f]);
 			}
@@ -169,7 +177,7 @@ PCB *pcb_alloc(void){
 		free_proc->kernel_stack_frames[i] = pfn;
 	}
 
-	TracePrintf(1, "Allocated PCB with PID %d \n", pid);
+	TracePrintf(0, "Allocated PCB with PID %d \n", pid_store);
 	return free_proc;
 }
 
@@ -188,13 +196,13 @@ int pcb_free(int pid){
         return ERROR;
     }
 
-    if(process_table[pid].currState == FREE){
-        TracePrintf(1,  "Process %d already FREE.\n");
-        return ERROR;
-    }
-
     //Index into buffer to get the PCB at index pid
     PCB *proc = &process_table[pid];
+
+    if(proc->currState == FREE){
+        TracePrintf(1, "Process %d already FREE.\n");
+        return ERROR;
+    }
 
     if(proc->AddressSpace == NULL){
 	    return ERROR;
@@ -211,10 +219,13 @@ int pcb_free(int pid){
 
     // Free all frames mapped in the process's Region 1
     int num_r1_pages = MAX_PT_LEN - 1; // This is based on the diagram but can be changed if causes problems
+    for (int vpn1 = 0; vpn1 < num_r1_pages; vpn1++) {
+	    if (pt_r1[vpn1].valid) {
+		    frame_free(pt_r1[vpn1].pfn);
+		    pt_r1[vpn1].valid = FALSE;
+		    pt_r1[vpn1].prot = 0;
+		    pt_r1[vpn1].pfn = 0;
 
-    for (int vpn = 0; vpn < num_r1_pages; vpn++) {
-	    if (pt_r1[vpn].valid) {
-		    frame_free(pt_r1[vpn].pfn);
 	    }
     }
 
@@ -223,8 +234,8 @@ int pcb_free(int pid){
     kernel_page_table[vpnfind].prot = 0;
     kernel_page_table[vpnfind].pfn = 0;
 
-    WriteRegister(REG_TLB_FLUSH, (unsigned int)proc->AddressSpace);
-
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
+ 
     // Free the physical frame that held the page table itself
     // This is a field inside of the pte_t.pfn
     frame_free(kernel_proc_pfn);
@@ -233,12 +244,19 @@ int pcb_free(int pid){
     for (int i = 0; i < KERNEL_STACK_PAGES; i++) {
 	    if (proc->kernel_stack_frames[i] > 0) {
 		    frame_free(proc->kernel_stack_frames[i]);
+		    proc->kernel_stack_frames[i] = 0;
 	    }
     }
 
     // Clear the PCB
     memset(proc, 0, sizeof(PCB));
     proc->currState = FREE;
+
+    //Add back into the linked list of free Processes
+    proc->prev = NULL;
+    proc->next = process_free_head;
+
+    process_free_head = proc;
 
     TracePrintf(1, "Freed PCB for PID %d.\n");
     return 0;
