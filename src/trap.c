@@ -12,6 +12,12 @@
 #include "process.h"   
 #include "trap.h" //For function declarations for other files
 
+//Extern Variables
+extern unsigned long current_tick;
+extern Queue *readyQueue;
+extern Queue *sleepQueue;
+extern PCB *current_process;
+
 /*|==================================|
  *| Trap Handlers for Check Point 2  |
  *| -> TRAP_CLOCK		     |
@@ -19,15 +25,13 @@
  *|==================================|
  */
 
-extern unsigned long current_tick;
-extern Queue *readyQueue;
-extern Queue *sleepQueue;
-extern PCB *current_process;
-
-
 //declaration of the default place holder function
-void HandleTrap(UserContext *CurrUc){
-	TracePrintf(0, "################---------------------This is a placeholder function--------###########################3\n");
+void HandleTrap(UserContext *CurrUC){
+	int s = 0;
+	while(s < 10){
+		s++;
+		TracePrintf(0, "You are currently in the place holder function for trap handler!\n");
+	}
 	return;
 }
 
@@ -41,13 +45,11 @@ void HandleTrap(UserContext *CurrUc){
  */
 
 void HandleKernelTrap(UserContext *CurrUC){
-	TracePrintf(0, "In HandleKernelTrap function :) \n");
+	TracePrintf(0, "In HandleKernelTrap Function\n");
 	
-	//Get the code from the struct
-	int extract_code = CurrUC->code;
-
 	//Set up the variable that will be the return value 
 	int sys_return = 0;
+	int extract_code = CurrUC->code;
 
 	//Find what Syscall the code points to 
 	switch(extract_code){
@@ -108,16 +110,15 @@ void HandleKernelTrap(UserContext *CurrUC){
 			break;
 
 		default:
-			TracePrintf(0,"The current code did not match any syscall");
+			TracePrintf(0,"ERROR! The current code did not match any syscall\n");
 			break;
 	}
 	//Store the value that we get from the syscall into the regs[0];
 	CurrUC->regs[0] = sys_return;
 
-	TracePrintf(0, "Leaving HandleKernelTrap :)\n");
+	TracePrintf(0, "Leaving HandleKernelTrap\n");
 
 	return;
-	
 }
 
 /* <<<---------------------------------
@@ -192,7 +193,7 @@ void HandleDiskTrap(UserContext *CurrUC) {
 
 /* <<<----------------------------------------------
  *  Function to create the Interrupt Vector Table
- *  -> Good for now
+ *  -> Status: Working for now 
  * ---------------------------------------------->>>
  */
 void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]){

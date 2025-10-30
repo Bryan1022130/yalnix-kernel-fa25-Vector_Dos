@@ -13,3 +13,4 @@ void frames_init(unsigned int pmem_size);
 int  frame_alloc(int owner_pid);
 void frame_free(int pfn);
 int  SetKernelBrk(void *addr);
+void DoIdle(void);

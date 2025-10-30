@@ -80,21 +80,6 @@ HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 int pcb_free(int pid);
 
 /* ===================================================================================================================
- * Idle Function that runs in Kernel Space
- * Simple idle loop that runs when no processes are ready.
- * Continuously calls Pause() to yield CPU.
- * ===================================================================================================================
- */
-
-void DoIdle(void) { 
-	int count = 0;
-	while(1) {
-		TracePrintf(1,"Idle loop running (%d)\n", count++);
-		Pause();
-	}
-}
-
-/* ===================================================================================================================
  * Process Logic Functions 
  * InitPcbTable()
  * Clears all PCBs in the process table and marks them as FREE.

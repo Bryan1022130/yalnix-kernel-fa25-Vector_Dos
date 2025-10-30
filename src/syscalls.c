@@ -19,7 +19,6 @@ int GetPid(void) {
     return current_process->pid;
 }
 
-
 int Fork(void) {
     /*
      * GOAL:

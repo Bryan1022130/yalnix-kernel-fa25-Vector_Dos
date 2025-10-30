@@ -1,6 +1,7 @@
 #pragma once
 #include <hardware.h>
 
+//Interrupt Vector Table function declarations
 typedef void (*HandleTrapCall)(UserContext *CurrUC);
 void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]);
 
