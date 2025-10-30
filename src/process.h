@@ -1,4 +1,5 @@
 #pragma once
+
 #include <hardware.h>
 typedef struct pcb PCB;
 #include "memory.h"
@@ -6,6 +7,7 @@ typedef struct pcb PCB;
 //Enum to be able to represent the many states of the Process
 typedef enum{
         FREE,
+	SLEEP,
         READY,
         BLOCKED,
         RUNNING,
@@ -49,10 +51,7 @@ struct pcb{
 
 };
 
-
 //Helper functions for Context Switching
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p);
-
 KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used);
-
 PCB *get_next_ready_process(void);

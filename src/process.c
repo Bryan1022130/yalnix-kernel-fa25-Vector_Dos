@@ -17,7 +17,7 @@ extern Queue *readyQueue;
 extern Queue *sleepQueue;
 extern pte_t kernel_page_table[MAX_PT_LEN];
 extern int _orig_kernel_brk_page;
-
+extern pte_t kernel_page_table[MAX_PT_LEN];
 
 #define KSTACKS (KERNEL_STACK_MAXSIZE / PAGESIZE) 
 #define TRUE 1
@@ -57,7 +57,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 	
 }
 
-/*KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
+KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 	// Copy kernel context (and later, kernel stack) for a newly forked process.
 	// This produces a child that resumes right after Fork().
 
@@ -123,5 +123,4 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 	//return the kc_in as stated in the manual
 	return kc_in;
 }
-*/
 

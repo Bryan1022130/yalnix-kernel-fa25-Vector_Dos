@@ -1,7 +1,6 @@
 #include "syscalls.h"
 #include "process.h"
 #include "Queue.h"
-// #include "kernel.h"
 #include <yalnix.h>
 #include <hardware.h>
 #include <ykernel.h>

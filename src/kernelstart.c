@@ -65,7 +65,8 @@ unsigned long int vp0 = VMEM_0_BASE >> PAGESHIFT;
 unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
 
 //Page Table allocation -> an array of page table entries
-static pte_t kernel_page_table[MAX_PT_LEN];
+pte_t kernel_page_table[MAX_PT_LEN];
+
 //User table needs to be private to each process
 
 //Terminal Array
@@ -237,6 +238,7 @@ int pcb_free(int pid){
     proc->prev = NULL;
     proc->next = process_free_head;
 
+    //Make the freed process the head
     process_free_head = proc;
 
     TracePrintf(1, "Freed PCB for PID %d.\n");
@@ -279,8 +281,7 @@ void init_proc_create(void){
 
     	 // Map it temporarily into kernel space to initialize it
   	 // Find a free virtual page in kernel space to map this frame
-	 // Create a better way to keep this 
-	
+
 	 int temp_vpn = -1;
 	 //Look downward for free space to not reused pages by accident
 	 //Once again make this with a data structure
@@ -706,11 +707,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 	
 	TracePrintf(1, "------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------\n");
-	//Write to special register that Virtual Memory is enabled 
-
 	// All Region 0 mappings are ready; now turn on virtual memory.  
-	// From this point, all addresses are translated via the page tables.
 	WriteRegister(REG_VM_ENABLE, TRUE);
+
+	//Set the global variable as true 
+	vm_enabled = TRUE;
 
 	/* <<<------------------------------
 	 * Call SetKernelBrk()
@@ -720,37 +721,31 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Set current brk and then call SetKernelBrk
 	TracePrintf(1, "------------------------------------- WE ARE NOW GOING TO CALL KERNELBRK :) -------------------------------------\n");
 
-	//Normalize into byte address
 	// Initialize kernel heap pointer (current_kernel_brk)  
-	// and test SetKernelBrk() to ensure heap pages map correctly under VM.
     	uintptr_t orig_brk_address = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
 	current_kernel_brk = (void *)orig_brk_address;
-	int kbrk_return = SetKernelBrk(current_kernel_brk);
 
+	int kbrk_return = SetKernelBrk(current_kernel_brk);
 	if(kbrk_return != 0){
 		TracePrintf(0, "There was an error in SetKernelBrk\n");
 		return;
 	}
 
-	TracePrintf(1, "We have called set KernelBrk :)\n");
+	TracePrintf(1, "We have called SetKernelBrk :)\n");
 
-	//Set the global variable as true 
-	vm_enabled = TRUE;
+	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
 	/* <<<-------------------------------------
 	 * Create Process
 	 * ------------------------------------->>>
-	 *
 	*/
+
 	TracePrintf(1, "KernelStart: creating idle process\n");
 
-	//Create idle proc
-	//  Initialize the process table and create the first (idle) process.  
 	// This simulates the ‘init’ process until real user loading is implemented.
 	InitPcbTable();
 
 	// Each process needs a private Region 1 page table.  
-	// Allocate one physical frame to hold it.
 	init_proc_create();
 
 	TracePrintf(1, "KernelStart complete.\n");
