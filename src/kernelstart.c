@@ -22,8 +22,6 @@
 //Kernel Stack Macros {Same as PCB struct}
 #define KERNEL_STACK_PAGES (KERNEL_STACK_MAXSIZE / PAGESIZE) 
 
-//pid count
-static int pid_count = 0;
 /*
  * ================================>>
  * Global Variables
@@ -76,8 +74,6 @@ static unsigned int terminal_array[NUM_TERMINALS];
 
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
-
-int pcb_free(int pid);
 
 /* ===================================================================================================================
  * Process Logic Functions 

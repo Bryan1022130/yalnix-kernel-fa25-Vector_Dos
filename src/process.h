@@ -1,8 +1,7 @@
 #pragma once
 #include <hardware.h>
-#include "memory.h"
-
 typedef struct pcb PCB;
+#include "memory.h"
 
 //Enum to be able to represent the many states of the Process
 typedef enum{
