@@ -22,6 +22,8 @@
 //Kernel Stack Macros {Same as PCB struct}
 #define KERNEL_STACK_PAGES (KERNEL_STACK_MAXSIZE / PAGESIZE) 
 
+//pid count
+static int pid_count = 0;
 /*
  * ================================>>
  * Global Variables
@@ -38,7 +40,7 @@ short int vm_enabled = FALSE;
 //Process Block
 PCB *current_process = NULL; 
 PCB *idle_process = NULL;
-PCB *process_ready_head = NULL;
+PCB *process_free_head = NULL;
 PCB process_table[MAX_PROCS];
 
 // global process queues
@@ -102,8 +104,12 @@ void InitPcbTable(void){
     memset(process_table, 0, sizeof(process_table));
 
     // Set all entries in the pcb table as free 
-    for (int i = 0; i < MAX_PROCS; i++) {
+    for (int i = MAX_PROCS - 1; i >= 0 ; i--) {
         process_table[i].currState = FREE;
+	process_table[i].prev = NULL;
+	process_table[i].next = process_free_head;
+	process_free_head = &process_table[i];
+	
     }
 
     TracePrintf(0, "Initialized PCB table: all entries marked FREE.\n");
@@ -116,46 +122,55 @@ void InitPcbTable(void){
  * ===============================================================================================================
  */
 PCB *pcb_alloc(void){
-	TracePrintf(1, "Allocating new PCB...\n");
-	for (int pid = 0; pid < MAX_PROCS; pid++) {
-		if (process_table[pid].currState == FREE) {
+	if(process_free_head == NULL){
+		TracePrintf(0, "There was an error and no PCB were found! No PCB free!\n");
+		return NULL;
+	} 
 	
-			//Clear out the data in case there is left over data
-			memset(&process_table[pid], 0, sizeof(PCB));
+	TracePrintf(1, "Allocating new PCB...\n");
+
+	PCB *free_proc = process_free_head;
+
+	//Update the head to the next pointer
+	process_free_head = process_free_head->next;
+	
+	//Disconnect from other nodes
+	free_proc->next = NULL;
+	free_proc->prev = NULL;
+
+	//Assigne the new Pid and set
+	free_proc->currState = READY; 
+
+	int pid_store = pid_count++;
+	free_proc->pid = pid_store;
 			
-			TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
+	//Clear out the data in case there is left over data
+	memset(free_proc, 0, sizeof(PCB));
+			
+	TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
 
-			for(int i = 0; i < KERNEL_STACK_PAGES; i++){
+	for(int i = 0; i < KERNEL_STACK_PAGES; i++){
+		int pfn = frame_alloc(pid_store);
 
-				int pfn = frame_alloc(pid);
+		if(pfn == ERROR){
+			TracePrintf(0, "We ran out of frames to give!\n");
+			//Unmap any previous frames that we allocated
 
-				if(pfn == ERROR){
-
-					TracePrintf(0, "We ran out of frames to give!\n");
-
-					//Unmap any previous frames that we allocated
-
-					for(int f = 0; f < i; f++){
-						frame_free(process_table[pid].kernel_stack_frames[f]);
-					}
-
-					return NULL;
-				}
-
-				process_table[pid].kernel_stack_frames[i] = pfn;
-
+			for(int f = 0; f < i; f++){
+				frame_free(free_proc->kernel_stack_frames[f]);
 			}
 
-			process_table[pid].currState = READY; 
-			process_table[pid].pid = pid;
-			
-			TracePrintf(1, "Allocated PCB with PID %d \n", pid);
-			return &process_table[pid];
+			//free the pcb itself
+			pcb_free(pid_store);
+
+			return NULL;
 		}
+
+		free_proc->kernel_stack_frames[i] = pfn;
 	}
 
-	TracePrintf(0, "ERROR: No free PCBs available.\n");
-	return NULL;
+	TracePrintf(1, "Allocated PCB with PID %d \n", pid);
+	return free_proc;
 }
 
 /* ===============================================================================================================
@@ -231,8 +246,7 @@ int pcb_free(int pid){
 
 /* ==================================================================================================================
  * Proc Create Flow
- *
- *
+ * This the most up to date and corrected version
  * ==================================================================================================================
  */
 

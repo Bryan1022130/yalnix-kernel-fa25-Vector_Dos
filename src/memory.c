@@ -27,7 +27,7 @@ void frames_init(unsigned int pmem_size) {
     for (int i = 0; i < total_frames; i++) {
         frame_table[i].pfn = i;
         frame_table[i].in_use = 0;
-        frame_table[i].owner_pid = -1;  // -1 = kernel/unowned
+        frame_table[i].owner_pid = -1;
         frame_table[i].refcount = 0;
     }
     
