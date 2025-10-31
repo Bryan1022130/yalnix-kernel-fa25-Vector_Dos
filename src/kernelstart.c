@@ -88,7 +88,6 @@ void idle_proc_create(void){
 
 	//Get a process from our PCB free list
 	idle_process = pcb_alloc();
-
 	if(idle_process == NULL){
 		TracePrintf(0, "idle_proc_create(): ERROR pcb_alloc() returned NULL\n");
 		return;
@@ -147,7 +146,7 @@ void idle_proc_create(void){
 	
 	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
 
-	//memset(idle_pt, 0, MAX_PT_LEN * sizeof(pte_t));
+	memset(idle_pt, 0, MAX_PT_LEN * sizeof(pte_t));
 
    	// Allocate stack for idle process
 	TracePrintf(0, "About to alloc stack frame...\n");
@@ -182,12 +181,6 @@ void idle_proc_create(void){
 	//Set sp to the top of the user stack that we set up
 	memcpy(&idle_process->curr_uc, KernelUC, sizeof(UserContext));
 
-	//Set as running
-	idle_process->currState = READY;
-
-	//Set global variable for current process as the idle process
-	current_process = idle_process;
-
 	idle_process->curr_uc.pc = (void*)DoIdle;
 	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
 
@@ -211,6 +204,12 @@ void idle_proc_create(void){
 	
 	//Flush for region 1 since we just wrote its start and limit
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
+	//Set as running
+	idle_process->currState = READY;
+
+	//Set global variable for current process as the idle process
+	current_process = idle_process;
 
 	TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====\n");
 	TracePrintf(0, " This is the num of the array for the kernel_page_table --> %d", MAX_PT_LEN); 

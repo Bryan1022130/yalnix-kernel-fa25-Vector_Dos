@@ -98,16 +98,16 @@ Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x3ab40, PTLR0 0x80
 Yalnix     
 
 Yalnix     About to call memset on v_addr 0xfa000 (vpn 125)
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 2
 Yalnix     About to alloc stack frame...
 Yalnix     --->This is the pid number given into the function frame_alloc: 0
 Yalnix     ###>This is the physical frame that was found: 37
 Yalnix     idle_proc_create(): stack frame pfn=37
-Hardware   ========= Hardware receives signal ==============
-Hardware   FrameworkSignalHandler(11), depth 2
 Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
 Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x3ab40, PTLR0 0x80
-Yalnix     This is the value of the idle pc -- > 0x23e13 and this is the value of the sp --> 0x1fffff
+Yalnix     This is the value of the idle pc -- > 0x23e28 and this is the value of the sp --> 0x1fffff
 Yalnix     idle_process->pid: 0
 Hardware       | WriteRegister(REG_PTBR1,0x0fa000)
 Hardware   | HELPER WARNING: current PTBR1 does not match any process
-Hardware   | helper_maybort("unknown PTBR1"), ret addr = 0xf459e67d [libhardware.so].
+Hardware   | helper_maybort("unknown PTBR1"), ret addr = 0xed0a067d [libhardware.so].
