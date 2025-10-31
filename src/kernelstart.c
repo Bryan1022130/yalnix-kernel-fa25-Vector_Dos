@@ -817,11 +817,12 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	TracePrintf(1, "KernelStart: creating the init process ======================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 
-	PCB *init_pcb = createInit();
+	/*PCB *init_pcb = createInit();
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 		Halt();
 	}
+	*/
 
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
