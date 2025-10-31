@@ -20,6 +20,7 @@
 void init(void){
 	while(1){
 		TracePrintf(0, "This called when there is no arguments passed to ./yalnix\n");
+		Pause();
 	}
 
 }

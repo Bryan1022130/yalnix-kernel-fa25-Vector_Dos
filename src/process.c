@@ -1,4 +1,5 @@
 //Header files from yalnix_framework
+//Header files from yalnix_framework
 #include <ykernel.h>
 #include <hardware.h>
 #include <ctype.h>
@@ -16,8 +17,7 @@ extern PCB *idle_process;
 extern Queue *readyQueue;
 extern Queue *sleepQueue;
 extern pte_t kernel_page_table[MAX_PT_LEN];
-extern int _orig_kernel_brk_page;
-extern pte_t kernel_page_table[MAX_PT_LEN];
+
 
 #define KSTACKS (KERNEL_STACK_MAXSIZE / PAGESIZE) 
 #define TRUE 1
@@ -31,6 +31,7 @@ PCB *get_next_ready_process(void) {
 }
 
 // ----------------- Context Switching -----------------------------
+
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
 	// Save current kernel context into its PCB, restore the next PCB’s context,
 	// and return pointer to the next context to run.
@@ -39,18 +40,40 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 	PCB *curr = (PCB *)curr_pcb_p;
 	PCB *next = (PCB *)next_pcb_p;
 
+
+	// Defensive check dont try to switch to or from NULL
 	if(!curr || !next){
 		TracePrintf(0, "KCSwitch: invalid PCB pointers\n");
 		return kc_in;
 	}
-	if (curr == next) return kc_in;
-	// Save current kernel context into PCB
+	// Defensive check skip if both PCBs are the same
+	if (curr == next){
+		TracePrintf(1, "KCSwitch: same process, skipping\n");
+		return kc_in;
+	}
+	// Save current kernel context into PCB to resume later
 	memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
-	if (curr->currState == RUNNING) curr->currState = READY;
-	next->currState = RUNNING;
+	//Marks old process as ready to run again
+	if (curr->currState == RUNNING)
+		curr->currState = READY;
 
+	// Switches Region 1 to the next process's page table
+	// Changes the virtual memory context the CPU sees
+	if (next->AddressSpace != NULL){
+		WriteRegister(REG_PTBR1, (unsigned int) next->AddressSpace);
+		WriteRegister(REG_PTLR1, (unsigned int) MAX_PT_LEN);
+		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	}else {
+		TracePrintf(0, "KCSwitch: Warning - next process has NULL AddressSpace\n");
+	}
+
+	// Marks the new process as active and updates the global pointer that syscalls refrence 
+	next->currState = RUNNING;
 	current_process = next;
+
+	TracePrintf(1, "KCSwitch: switched from PID %d to PID %d\n",
+		curr->pid, next->pid);
 
     // Update global
 	return &next->curr_kc;

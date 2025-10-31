@@ -33,3 +33,5 @@ void init_proc_create(void);
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt);
 void init(void);
 
+//Load Program function
+int LoadProgram(char *name, char *args[], PCB *proc);

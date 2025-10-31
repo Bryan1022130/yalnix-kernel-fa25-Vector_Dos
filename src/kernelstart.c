@@ -244,40 +244,35 @@ int pcb_free(int pid){
     TracePrintf(1, "Freed PCB for PID %d.\n");
     return 0;
 }
-
-/* ==================================================================================================================
- * Proc Create Flow
- * This the most up to date and corrected version
- * ==================================================================================================================
+/* ===========================================
+ * Function for setting up the init function
+ * ===========================================
  */
 
-void init_proc_create(void){
+PCB *createInit(void){
+	TracePrintf(0, "We are creating the init process {This should be process 2}\n");
 
-	TracePrintf(1, "init_proc_create(): begin\n");
+	PCB *init_proc = pcb_alloc();
 
-	//Get a process from our PCB free list
-	idle_process = pcb_alloc();
-
-	if(idle_process == NULL){
-		TracePrintf(0, "init_proc_create(): ERROR pcb_alloc() returned NULL\n");
-		return;
+	if(init_proc == NULL){
+		TracePrintf(0, "There was an error when getting a process for Init Process\n");
+		return NULL;
 	}
 
-  	/* =======================
-    	 * Allocate a new page table for idle process
-     	 * =======================
-     	 */
+	//Since the parent process will have a pid of 0; Set the ppid to zero
+	init_proc->ppid = 0;
 
-    	// Allocate a physical frame for the page table
+	// Allocate a physical frame for the page table
    	int pt_pfn = frame_alloc(idle_process->pid);
 
 	//WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
    	 if (pt_pfn == ERROR) {
-   	     TracePrintf(0, "init_proc_create(): ERROR allocating PT frame\n");
-	     return;
+   	     TracePrintf(0, "idle_proc_create(): ERROR allocating PT frame\n");
+	     pcb_free(init_proc->pid);
+	     return NULL;
    	 }
 
-	 TracePrintf(1, "init_proc_create(): PT frame pfn=%d\n", pt_pfn);
+	 TracePrintf(1, "InitProc: PT frame pfn=%d\n", pt_pfn);
 
     	 // Map it temporarily into kernel space to initialize it
   	 // Find a free virtual page in kernel space to map this frame
@@ -293,7 +288,82 @@ void init_proc_create(void){
 	 }
 
     	if (temp_vpn < 0) {
-		TracePrintf(0, "init_proc_create(): ERROR no free kernel vpn for PT mapping\n");
+		TracePrintf(0, "idle_proc_create(): ERROR no free kernel vpn for PT mapping\n");
+		frame_free(pt_pfn);
+	  	pcb_free(init_proc->pid);
+		return NULL;
+    	}
+  	
+	//Map the pfn into the kernel_page_table so that it can be accessed by MMU
+   	kernel_page_table[temp_vpn].pfn = pt_pfn;
+    	kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
+    	kernel_page_table[temp_vpn].valid = TRUE;
+
+	TracePrintf(0, "FLushing Region 1 memory space so that it knows its updated\n");
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
+
+	// Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
+	//This serves as the blueprint to talk to physical memory
+   	pte_t *init_pt = (pte_t *)(temp_vpn << PAGESHIFT);
+	
+	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", init_pt, temp_vpn);
+
+	memset(init_pt, 0, MAX_PT_LEN * sizeof(pte_t));
+	
+	init_proc->AddressSpace = (void *)(temp_vpn << PAGESHIFT);
+
+	return init_proc;
+}
+
+/* ==================================================================================================================
+ * Proc Create Flow
+ * This the most up to date and corrected version
+ * ==================================================================================================================
+ */
+
+void idle_proc_create(void){
+
+	TracePrintf(1, "idle_proc_create(): begin\n");
+
+	//Get a process from our PCB free list
+	idle_process = pcb_alloc();
+
+	if(idle_process == NULL){
+		TracePrintf(0, "idle_proc_create(): ERROR pcb_alloc() returned NULL\n");
+		return;
+	}
+
+  	/* =======================
+    	 * Allocate a new page table for idle process
+     	 * =======================
+     	 */
+
+    	// Allocate a physical frame for the page table
+   	int pt_pfn = frame_alloc(idle_process->pid);
+
+	//WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
+   	 if (pt_pfn == ERROR) {
+   	     TracePrintf(0, "idle_proc_create(): ERROR allocating PT frame\n");
+	     return;
+   	 }
+
+	 TracePrintf(1, "idle_proc_create(): PT frame pfn=%d\n", pt_pfn);
+
+    	 // Map it temporarily into kernel space to initialize it
+  	 // Find a free virtual page in kernel space to map this frame
+
+	 int temp_vpn = -1;
+	 //Look downward for free space to not reused pages by accident
+	 //Once again make this with a data structure
+	 for (int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--) {
+		 if (kernel_page_table[i].valid == FALSE) {
+			 temp_vpn = i;
+			 break;
+		 }
+	 }
+
+    	if (temp_vpn < 0) {
+		TracePrintf(0, "idle_proc_create(): ERROR no free kernel vpn for PT mapping\n");
 		frame_free(pt_pfn);
 		return;
     	}
@@ -304,7 +374,7 @@ void init_proc_create(void){
     	kernel_page_table[temp_vpn].valid = TRUE;
 
 	TracePrintf(0, "FLushing Region 1 memory space so that it knows its updated\n");
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
 	TracePrintf(0, "FLUSH IS DONE.\n");
 
 	// Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
@@ -320,12 +390,12 @@ void init_proc_create(void){
    	int idle_stack_pfn = frame_alloc(idle_process->pid);
 
 	if (idle_stack_pfn == ERROR) {
-		TracePrintf(0, "init_proc_create(): ERROR allocating stack frame\n");
+		TracePrintf(0, "idle_proc_create(): ERROR allocating stack frame\n");
 		frame_free(pt_pfn);
 		return;
 	}
 
-	TracePrintf(1, "init_proc_create(): stack frame pfn=%d\n", idle_stack_pfn);
+	TracePrintf(1, "idle_proc_create(): stack frame pfn=%d\n", idle_stack_pfn);
     	
 	//Map into kernel 
     	unsigned long stack_page_index = MAX_PT_LEN - 1;
@@ -338,9 +408,6 @@ void init_proc_create(void){
 	 * =======================
 	 */
 	
-	//Get a pid for the process
-	idle_process->pid = helper_new_pid(idle_pt);
-
 	//To indicate that its the kernel process itself
 	idle_process->ppid = 0;
 
@@ -394,7 +461,7 @@ void init_proc_create(void){
 	TracePrintf(0, "current_process ptr: %p\n", current_process);
 	TracePrintf(0, "==========================\n");
 	
-	TracePrintf(0, "init_proc_create(): done (pid=%d, aspace=%p)\n", idle_process->pid, idle_process->AddressSpace);
+	TracePrintf(0, "idle_proc_create(): done (pid=%d, aspace=%p)\n", idle_process->pid, idle_process->AddressSpace);
 
 }
 
@@ -573,6 +640,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = (pmem_size / PAGESIZE);
 
+	//Set up the PCB table	
+	InitPcbTable();
+
 	TracePrintf(1,"========> This is the start of the KernelStart function <=====================\n");
 	TracePrintf(2, "<<<<<<<<<<<<<<<< this is the size pmem_size => %lX and this is the stack frames ==> %d >>>>>>>>>>>>>>>>>>>>>>>>\n", pmem_size, frame_count);
 
@@ -624,7 +694,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	// Build Region 0 mappings for kernel text, data, heap, and stack.  
 	// This must be complete before enabling VM or the kernel will fault.	
-	TracePrintf(1,"-------------A------------------------------------ Region 0 Set up ----------------------------------------------------\n");
+	TracePrintf(1,"------------------------------------------------- Region 0 Set up ----------------------------------------------------\n");
 
 	//Set the Global variable
 	kernel_region_pt = (void *)kernel_page_table;
@@ -738,23 +808,34 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	/* <<<-------------------------------------
 	 * Create Process
+	 *The idle proces
 	 * ------------------------------------->>>
 	*/
 
-	TracePrintf(1, "KernelStart: creating idle process\n");
+	//Create the idle proc or process 1
+	idle_proc_create();
+
+	TracePrintf(1, "KernelStart: creating the init process ======================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+
+	PCB *init_pcb = createInit();
+	if(init_pcb == NULL){
+		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
+		Halt();
+	}
 
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
-		init();
+		//init();
 	}
 
-	TracePrintf(0, "This is what is in cmd_args[0] ---- > %p\n", cmd_args[0]);
 
-	// This simulates the ‘init’ process until real user loading is implemented.
-	InitPcbTable();
-
-	// Each process needs a private Region 1 page table.  
-	init_proc_create();
+	TracePrintf(0, "Great this the name of your program --> %s\n", cmd_args[0]);
+	TracePrintf(0, "I am going to load your program \n");
+	int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
+	if(lp_ret == ERROR){
+		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
+		return;
+	}
 
 	TracePrintf(1, "KernelStart complete.\n");
 	return;
