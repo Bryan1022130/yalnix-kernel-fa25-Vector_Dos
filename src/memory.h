@@ -21,7 +21,7 @@ typedef struct Frame {
 // Core memory-management functions
 void frames_init(unsigned int pmem_size);
 int  frame_alloc(int owner_pid);
-void frame_free(int pfn)
+void frame_free(int pfn);
 
 //KernelStart.c function declarations
 int  SetKernelBrk(void *addr);
