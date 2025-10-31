@@ -362,8 +362,9 @@ LoadProgram(char *name, char *args[], PCB *proc)
 
   /*
    * Zero out the uninitialized data area
+   * I added the cast of (void *) for li.id_end because it gave me warnings that were annyoing
    */
-  bzero(li.id_end, li.ud_end - li.id_end);
+  bzero((void *)li.id_end, li.ud_end - li.id_end);
 
   /*
    * Set the entry point in the process's UserContext

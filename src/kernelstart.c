@@ -223,7 +223,6 @@ void idle_proc_create(void){
 	TracePrintf(0, "==========================\n");
 	
 	TracePrintf(0, "idle_proc_create(): done (pid=%d, aspace=%p)\n", idle_process->pid, idle_process->AddressSpace);
-
 }
 
 /* ==============================================================================================
