@@ -32,6 +32,7 @@
 // memory mappings, process table, and heap/stack pointers.  
 // They are shared across modules and exist for the kernel’s lifetime.
 
+int pmem_size1;
 //Virtual Memory Check
 short int vm_enabled = FALSE;
 
@@ -102,7 +103,7 @@ void idle_proc_create(void){
 
     	// Allocate a physical frame for the page table
 	TracePrintf(0, "Calling the frame_alloc function to be able to map a physical frame for our idle process\n");
-   	int pt_pfn = frame_alloc(idle_process->pid);
+   	int pt_pfn = frame_alloc(-1);
 
 	//WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
    	 if (pt_pfn == ERROR) {
@@ -116,7 +117,7 @@ void idle_proc_create(void){
 
   	 // Find a free virtual page in kernel space to map this frame
 	 int temp_vpn = -1;
-	 for (int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--) {
+	 for (int i = _orig_kernel_brk_page + 1; i < (KERNEL_STACK_BASE >> PAGESHIFT) - 10; i++) {
 		 if (kernel_page_table[i].valid == FALSE) {
 			 temp_vpn = i;
 			 break;
@@ -145,12 +146,16 @@ void idle_proc_create(void){
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
 	
 	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
-
-	memset(idle_pt, 0, MAX_PT_LEN * sizeof(pte_t));
+	memset(idle_pt, 0, sizeof(pte_t));
 
    	// Allocate stack for idle process
-	TracePrintf(0, "About to alloc stack frame...\n");
+	
+	//To indicate that its the kernel process itself
+	idle_process->pid = helper_new_pid(idle_pt);
+
+	TracePrintf(0, "Assigned idle_process->pid = %d\n", idle_process->pid);
    	int idle_stack_pfn = frame_alloc(idle_process->pid);
+	TracePrintf(0, "frame_alloc returned pt_pfn = %d\n", idle_stack_pfn);
 
 	if (idle_stack_pfn == ERROR) {
 		TracePrintf(0, "idle_proc_create(): ERROR allocating stack frame\n");
@@ -164,15 +169,15 @@ void idle_proc_create(void){
     	unsigned long stack_page_index = MAX_PT_LEN - 1;
     	idle_pt[stack_page_index].valid = TRUE;
     	idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
-   	idle_pt[stack_page_index].pfn = idle_stack_pfn;
+   	idle_pt[stack_page_index].pfn =  pt_pfn;
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
 	/* =======================
 	 * idle_proc setup
 	 * =======================
 	 */
-	
-	//To indicate that its the kernel process itself
+
+	TracePrintf(0, "Assigned idle_process->pid = %d\n", idle_process->pid);
 	idle_process->ppid = -1;
 
 	//Store the byte address of the start of region 1 table
@@ -393,6 +398,8 @@ int SetKernelBrk(void * addr){
  */ 
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
+
+	pmem_size1 = pmem_size;
 
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = (pmem_size / PAGESIZE);

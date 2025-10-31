@@ -19,7 +19,7 @@ K_INCS = memory.h process.h Queue.h syscalls.h trap.h
 U_SRC_DIR = ./test
 
 # What are the user c and include files?
-U_SRCS = init.c
+U_SRCS = 
 U_INCS =  
 
 
