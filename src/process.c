@@ -83,7 +83,7 @@ PCB *pcb_alloc(void){
         free_proc->currState = READY;
 
         int pid_store = free_proc - process_table;
-        TracePrintf(0, "This is the value of the pid from our pcb_alloc functio - > %d\n", pid_store);
+        TracePrintf(0, "This is the value of the pid from our pcb_alloc function - > %d\n", pid_store);
 
         free_proc->pid = pid_store;
 
@@ -109,7 +109,7 @@ PCB *pcb_alloc(void){
                 free_proc->kernel_stack_frames[i] = pfn;
         }
 
-        TracePrintf(0, "Allocated PCB with PID %d \n", pid_store);
+        TracePrintf(0, "Allocated PCB with PID %d\n\n", pid_store);
         return free_proc;
 }
 

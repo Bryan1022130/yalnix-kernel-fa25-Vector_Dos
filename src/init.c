@@ -15,7 +15,10 @@
 #include "memory.h" //API for Frame tracking in our program
 #include "process.h" //API for process block control
 
-extern kernel_page_table[MAX_PT_LEN];
+#define FALSE 0
+#define TRUE 1
+
+extern pte_t kernel_page_table[MAX_PT_LEN];
 
 /* ===========================================
  * Function for setting up the init function
@@ -36,7 +39,7 @@ PCB *createInit(void){
         init_proc->ppid = 0;
 
         // Allocate a physical frame for the page table
-        int pt_pfn = frame_alloc(idle_process->pid);
+        int pt_pfn = frame_alloc(init_proc->pid);
 
         //WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
          if (pt_pfn == ERROR) {
@@ -54,7 +57,7 @@ PCB *createInit(void){
          //Look downward for free space to not reused pages by accident
          //Once again make this with a data structure
          for (int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--) {
-                 if (kernel_page_table[i]->valid == FALSE) {
+                 if (kernel_page_table[i].valid == FALSE) {
                          temp_vpn = i;
                          break;
                  }
@@ -68,9 +71,9 @@ PCB *createInit(void){
         }
 
         //Map the pfn into the kernel_page_table so that it can be accessed by MMU
-        kernel_page_table[temp_vpn]->pfn = pt_pfn;
-        kernel_page_table[temp_vpn]->prot = PROT_READ | PROT_WRITE;
-        kernel_page_table[temp_vpn]->valid = TRUE;
+        kernel_page_table[temp_vpn].pfn = pt_pfn;
+        kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
+        kernel_page_table[temp_vpn].valid = TRUE;
 
         TracePrintf(0, "FLushing Region 1 memory space so that it knows its updated\n");
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);

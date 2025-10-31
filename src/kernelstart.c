@@ -93,6 +93,8 @@ void idle_proc_create(void){
 		TracePrintf(0, "idle_proc_create(): ERROR pcb_alloc() returned NULL\n");
 		return;
 	}
+	
+	// -----------------------------------------------------------------------------------------------------------------
 
   	/* =======================
     	 * Allocate a new page table for idle process
@@ -100,6 +102,7 @@ void idle_proc_create(void){
      	 */
 
     	// Allocate a physical frame for the page table
+	TracePrintf(0, "Calling the frame_alloc function to be able to map a physical frame for our idle process\n");
    	int pt_pfn = frame_alloc(idle_process->pid);
 
 	//WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
@@ -108,14 +111,12 @@ void idle_proc_create(void){
 	     return;
    	 }
 
-	 TracePrintf(1, "idle_proc_create(): PT frame pfn=%d\n", pt_pfn);
+	 TracePrintf(1, "idle_proc_create(): PT frame pfn=%d\n\n", pt_pfn);
+	
+	 // -----------------------------------------------------------------------------------------------------------------
 
-    	 // Map it temporarily into kernel space to initialize it
   	 // Find a free virtual page in kernel space to map this frame
-
 	 int temp_vpn = -1;
-	 //Look downward for free space to not reused pages by accident
-	 //Once again make this with a data structure
 	 for (int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--) {
 		 if (kernel_page_table[i].valid == FALSE) {
 			 temp_vpn = i;
@@ -134,17 +135,19 @@ void idle_proc_create(void){
     	kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
     	kernel_page_table[temp_vpn].valid = TRUE;
 
-	TracePrintf(0, "FLushing Region 1 memory space so that it knows its updated\n");
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
-	TracePrintf(0, "FLUSH IS DONE.\n");
+	TracePrintf(0, "Flushing Region 0 memory space so that it knows its updated\n");
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+	TracePrintf(0,"\n\n");
+
+	// -----------------------------------------------------------------------------------------------------------------
 
 	// Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
-	//This serves as the blueprint to talk to physical memory
+	//Blueprint to talk to physical memory
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
 	
 	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
 
-	memset(idle_pt, 0, MAX_PT_LEN * sizeof(pte_t));
+	//memset(idle_pt, 0, MAX_PT_LEN * sizeof(pte_t));
 
    	// Allocate stack for idle process
 	TracePrintf(0, "About to alloc stack frame...\n");
@@ -163,23 +166,27 @@ void idle_proc_create(void){
     	idle_pt[stack_page_index].valid = TRUE;
     	idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
    	idle_pt[stack_page_index].pfn = idle_stack_pfn;
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
 	/* =======================
-	 * Pid Logic
+	 * idle_proc setup
 	 * =======================
 	 */
 	
 	//To indicate that its the kernel process itself
-	idle_process->ppid = 0;
-
-	//Flush for region 1 since we just wrote its start and limit
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	idle_process->ppid = -1;
 
 	//Store the byte address of the start of region 1 table
 	idle_process->AddressSpace = (void *)(uintptr_t)(temp_vpn << PAGESHIFT);
 	
 	//Set sp to the top of the user stack that we set up
 	memcpy(&idle_process->curr_uc, KernelUC, sizeof(UserContext));
+
+	//Set as running
+	idle_process->currState = READY;
+
+	//Set global variable for current process as the idle process
+	current_process = idle_process;
 
 	idle_process->curr_uc.pc = (void*)DoIdle;
 	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
@@ -204,12 +211,6 @@ void idle_proc_create(void){
 	
 	//Flush for region 1 since we just wrote its start and limit
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-
-	//Set as running
-	idle_process->currState = READY;
-
-	//Set global variable for current process as the idle process
-	current_process = idle_process;
 
 	TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====\n");
 	TracePrintf(0, " This is the num of the array for the kernel_page_table --> %d", MAX_PT_LEN); 
@@ -317,9 +318,6 @@ int SetKernelBrk(void * addr){
 		uintptr_t grow_start = UP_TO_PAGE(old_kbrk);        // first new page if growing
 		uintptr_t grow_end   = UP_TO_PAGE(new_kbrk_addr);   // one past last page
 							
-		// If grow_end > grow_start → we’re expanding the heap
-		// If grow_end < grow_start → we’re shrinking
-
 		// Step 2: Growing the heap (allocate frames)
 		if (grow_end > grow_start) {
 		        TracePrintf(2, "[SetKernelBrk] Growing kernel heap\n");
@@ -552,12 +550,12 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	TracePrintf(1, "KernelStart: creating the init process ======================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 
-	/*PCB *init_pcb = createInit();
-	if(init_pcb == NULL){
-		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
-		Halt();
-	}
-	*/
+//	PCB *init_pcb = createInit();
+	//if(init_pcb == NULL){
+//		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
+//		Halt();
+//	}
+
 
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");

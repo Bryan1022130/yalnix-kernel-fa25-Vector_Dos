@@ -77,16 +77,15 @@ void frames_init(unsigned int pmem_size) {
 // Find a free frame and mark it as owned by 'owner_pid'.
 // Returns the physical frame number (PFN), or ERROR if full.
 int frame_alloc(int owner_pid) {
-	TracePrintf(0, "THIS IS THE FRAME ALLOC FUNCTION _____________________________________???????????????\n");
 
-	TracePrintf(0, "THIS IS THE PID NUMBER THAT WE WERE GIVEN -- %d\n", owner_pid);
+	TracePrintf(0, "--->This is the pid number given into the function frame_alloc: %d\n", owner_pid);
 
 	for (int i = 0; i < total_frames; i++) {
 		if (frame_table[i].in_use == 0) {
 			frame_table[i].in_use = 1;
            		frame_table[i].owner_pid = owner_pid;
 			frame_table[i].refcount = 1;
-			TracePrintf(0, "THIS IS OUR RETURN VALUE -- %d\n", i);
+			TracePrintf(0, "###>This is the physical frame that was found: %d\n", i);
             		return i;
         }
     }
