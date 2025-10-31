@@ -17,6 +17,11 @@
 
 extern kernel_page_table[MAX_PT_LEN];
 
+/* ===========================================
+ * Function for setting up the init function
+ * ===========================================
+ */
+
 PCB *createInit(void){
         TracePrintf(0, "We are creating the init process {This should be process 2}\n");
 
