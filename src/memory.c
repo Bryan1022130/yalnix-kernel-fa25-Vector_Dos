@@ -70,6 +70,8 @@ void frames_init(unsigned int pmem_size) {
     TracePrintf(1, "  Marked frames 0-%lu as low memory (reserved)\n", first_kernel_page - 1);
     TracePrintf(1, "  Marked frames %lu-%lu as kernel text/data\n", first_kernel_page, first_unused_page - 1);
     TracePrintf(1, "  Marked frames %lu-%lu as kernel stack\n", stack_base_page, stack_limit_page - 1);
+    TracePrintf(1, "Leaving the frame_init function\n\n");
+
 }
 
 // Find a free frame and mark it as owned by 'owner_pid'.

@@ -83,7 +83,7 @@ PCB *pcb_alloc(void){
         free_proc->currState = READY;
 
         int pid_store = free_proc - process_table;
-        TracePrintf(0, "This is the value of the pid - > %d", pid_store);
+        TracePrintf(0, "This is the value of the pid from our pcb_alloc functio - > %d\n", pid_store);
 
         free_proc->pid = pid_store;
 

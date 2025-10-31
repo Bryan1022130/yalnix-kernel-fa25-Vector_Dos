@@ -173,7 +173,7 @@ void idle_proc_create(void){
 	idle_process->ppid = 0;
 
 	//Flush for region 1 since we just wrote its start and limit
-//	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	//Store the byte address of the start of region 1 table
 	idle_process->AddressSpace = (void *)(uintptr_t)(temp_vpn << PAGESHIFT);
@@ -400,18 +400,17 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = (pmem_size / PAGESIZE);
 
-	//Set up the PCB table	
-	InitPcbTable();
-
-	TracePrintf(1,"========> This is the start of the KernelStart function <=====================\n");
-	TracePrintf(2, "<<<<<<<<<<<<<<<< this is the size pmem_size => %lX and this is the stack frames ==> %d >>>>>>>>>>>>>>>>>>>>>>>>\n", pmem_size, frame_count);
+	TracePrintf(1,"========> This is the start of the KernelStart function <========\n");
+	TracePrintf(1, "<<<<<<<<<<<<<<<< this is the size pmem_size => %lX and this is the stack frames ==> %d >>>>>>>>>>>>>>>>>>>>>>>>\n", pmem_size, frame_count);
 
 	/* <<<---------------------------------------------------------
 	 * Boot up the free frame data structure && define global vars
 	 * ---------------------------------------------------------->>>
 	 */
 
-	//Initialize the data struct to track the free frames
+	//Set up the PCB table
+	InitPcbTable();
+
 	// Builds the frame table and marks kernel-reserved frames as used.
 	frames_init(pmem_size);
 	
@@ -419,10 +418,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	readyQueue = initializeQueue();
 	sleepQueue = initializeQueue();
 
-
 	//Set up global variable for the current UserContext
 	KernelUC = uctxt;
-	// KernelStart will copy or modify this to return into user mode later.
 
 	/* <<<------------------------------
 	 * Set up the Interrupt Vector Table
@@ -430,13 +427,13 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	// Each trap/interrupt is linked to its handler so hardware can dispatch correctly.
-	// This must be complete before enabling VM or the kernel will fault.
-	TracePrintf(1,"+++++ We are setting up the IVT and im going to call the function\n");
+	TracePrintf(1,"+++++ We are setting up the IVT and im going to call the function | CALLED KERNELSTART \n");
 	setup_trap_handler(Interrupt_Vector_Table);
-	TracePrintf(1,"+++++ We have left the functions and going to set up region 0\n");
+	TracePrintf(1,"+++++ We have left the function and are now going to set up region 0 | CALLED KERNELSTART\n\n");
 
 	/* <<<---------------------------------------
 	 * Set up the initial Region 0 {KERNEL SPACE}
+	 * Build Region 0 mappings for kernel text, data, heap, and stack.  
 	 * -->Stack	-
 	 *  		-
 	 *  		-
@@ -451,9 +448,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 * _first_kernel_text_page - > low page of kernel text
 	 */
 
-
-	// Build Region 0 mappings for kernel text, data, heap, and stack.  
-	// This must be complete before enabling VM or the kernel will fault.	
 	TracePrintf(1,"------------------------------------------------- Region 0 Set up ----------------------------------------------------\n");
 
 	//Set the Global variable
@@ -461,12 +455,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(2,"This is where my array is located --> %p\n", kernel_region_pt);
 	
 	unsigned long int text_start = _first_kernel_text_page;
-	TracePrintf(2, "This is the value of the text_start --> %lx ++++++++++++++= \n", text_start);
 	unsigned long int text_end = _first_kernel_data_page;
-	TracePrintf(2, "This is the value of the text_end ---> %lx++++++++++++++\n", text_end);
-	
-	for(unsigned long int text = text_start; text < text_end; text++){
 
+	for(unsigned long int text = text_start; text < text_end; text++){
 		//Text section should be only have READ && EXEC permissions
 		kernel_page_table[text].prot = PROT_READ | PROT_EXEC;
 		kernel_page_table[text].valid = TRUE;
@@ -479,9 +470,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	unsigned long int heapdata_start = _first_kernel_data_page; 
-	TracePrintf(2, "This is the value of the heapdata_start---> %lx++++++++++++++++\n", heapdata_start);
 	unsigned long int heapdata_end = _orig_kernel_brk_page;
-	TracePrintf(2, "This is the value of the heapdata_end ---> %lx ++++++++++++++++++++\n", heapdata_end);
 
 	for(unsigned long int data_heap = heapdata_start; data_heap < heapdata_end; data_heap++){
 		//Heap and Data section both have READ and WRITE conditions
@@ -508,48 +497,33 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		kernel_page_table[stack_loop].pfn = stack_loop; 
 	}
 
-	TracePrintf(2,"THIS IS BEFORE WE ARE WRITING THE PAGE TABLE ADDRESS TO THE HARDWARE\n");
-
 	//Set global variable for stack limit for region 0
 	kernel_stack_limit = (void *)KERNEL_STACK_LIMIT;
-
+	
+	TracePrintf(0, "This is the base of the kernel_page_table ===> %p\n", kernel_page_table);
 	//Write the address of the start of text for pte_t
 	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
-	
+
 	//MAX_PT_LEN because REG_PTLR0 needs number of entries in the page table for region 0
 	WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
 
-	TracePrintf(1, "Region 0 setup complete (stack, text, data, heap)\n");
-
-	pte_t *kernel_pt = kernel_page_table;
-
-	int kernel_pid = helper_new_pid(kernel_pt);
-
-	TracePrintf(2, "THIS IS THE KERNEL PID ++================================>>>>>>>>>>>>>>>>>>>>>>>>>>>> %d\n", kernel_pid);
-
-	if (kernel_pid < 0) {
-		TracePrintf(0, "FATAL ERROR: Could not register kernel's initial PID!\n");
-   		 Halt(); // Or appropriate error handling
-	}
+	TracePrintf(1,"############################################## Region 0 Setup Done #############################################################\n\n");
 
 	/* <<<--------------------------
 	 * Initialize Virtual Memory
 	 * -------------------------->>>
 	 */
 	
-	TracePrintf(1, "------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------\n");
-	// All Region 0 mappings are ready; now turn on virtual memory.  
+	TracePrintf(1, "------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------\n\n");
 	WriteRegister(REG_VM_ENABLE, TRUE);
-
-	//Set the global variable as true 
 	vm_enabled = TRUE;
+	TracePrintf(1, "##################################### VIRTUAL MEMORY SECTION IS DONE ################################################\n\n");
 
 	/* <<<------------------------------
 	 * Call SetKernelBrk()
 	 * ------------------------------>>>
 	 */
 
-	//Set current brk and then call SetKernelBrk
 	TracePrintf(1, "------------------------------------- WE ARE NOW GOING TO CALL KERNELBRK :) -------------------------------------\n");
 
 	// Initialize kernel heap pointer (current_kernel_brk)  
@@ -562,7 +536,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	TracePrintf(1, "We have called SetKernelBrk :)\n");
+	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n\n");
+
 
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
