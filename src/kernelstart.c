@@ -22,30 +22,25 @@
 //Kernel Stack Macros {Same as PCB struct}
 #define KERNEL_STACK_PAGES (KERNEL_STACK_MAXSIZE / PAGESIZE) 
 
-/*
- * ================================>>
+/* ================================>>
  * Global Variables
  * <<================================
  */
 
-//Virtual Memory Check
+//Virtual Memory
 short int vm_enabled = FALSE;
 
-//Process Block
+//Process Block Control
 PCB *current_process = NULL; 
 PCB *idle_process = NULL;
 PCB *process_free_head = NULL;
-//PCB process_table[MAX_PROCS];
 
 // global process queues
-Queue *readyQueue;    // holds READY processes waiting for CPU
-Queue *sleepQueue;    // holds BLOCKED processes waiting for Delay to expire
+Queue *readyQueue;    
+Queue *sleepQueue;
 
-//Brk Location
+//Kernel Control
 void *current_kernel_brk;
-
-//Kernel Tracking Logic
-void *kernel_stack_limit;
 UserContext *KernelUC;
 
 //Frames available in physical memory {pmem_size / PAGESIZE}
@@ -55,11 +50,10 @@ unsigned long int frame_count;
 unsigned long current_tick = 0;
 
 //Virtual Memory look up logic
-// Something like -----> (vpn >= vp1) ? vpn - vp1 : vpn - vp0;
 unsigned long int vp0 = VMEM_0_BASE >> PAGESHIFT;
 unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
 
-//Page Table allocation -> an array of page table entries
+//Kernel Page Table {Malloc Called}
 pte_t *kernel_page_table;
 
 //Functions for terminal {TTY_TRANSMIT && TTY_RECEIVE}
@@ -204,9 +198,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	unsigned char *track = (unsigned char*)malloc(frame_count);
 	init_frames(track, frame_count);
 
-	//Set up the PCB table
-	//InitPcbTable();	
-
 	// initialize process queues
 	readyQueue = initializeQueue();
 	sleepQueue = initializeQueue();
@@ -271,16 +262,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	*/
 	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n\n");
 
-
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
 	//Create the idle proc or process 1
 	idle_proc_create(track, frame_count, user_page_table, uctxt);
-	
 	/*
-	TracePrintf(1, "KernelStart: creating the init process ======================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	TracePrintf(1, "We are going into the CreateInit process ++++\n");
-
 	PCB *init_pcb = createInit();
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");

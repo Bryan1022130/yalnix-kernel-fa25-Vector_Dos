@@ -16,8 +16,7 @@ extern PCB *current_process;
 extern PCB *idle_process;
 extern Queue *readyQueue;
 extern Queue *sleepQueue;
-extern pte_t kernel_page_table[MAX_PT_LEN];
-extern PCB process_table[MAX_PROCS];
+extern pte_t *kernel_page_table;
 extern PCB *process_free_head;
 
 #define KSTACKS (KERNEL_STACK_MAXSIZE / PAGESIZE) 
@@ -191,7 +190,6 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 	//Check if the process is valid
 	PCB *curr = (PCB *)curr_pcb_p;
 	PCB *next = (PCB *)next_pcb_p;
-
 
 	// Defensive check dont try to switch to or from NULL
 	if(!curr || !next){
