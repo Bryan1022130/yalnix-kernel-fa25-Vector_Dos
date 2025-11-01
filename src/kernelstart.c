@@ -147,7 +147,9 @@ void idle_proc_create(void){
 
   	 // Find a free virtual page in kernel space to map this frame
 	 int temp_vpn = -1;
-	 for (int i = _orig_kernel_brk_page + 1; i < (KERNEL_STACK_BASE >> PAGESHIFT) - 10; i++) {
+	 unsigned long brk_page = ((unsigned long)current_kernel_brk) >> PAGESHIFT;
+
+	 for (int i = brk_page; i < (KERNEL_STACK_BASE >> PAGESHIFT) - 10; i++) {
 		 if (kernel_page_table[i].valid == FALSE) {
 			 temp_vpn = i;
 			 break;
@@ -173,12 +175,13 @@ void idle_proc_create(void){
 
 	// Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
 	//Blueprint to talk to physical memory
+	TracePrintf(0, "About to get idle_pt\n");
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
 	
 	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
 
 	helper_check_heap("before");
-	memset(idle_pt, 0, (PAGESIZE));
+	//memset(idle_pt, 0, sizeof(pte_t) * MAX_PT_LEN);
 	helper_check_heap("after");
 
 	//WE need to call helper_new_pid to inform the hardware

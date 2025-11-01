@@ -63,7 +63,7 @@ LD_EXTRA =
 KERNEL_LIBS = $(LIBDIR)/libkernel.a $(LIBDIR)/libhardware.so
 
 # the "kernel.x" argument tells the loader to use the memory layout in the kernel.x file..
-KERNEL_LDFLAGS = $(LD_EXTRA) -L$(LIBDIR) -lkernel -lelf  -Wl,-T,$(ETCDIR)/kernel.x  -Wl,-R$(LIBDIR)  -lhardware
+KERNEL_LDFLAGS = $(LD_EXTRA) -L$(LIBDIR) -lkernel -lelf  -Wl,-T,$(ETCDIR)/kernel.x  -Wl,-R$(LIBDIR)  -lhardware 
 LINK_KERNEL = $(LINK.c)
 
 #  "user.x" respectively.
