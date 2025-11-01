@@ -130,7 +130,7 @@ void HandleKernelTrap(UserContext *CurrUC){
 
 void HandleClockTrap(UserContext *CurrUC){
 	current_tick++;
-	TracePrintf(0, "In HandleClockTrap");
+	TracePrintf(0, "In HandleClockTrap\n");
 
 	QueueNode *node = peek(sleepQueue);
 	// wake up processes whose Delay expired
@@ -145,7 +145,7 @@ void HandleClockTrap(UserContext *CurrUC){
 		p = (node ? (PCB *)node->data : NULL);
 	}
 	
-	TracePrintf(0, "Leaving HandleClockTrap");
+	TracePrintf(0, "Leaving HandleClockTrap\n");
 	
 	/*
 	PCB *old_pcb = current_process;

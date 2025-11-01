@@ -78,6 +78,34 @@ static unsigned int terminal_array[NUM_TERMINALS];
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
 /* ==================================================================================================================
+ * Kernel Stack Allocation function 
+ * ==================================================================================================================
+ */
+int create_sframes(int pid, PCB *free_proc){
+        TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
+
+        for(int i = 0; i < KERNEL_STACK_PAGES; i++){
+                //Allocate a physical frame for kernel stack
+                int pfn = frame_alloc(pid);
+                if(pfn == ERROR){
+                        TracePrintf(0, "We ran out of frames to give!\n");
+
+                        //Unmap any previous frames that we allocated
+                        for(int f = 0; f < i; f++){
+                                frame_free(free_proc->kernel_stack_frames[f]);
+                        }
+
+                        //free the pcb itself
+                        pcb_free(pid);
+
+                        return ERROR;
+                }
+                free_proc->kernel_stack_frames[i] = pfn;
+        }
+	return 0;
+}
+
+/* ==================================================================================================================
  * Proc Create Flow
  * This the most up to date and corrected version
  * ==================================================================================================================
@@ -101,9 +129,11 @@ void idle_proc_create(void){
      	 * =======================
      	 */
 
+	idle_process->pid = 0;
+
     	// Allocate a physical frame for the page table
 	TracePrintf(0, "Calling the frame_alloc function to be able to map a physical frame for our idle process\n");
-   	int pt_pfn = frame_alloc(-1);
+   	int pt_pfn = frame_alloc(idle_process->pid);
 
 	//WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
    	 if (pt_pfn == ERROR) {
@@ -146,16 +176,23 @@ void idle_proc_create(void){
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
 	
 	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
-	memset(idle_pt, 0, sizeof(pte_t));
 
-   	// Allocate stack for idle process
-	
-	//To indicate that its the kernel process itself
+	helper_check_heap("before");
+	memset(idle_pt, 0, (PAGESIZE));
+	helper_check_heap("after");
+
+	//WE need to call helper_new_pid to inform the hardware
 	idle_process->pid = helper_new_pid(idle_pt);
-
 	TracePrintf(0, "Assigned idle_process->pid = %d\n", idle_process->pid);
+
+	//Creats it kernel stack frames {Field inside of the struct PCB}
+	if(create_sframes(idle_process->pid, idle_process) == ERROR){
+		return;
+	}
+	
+	TracePrintf(0,"\n\n");
+	TracePrintf(0,"We are going to alloc a frame the idle procs stack\n");
    	int idle_stack_pfn = frame_alloc(idle_process->pid);
-	TracePrintf(0, "frame_alloc returned pt_pfn = %d\n", idle_stack_pfn);
 
 	if (idle_stack_pfn == ERROR) {
 		TracePrintf(0, "idle_proc_create(): ERROR allocating stack frame\n");
@@ -163,14 +200,15 @@ void idle_proc_create(void){
 		return;
 	}
 
-	TracePrintf(1, "idle_proc_create(): stack frame pfn=%d\n", idle_stack_pfn);
+	TracePrintf(1, "idle_proc_create(): stack frame pfn=%d\n\n", idle_stack_pfn);
     	
-	//Map into kernel 
+	//We are accessing region 1 page table
     	unsigned long stack_page_index = MAX_PT_LEN - 1;
     	idle_pt[stack_page_index].valid = TRUE;
     	idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
-   	idle_pt[stack_page_index].pfn =  pt_pfn;
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+   	idle_pt[stack_page_index].pfn =  idle_stack_pfn;
+
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	/* =======================
 	 * idle_proc setup
@@ -208,7 +246,7 @@ void idle_proc_create(void){
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
 	
 	//Flush for region 1 since we just wrote its start and limit
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	WriteRegister(REG_TLB_FLUSH, (unsigned int)temp_vpn << PAGESHIFT);
 
 	//Set as running
 	idle_process->currState = READY;
@@ -230,6 +268,7 @@ void idle_proc_create(void){
 	TracePrintf(0, "idle_proc_create(): done (pid=%d, aspace=%p)\n", idle_process->pid, idle_process->AddressSpace);
 }
 
+
 /* ==============================================================================================
  * SetKernelBrk Function Logic
  * ==============================================================================================
@@ -247,7 +286,7 @@ int SetKernelBrk(void * addr){
 	 */
 	
 	if(vm_enabled == FALSE){
-		TracePrintf(2, "THIS IS CALLED WHEN VIRTUAL MEMORY IS NOT ENABLED\n");	
+		TracePrintf(1, "THIS IS CALLED WHEN VIRTUAL MEMORY IS NOT ENABLED\n");	
 
 		//Normalize byte address for brk_addr
 		uintptr_t original_brk_addr = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
@@ -286,7 +325,7 @@ int SetKernelBrk(void * addr){
         	return 0;
 	}
 	else if (vm_enabled == TRUE){
-		TracePrintf(2, "VIRTUAL MEMORY HAS BEEN ENABLED \n");
+		TracePrintf(1, "VIRTUAL MEMORY HAS BEEN ENABLED \n");
 
 		//SetKernelBrk functions as regular brk after Virtual Memory has been initialized
 		//Stores the byte address of the kernel break
@@ -303,7 +342,7 @@ int SetKernelBrk(void * addr){
 		uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
 
 
-		TracePrintf(2, "[SetKernelBrk-VM] Comparing new_brk: %p against heap_start: %p\n",
+		TracePrintf(1, "[SetKernelBrk-VM] Comparing new_brk: %p against heap_start: %p\n",
                     (void*)new_kbrk_addr, (void*)heap_start);
 
 
@@ -324,7 +363,7 @@ int SetKernelBrk(void * addr){
 							
 		// Step 2: Growing the heap (allocate frames)
 		if (grow_end > grow_start) {
-		        TracePrintf(2, "[SetKernelBrk] Growing kernel heap\n");
+		        TracePrintf(1, "[SetKernelBrk] Growing kernel heap\n");
 
 		        uintptr_t mapped_until = grow_start;
 
@@ -351,6 +390,7 @@ int SetKernelBrk(void * addr){
 		                                        kernel_page_table[rvpn].pfn   = 0;
 		                                }
 		                        }
+					WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 		                        TracePrintf(0, "[SetKernelBrk] Out of frames while growing!\n");
 		                        return ERROR;
 		                }
@@ -360,12 +400,14 @@ int SetKernelBrk(void * addr){
 		                kernel_page_table[vpn].valid = TRUE;
 
 		                mapped_until = vaddr + PAGESIZE;
+			        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+
 		        }
 
-		        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+		      //  WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 		}
 		else if (grow_end < grow_start) {
-		        TracePrintf(2, "[SetKernelBrk] Shrinking kernel heap...\n");
+		        TracePrintf(1, "[SetKernelBrk] Shrinking kernel heap...\n");
 		        for (uintptr_t vaddr = grow_end; vaddr < grow_start; vaddr += PAGESIZE) {
 		                int vpn = (int)(vaddr >> PAGESHIFT);
 		                if (kernel_page_table[vpn].valid) {
@@ -403,7 +445,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Calculate the number of page frames and store into our global variable 
 	frame_count = (pmem_size / PAGESIZE);
-
+	TracePrintf(1, "\n\n");
 	TracePrintf(1,"========> This is the start of the KernelStart function <========\n");
 	TracePrintf(1, "<<<<<<<<<<<<<<<< this is the size pmem_size => %lX and this is the stack frames ==> %d >>>>>>>>>>>>>>>>>>>>>>>>\n", pmem_size, frame_count);
 
@@ -413,11 +455,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	 */
 
 	//Set up the PCB table
-	InitPcbTable();
+	InitPcbTable();	
 
-	// Builds the frame table and marks kernel-reserved frames as used.
-	frames_init(pmem_size);
-	
 	// initialize process queues
 	readyQueue = initializeQueue();
 	sleepQueue = initializeQueue();
@@ -456,10 +495,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Set the Global variable
 	kernel_region_pt = (void *)kernel_page_table;
-	TracePrintf(2,"This is where my array is located --> %p\n", kernel_region_pt);
+	TracePrintf(1,"This is where my array is located --> %p\n", kernel_region_pt);
 	
 	unsigned long int text_start = _first_kernel_text_page;
 	unsigned long int text_end = _first_kernel_data_page;
+	TracePrintf(1," this is the value of text_start --> %lu and this is text_end --> %lu \n", text_start, text_end);
 
 	for(unsigned long int text = text_start; text < text_end; text++){
 		//Text section should be only have READ && EXEC permissions
@@ -475,14 +515,15 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	unsigned long int heapdata_start = _first_kernel_data_page; 
 	unsigned long int heapdata_end = _orig_kernel_brk_page;
-
+	TracePrintf(1," this is the value of heapdata_start --> %lu and this is heapdata_end --> %lu \n", heapdata_start, heapdata_end);
 	for(unsigned long int data_heap = heapdata_start; data_heap < heapdata_end; data_heap++){
 		//Heap and Data section both have READ and WRITE conditions
 		kernel_page_table[data_heap].prot = PROT_WRITE | PROT_READ; 
 		kernel_page_table[data_heap].valid = TRUE;
 		kernel_page_table[data_heap].pfn = data_heap;
 	}
-
+	
+	TracePrintf(1,"This is the redzone and we neeed to print this out\n");
 	/* ==============================
 	 * Red Zone {Unmapped Pages}
 	 * ==============================
@@ -491,11 +532,10 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	unsigned long int stack_start = KERNEL_STACK_BASE >> PAGESHIFT;
 	unsigned long int stack_end = KERNEL_STACK_LIMIT >> PAGESHIFT;
 	
-	TracePrintf(2,"This is in the stack loop logic\n");
-	TracePrintf(2," this is the value of stack_start --> %lx and this is stackend --> %lx \n", stack_start, stack_end);
+	TracePrintf(1,"This is in the stack loop logic\n");
+	TracePrintf(1," this is the value of stack_start --> %lu and this is stackend --> %lu \n", stack_start, stack_end);
 
 	for(unsigned long int stack_loop = stack_start; stack_loop < stack_end; stack_loop++){
-		TracePrintf(2,"WE ARE in the stack loop\n");
 		kernel_page_table[stack_loop].prot = PROT_READ | PROT_WRITE;
 		kernel_page_table[stack_loop].valid = TRUE;
 		kernel_page_table[stack_loop].pfn = stack_loop; 
@@ -504,7 +544,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Set global variable for stack limit for region 0
 	kernel_stack_limit = (void *)KERNEL_STACK_LIMIT;
 	
-	TracePrintf(0, "This is the base of the kernel_page_table ===> %p\n", kernel_page_table);
+	TracePrintf(1, "This is the base of the kernel_page_table ===> %p\n", kernel_page_table);
 	//Write the address of the start of text for pte_t
 	WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
 
@@ -545,6 +585,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
+	// Builds the frame table and marks kernel-reserved frames as used.
+	frames_init(pmem_size);
+
 	/* <<<-------------------------------------
 	 * Create Process
 	 *The idle proces
@@ -568,7 +611,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		//init();
 	}
 
-
+	/*
 	TracePrintf(0, "Great this the name of your program --> %s\n", cmd_args[0]);
 	TracePrintf(0, "I am going to load your program \n");
 	int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
@@ -576,6 +619,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
 		return;
 	}
+
+	*/
 
 	TracePrintf(1, "KernelStart complete.\n");
 	return;

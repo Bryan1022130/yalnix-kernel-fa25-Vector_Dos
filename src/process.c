@@ -82,11 +82,11 @@ PCB *pcb_alloc(void){
         //Assign the new pid and set the state as running
         free_proc->currState = READY;
 
-        int pid_store = free_proc - process_table;
-        TracePrintf(0, "This is the value of the pid from our pcb_alloc function - > %d\n", pid_store);
+        //int pid_store = free_proc - process_table;
+        //TracePrintf(0, "This is the value of the pid from our pcb_alloc function - > %d\n", pid_store);
 
-        free_proc->pid = pid_store;
-
+        //free_proc->pid = pid_store;
+	/*
         TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KSTACKS);
         for(int i = 0; i < KSTACKS; i++){
                 //Allocate a physical frame for kernel stack
@@ -110,7 +110,10 @@ PCB *pcb_alloc(void){
         }
 
         TracePrintf(0, "Allocated PCB with PID %d\n\n", pid_store);
+	*/
+
         return free_proc;
+
 }
 
 /* ===============================================================================================================
