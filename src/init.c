@@ -27,6 +27,7 @@ extern UserContext *KernelUC;
  * ===========================================
  */
 
+/*
 PCB *createInit(void){
         TracePrintf(0, "We are creating the init process {This should be process 2}\n");
 
@@ -123,3 +124,4 @@ void init(void){
 	}
 
 }
+*/

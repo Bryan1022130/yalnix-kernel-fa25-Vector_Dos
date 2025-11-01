@@ -1,7 +1,5 @@
 #include "Queue.h"
 
-//This is probably unnecessary since you can check integers for true or false
-//But this is just to make it more clear
 #define TRUE 1
 #define FALSE 0
 

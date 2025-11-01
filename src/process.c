@@ -24,6 +24,7 @@ extern PCB *process_free_head;
 #define TRUE 1
 #define FALSE 0
 
+
 //-------------------------------------------------------------------------------------------PCB Logic for KernelStart
 
 /* ===================================================================================================================
@@ -32,7 +33,7 @@ extern PCB *process_free_head;
  * Clears all PCBs in the process table and marks them as FREE.
  * ===================================================================================================================
  */
-
+/*
 void InitPcbTable(void){
     // Zero out the entire array
     memset(process_table, 0, sizeof(process_table));
@@ -50,6 +51,7 @@ void InitPcbTable(void){
 
     TracePrintf(0, "Initialized PCB table: all entries marked FREE.\n");
 }
+*/
 
 /* ===============================================================================================================
  * pcb_alloc()
@@ -57,6 +59,8 @@ void InitPcbTable(void){
  * Sets the state to READY and assigns its PID.
  * ===============================================================================================================
  */
+
+/*
 PCB *pcb_alloc(void){
 
         //Check if there is PCBs left to use
@@ -85,6 +89,7 @@ PCB *pcb_alloc(void){
         return free_proc;
 
 }
+*/
 
 /* ===============================================================================================================
  * pcb_free(pid)
@@ -94,6 +99,8 @@ PCB *pcb_alloc(void){
  *  - Resets PCB state to FREE
  * ===============================================================================================================
  */
+
+/*
 int pcb_free(int pid){
 
     if(pid < 0 || pid >= MAX_PROCS){
@@ -167,6 +174,7 @@ int pcb_free(int pid){
     TracePrintf(1, "Freed PCB for PID %d.\n");
     return 0;
 }
+*/
 
 // ----------------- Context Switching -----------------------------
 PCB *get_next_ready_process(void) {

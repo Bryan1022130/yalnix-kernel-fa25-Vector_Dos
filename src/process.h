@@ -28,7 +28,6 @@ struct pcb{
         UserContext curr_uc; //Hold the Current User Context { Not just the pointer}
 	
 	//Process information
-	int ppid; //Parent Process id 
         int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
 	int exitstatus; // When a process is going to exit
 

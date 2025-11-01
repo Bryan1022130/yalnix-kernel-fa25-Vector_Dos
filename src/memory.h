@@ -19,9 +19,9 @@ typedef struct Frame {
 } Frame;
 
 // Core memory-management functions
-void frames_init(unsigned int pmem_size);
-int  frame_alloc(int owner_pid);
-void frame_free(int pfn);
+//void frames_init(unsigned int pmem_size);
+//int  frame_alloc(int owner_pid);
+//void frame_free(int pfn);
 
 //KernelStart.c function declarations
 int  SetKernelBrk(void *addr);
@@ -33,7 +33,16 @@ int pcb_free(int pid);
 void init_proc_create(void);
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt);
 void init(void);
-int create_sframes(int pid, PCB *free_proc);
+
+int create_sframes(PCB *free_proc, unsigned char *track, int track_size);
+void init_frames(unsigned char *track, int track_size);
+int find_frame(unsigned char *track, int track_size);
+void frame_alloc(unsigned char *track, int frame_number);
+void frame_free(unsigned char *track, int frame_number);
+
+void SetupRegion0(pte_t *kernel_page_table);
+void SetupRegion1(pte_t *user_page_table);
+
 
 //Load Program function
 int LoadProgram(char *name, char *args[], PCB *proc);
