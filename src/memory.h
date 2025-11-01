@@ -33,6 +33,7 @@ int pcb_free(int pid);
 void init_proc_create(void);
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt);
 void init(void);
+int create_sframes(int pid, PCB *free_proc);
 
 //Load Program function
 int LoadProgram(char *name, char *args[], PCB *proc);

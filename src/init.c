@@ -18,8 +18,10 @@
 #define FALSE 0
 #define TRUE 1
 
-extern pte_t kernel_page_table[MAX_PT_LEN];
 
+extern pte_t kernel_page_table[MAX_PT_LEN];
+extern PCB *current_process;
+extern UserContext *KernelUC; 
 /* ===========================================
  * Function for setting up the init function
  * ===========================================
@@ -29,32 +31,17 @@ PCB *createInit(void){
         TracePrintf(0, "We are creating the init process {This should be process 2}\n");
 
         PCB *init_proc = pcb_alloc();
-
         if(init_proc == NULL){
                 TracePrintf(0, "There was an error when getting a process for Init Process\n");
                 return NULL;
         }
 
-        //Since the parent process will have a pid of 0; Set the ppid to zero
-        init_proc->ppid = 0;
-
-        // Allocate a physical frame for the page table
-        int pt_pfn = frame_alloc(init_proc->pid);
-
-        //WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
-         if (pt_pfn == ERROR) {
-             TracePrintf(0, "idle_proc_create(): ERROR allocating PT frame\n");
-             pcb_free(init_proc->pid);
-             return NULL;
-         }
-
-         TracePrintf(1, "InitProc: PT frame pfn=%d\n", pt_pfn);
-
-         // Map it temporarily into kernel space to initialize it
+	// -------------------------------->> Setting up Region Table
+	
          // Find a free virtual page in kernel space to map this frame
-
          int temp_vpn = -1;
-         //Look downward for free space to not reused pages by accident
+
+         //Look downward for free space to not reuse pages by accident
          //Once again make this with a data structure
          for (int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--) {
                  if (kernel_page_table[i].valid == FALSE) {
@@ -65,29 +52,67 @@ PCB *createInit(void){
 
         if (temp_vpn < 0) {
                 TracePrintf(0, "idle_proc_create(): ERROR no free kernel vpn for PT mapping\n");
-                frame_free(pt_pfn);
-                pcb_free(init_proc->pid);
                 return NULL;
         }
+
+	TracePrintf(0, "We are going to get a new pid from the helper\n");
+	
+	//Ask the hardware for a pid and let it know a new process is being spawned
+//	init_proc->pid = helper_new_pid((pte_t *)(temp_vpn << PAGESHIFT));
+	init_proc->pid = 0;
+        // Allocate a physical frame for the page table
+        int pt_pfn = frame_alloc(init_proc->pid);
+
+         if (pt_pfn == ERROR) {
+             TracePrintf(0, "idle_proc_create(): ERROR allocating PT frame\n");
+             pcb_free(init_proc->pid);
+             return NULL;
+         }
 
         //Map the pfn into the kernel_page_table so that it can be accessed by MMU
         kernel_page_table[temp_vpn].pfn = pt_pfn;
         kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
         kernel_page_table[temp_vpn].valid = TRUE;
 
-        TracePrintf(0, "FLushing Region 1 memory space so that it knows its updated\n");
+        TracePrintf(0, "Flushing Region 1 memory space so that it knows its updated\n");
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
 
         // Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
         //This serves as the blueprint to talk to physical memory
+	TracePrintf(0, "IF I AM CALLED THEN I AM WHAT CAUSE THE SEGFAULT AND I KNOW WHAT TO CHANGE\n");
         pte_t *init_pt = (pte_t *)(temp_vpn << PAGESHIFT);
+	TracePrintf(0, "IF I AM CALLED THEN I AM WHAT CAUSE THE SEGFAULT AND I KNOW WHAT TO CHANGE\n");
 
-        TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", init_pt, temp_vpn);
+	//clear out the region one page table and make it invalid
+	for(int x = 0; x < MAX_PT_LEN; x++){
+		init_pt[x].prot = 0;
+		init_pt[x].prot = 0;
+		init_pt[x].prot = 0;
+	}
 
-        memset(init_pt, 0, MAX_PT_LEN * sizeof(pte_t));
+	//Set up its Kernel Frames
+	create_sframes(init_proc->pid, init_proc);
+	
+	//Figure out how to get curr_uc
+	//Copy over info to new init_proc
+	KCCopy(&current_process->curr_kc, init_proc, NULL);
 
+	WriteRegister(REG_PTBR1, (unsigned int)init_proc->AddressSpace);
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
+
+	//Set up information for the PCB
+	memcpy(&init_proc->curr_uc, KernelUC, sizeof(UserContext)); // Copy in the curr UserContext
         init_proc->AddressSpace = (void *)(temp_vpn << PAGESHIFT);
+	init_proc->currState = RUNNING;
+	init_proc->ppid = 0; //It has not parent process
+	
+	init_proc->parent = NULL;
+	init_proc->first_child = NULL;
+	init_proc->next_sibling = NULL;
+	init_proc->wake_tick = 0;
 
+	current_process = init_proc;
         return init_proc;
 }
 

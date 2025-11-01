@@ -149,7 +149,7 @@ void idle_proc_create(void){
 	 int temp_vpn = -1;
 	 unsigned long brk_page = ((unsigned long)current_kernel_brk) >> PAGESHIFT;
 
-	 for (int i = brk_page; i < (KERNEL_STACK_BASE >> PAGESHIFT) - 10; i++) {
+	 for (int i = brk_page; i < (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i++) {
 		 if (kernel_page_table[i].valid == FALSE) {
 			 temp_vpn = i;
 			 break;
@@ -175,14 +175,14 @@ void idle_proc_create(void){
 
 	// Get pointer to the page table; we are getting the virtual address with temp_vpn << PAGESHIFT
 	//Blueprint to talk to physical memory
+	
+	
 	TracePrintf(0, "About to get idle_pt\n");
    	pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT);
 	
 	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
 
-	helper_check_heap("before");
-	//memset(idle_pt, 0, sizeof(pte_t) * MAX_PT_LEN);
-	helper_check_heap("after");
+	memset(idle_pt, 0, sizeof(pte_t) * MAX_PT_LEN);
 
 	//WE need to call helper_new_pid to inform the hardware
 	idle_process->pid = helper_new_pid(idle_pt);
@@ -204,14 +204,19 @@ void idle_proc_create(void){
 	}
 
 	TracePrintf(1, "idle_proc_create(): stack frame pfn=%d\n\n", idle_stack_pfn);
-    	
+
 	//We are accessing region 1 page table
     	unsigned long stack_page_index = MAX_PT_LEN - 1;
     	idle_pt[stack_page_index].valid = TRUE;
     	idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
    	idle_pt[stack_page_index].pfn =  idle_stack_pfn;
 
+
+	WriteRegister(REG_PTBR1, (unsigned int)(temp_vpn << PAGESHIFT));
+	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
+	
 
 	/* =======================
 	 * idle_proc setup
@@ -249,8 +254,7 @@ void idle_proc_create(void){
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
 	
 	//Flush for region 1 since we just wrote its start and limit
-	WriteRegister(REG_TLB_FLUSH, (unsigned int)temp_vpn << PAGESHIFT);
-
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 	//Set as running
 	idle_process->currState = READY;
 
@@ -452,6 +456,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1,"========> This is the start of the KernelStart function <========\n");
 	TracePrintf(1, "<<<<<<<<<<<<<<<< this is the size pmem_size => %lX and this is the stack frames ==> %d >>>>>>>>>>>>>>>>>>>>>>>>\n", pmem_size, frame_count);
 
+
+	TracePrintf(0, "kernel_page_table pointer = %p\n", kernel_page_table);
+	TracePrintf(0, "Expected virtual kernel PT base = 0x%08x\n", VMEM_0_BASE);
+
+
 	/* <<<---------------------------------------------------------
 	 * Boot up the free frame data structure && define global vars
 	 * ---------------------------------------------------------->>>
@@ -598,32 +607,33 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	*/
 
 	//Create the idle proc or process 1
-	idle_proc_create();
+	//idle_proc_create();
 
 	TracePrintf(1, "KernelStart: creating the init process ======================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+	TracePrintf(1, "We are going into the CreateInit process ++++\n");
 
-//	PCB *init_pcb = createInit();
-	//if(init_pcb == NULL){
-//		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
-//		Halt();
-//	}
+	PCB *init_pcb = createInit();
+	if(init_pcb == NULL){
+		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
+		Halt();
+	}
 
 
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
-		//init();
+		init();
 	}
 
-	/*
+	
 	TracePrintf(0, "Great this the name of your program --> %s\n", cmd_args[0]);
 	TracePrintf(0, "I am going to load your program \n");
 	int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
+
 	if(lp_ret == ERROR){
 		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
 		return;
 	}
 
-	*/
 
 	TracePrintf(1, "KernelStart complete.\n");
 	return;
