@@ -101,9 +101,7 @@ int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
  * ==================================================================================================================
  */
 
-void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_table, UserContext *uctxt, unsigned char *tracky, int track_sizey){
-	//I have to malloc this proably 
-	
+void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_table, UserContext *uctxt){
 	TracePrintf(1, "idle_proc_create(): begin\n");
 
 	//Malloc space for PCB idle struct 
@@ -112,47 +110,36 @@ void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tab
 
 	
 	TracePrintf(0, "About to get idle_pt\n");
-   	//pte_t *idle_pt = (pte_t *)(temp_vpn << PAGESHIFT); //this is proably wrong
-	pte_t *idle_pt = user_page_table;
-	
-//	TracePrintf(0, "About to call memset on v_addr %p (vpn %d)\n", idle_pt, temp_vpn);
+	pte_t *idle_pt = user_page_table;	
 	memset(idle_pt, 0, sizeof(pte_t) * MAX_PT_LEN);	
   	int pid_find = helper_new_pid(user_page_table);
 	idle_process->pid = pid_find;
 	TracePrintf(0, "Assigned idle_process->pid = %d\n", idle_process->pid);
 
-	int pfn = find_frame(tracky, track_sizey);
+	int pfn = find_frame(track, track_size);
 	if(pfn == ERROR){
 		TracePrintf(0, "There was an error with find_frame");
 		return;
 	}
 
-
 //	We are accessing region 1 page table
-	unsigned long stack_vpn = (VMEM_1_LIMIT >> PAGESHIFT) - 1;
     	unsigned long stack_page_index = MAX_PT_LEN - 1;
-	TracePrintf(0, "Are these the same shift --> %d or this max_pt_len --> %d\n", stack_vpn, stack_page_index);
 	idle_pt[stack_page_index].valid = TRUE;
    	idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
    	idle_pt[stack_page_index].pfn = pfn;
-
-
 
 	/* =======================
 	 * idle_proc setup
 	 * =======================
 	 */
-
-	//Store the byte address of the start of region 1 table
-	//idle_process->AddressSpace = (void *)(uintptr_t)(temp_vpn << PAGESHIFT);
+	
 	idle_process->AddressSpace = user_page_table;
 
 	idle_process->curr_uc.pc = (void*)DoIdle;
 	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 4);
 
-	create_sframes(idle_process, tracky, track_sizey);
+	create_sframes(idle_process, track, track_size);
 	
-
 	TracePrintf(0, "This is the value of the idle pc -- > %p and this is the value of the sp --> %p\n", idle_process->curr_uc.pc, idle_process->curr_uc.sp);
 	TracePrintf(0, "idle_process->pid: %d\n", idle_process->pid);
 	
@@ -288,7 +275,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
 	//Create the idle proc or process 1
-	idle_proc_create(track, frame_count, user_page_table, uctxt, track, frame_count);
+	idle_proc_create(track, frame_count, user_page_table, uctxt);
 	
 	/*
 	TracePrintf(1, "KernelStart: creating the init process ======================================================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
