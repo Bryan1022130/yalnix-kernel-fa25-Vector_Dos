@@ -15,6 +15,7 @@
 #include "memory.h" //API for Frame tracking in our program
 #include "process.h" //API for process block control
 #include "idle.h"
+#include "init.h"
 
 //Macros for if VM is enabled
 #define TRUE 1
@@ -177,8 +178,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Create the idle proc or process 1
 	idle_proc_create(track, frame_count, user_page_table, uctxt);
 
-	/*
-	PCB *init_pcb = createInit();
+	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 		Halt();
@@ -189,7 +189,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
 		init();
 	}
-
 	
 	TracePrintf(0, "Great this the name of your program --> %s\n", cmd_args[0]);
 	TracePrintf(0, "I am going to load your program \n");
@@ -200,7 +199,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	*/
+	
 
 	TracePrintf(1, "KernelStart complete.\n");
 	return;

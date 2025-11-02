@@ -11,9 +11,9 @@
 # Where's your kernel source?
 K_SRC_DIR = .
 
-# What are the kernel c and include files? //Add template.c back 
+# What are the kernel c and include files? 
 K_SRCS = kernelstart.c memory.c process.c Queue.c syscalls.c trap.c idle.c init.c re1sp.c re0sp.c kernelbrk.c template.c
-K_INCS = memory.h process.h Queue.h syscalls.h trap.h idle.h 
+K_INCS = memory.h process.h Queue.h syscalls.h trap.h idle.h init.h
 
 # Where's your user source?
 U_SRC_DIR = ./test

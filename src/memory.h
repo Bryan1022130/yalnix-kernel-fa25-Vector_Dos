@@ -13,14 +13,12 @@
 	
 //KernelStart.c function declarations
 int  SetKernelBrk(void *addr);
-PCB *createInit(void);
 void InitPcbTable(void);
 PCB *pcb_alloc(void);
 int pcb_free(int pid);
-void init_proc_create(void);
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt);
-void init(void);
 
+//Frame logic 
 int create_sframes(PCB *free_proc, unsigned char *track, int track_size);
 void init_frames(unsigned char *track, int track_size);
 int find_frame(unsigned char *track, int track_size);
