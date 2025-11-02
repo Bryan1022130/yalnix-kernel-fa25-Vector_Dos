@@ -19,34 +19,36 @@
 #define FALSE 0
 #define TRUE 1
 
-//Ask the hardware for a pid and let it know a new process is being spawned
+//Extern 
 extern pte_t *kernel_page_table;
 extern PCB *current_process;
 extern UserContext *KernelUC;
 extern Queue *readyQueue;
 extern unsigned long int frame_count;
 
-
-//This should be process 2 
 PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_size){
-        TracePrintf(0, "We are creating the init process {This should be process 2}\n");
-	TracePrintf(0, "If we atleast get this message than that means we are in a good place :)\n");
+        TracePrintf(0, "Start of the init process </> \n");
 
         PCB *init_proc =(PCB *)malloc(sizeof(PCB));
         if(init_proc == NULL){
-                TracePrintf(0, "Error with Malloc for init_pcb\n");
+                TracePrintf(0, "Malloc error for init_proc\n");
+		free(init_proc);
                 return NULL;
         }
 
-	// -------------------------------->> Setting up Region Table
+	memset(init_proc, 0, sizeof(PCB));
+
 	//Get new pid with the help of the hardware
 	init_proc->pid = helper_new_pid(user_page_table);
 	TracePrintf(0, "This is the pid of the new process -> %d\n", init_proc->pid);
 
+	// -------------------------------->> Setting up Region Table
+	
         // Allocate a physical framem for the process
         int pt_pfn = find_frame(track, track_size);
-         if (pt_pfn == ERROR) {
-             TracePrintf(0, "idle_proc_create(): ERROR allocating PT frame\n");
+         if(pt_pfn == ERROR) {
+             TracePrintf(0, "Init Proc: Error with finding physical frame!\n");
+	     free(init_proc);
              return NULL;
          }
 
@@ -59,40 +61,34 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
         TracePrintf(0, "Flushing Region 1\n");
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 	
-	/*
 	//Point to region 1 page table
         pte_t *init_pt = (pte_t *)user_page_table;
-	memset(init_pt, 0, sizeof(MAX_PT_LEN * sizeof(pte_t)));
-
-	//clear out the region one page table and make it invalid
-	for(int x = 0; x < MAX_PT_LEN; x++){
-		init_pt[x].prot = 0;
-		init_pt[x].valid = FALSE;
-		init_pt[x].pfn= 0;
-	}
-	*/
+	memset(init_pt, 0, (MAX_PT_LEN * sizeof(pte_t)));
 
 	//Set up its Kernel Frames
-	create_sframes(init_proc, track, frame_count);
+	int kf_ret = create_sframes(init_proc, track, frame_count);
+	if(kf_ret == ERROR){
+		TracePrintf(0, "Init Proc: Error with setting up kernel stack!\n");
+		frame_free(track, pt_pfn);
+		free(init_proc);
+		return NULL;
+	}
 	
-	//Copy over info to new init_proc
+	//Set up proces informatio
 	init_proc->AddressSpace = (void *)user_page_table;
 	KCCopy(&current_process->curr_kc, init_proc, NULL);
 
-	//Set up information for the PCB
-	memcpy(&init_proc->curr_uc, KernelUC, sizeof(UserContext)); // Copy in the curr UserContext
+	//a UserContext (from the the uctxt argument to KernelStart))
+	memcpy(&init_proc->curr_uc, KernelUC, sizeof(UserContext));
 	init_proc->currState = READY;	
-	init_proc->parent = NULL;
-	init_proc->first_child = NULL;
-	init_proc->next_sibling = NULL;
-	init_proc->wake_tick = 0;
 
 	WriteRegister(REG_PTBR1, (unsigned int)init_proc->AddressSpace);
+	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 	
 	//Queue the process into the Queue {Maybe this wrong}
-	//Enqueue(readyQueue,(void *)init_proc); 
-	
+	Enqueue(readyQueue,(void *)init_proc); 
+  	TracePrintf(0, "End of the init process </> \n");
         return init_proc;
 }
 
