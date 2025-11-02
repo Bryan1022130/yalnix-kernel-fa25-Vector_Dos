@@ -96,7 +96,7 @@ Hardware   FrameworkSignalHandler(14), depth 1
 Hardware   clock tick 1
 Hardware   ----
 Hardware   | Trap Alarm clock
-Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf5673579
+Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xe9d0f579
 Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
 Hardware   | Calling Yalnix handler 0x22c11 for trap TRAP_CLOCK
 Hardware   ----
@@ -105,43 +105,7 @@ Yalnix     The Queue is empty!
 Yalnix     Leaving HandleClockTrap
 Hardware   ----
 Hardware   | Back from Yalnix handler 0x22c11 for trap TRAP_CLOCK
-Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xf5673579
+Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xe9d0f579
 Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
 Hardware   ----
 Yalnix     Idle loop running (1)
-Hardware   ========= Hardware receives signal ==============
-Hardware   FrameworkSignalHandler(14), depth 1
-Hardware   clock tick 2
-Hardware   ----
-Hardware   | Trap Alarm clock
-Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf5673579
-Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
-Hardware   | Calling Yalnix handler 0x22c11 for trap TRAP_CLOCK
-Hardware   ----
-Yalnix     In HandleClockTrap
-Yalnix     The Queue is empty!
-Yalnix     Leaving HandleClockTrap
-Hardware   ----
-Hardware   | Back from Yalnix handler 0x22c11 for trap TRAP_CLOCK
-Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xf5673579
-Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
-Hardware   ----
-Yalnix     Idle loop running (2)
-Hardware   ========= Hardware receives signal ==============
-Hardware   FrameworkSignalHandler(14), depth 1
-Hardware   clock tick 3
-Hardware   ----
-Hardware   | Trap Alarm clock
-Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf5673579
-Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
-Hardware   | Calling Yalnix handler 0x22c11 for trap TRAP_CLOCK
-Hardware   ----
-Yalnix     In HandleClockTrap
-Yalnix     The Queue is empty!
-Yalnix     Leaving HandleClockTrap
-Hardware   ----
-Hardware   | Back from Yalnix handler 0x22c11 for trap TRAP_CLOCK
-Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xf5673579
-Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
-Hardware   ----
-Yalnix     Idle loop running (3)
