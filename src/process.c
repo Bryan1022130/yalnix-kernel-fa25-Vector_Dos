@@ -86,15 +86,22 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
         return kc_in;
     }
 
-    // Save current kernel context into PCB to resume later
+    //copy the bytes of the kernel context into the current process’s PCB 
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
-    return &next->curr_kc;
-
     // Mark old process as ready to run again
-    if (curr->currState == RUNNING)
-        curr->currState = READY;
-    	//Proably enque to ready list
+    if (curr->currState == RUNNING){
+	    //Take the next process of the Queue
+	    Dequeue(readyQueue);
+		
+	    //Setup current process for readyQueue and enqueue 
+	    curr->currState = READY;
+	    Enqueue(readyQueue, curr);
+    }
+
+
+
+
 
     if (next->curr_kc.lc.uc_mcontext.gregs[REG_ESP] == 0) {
         TracePrintf(1, "KCSwitch: first run of PID %d - copying kernel stack\n", next->pid);
@@ -141,6 +148,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     
     // Remap kernel stack
     /*
+
     int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
     for (int i = 0; i < KSTACKS; i++) {
         kernel_page_table[ks_base_vpn + i].pfn = next->kernel_stack_frames[i];

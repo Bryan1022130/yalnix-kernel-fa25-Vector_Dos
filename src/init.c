@@ -76,7 +76,7 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 	
 	//Set up proces informatio
 	init_proc->AddressSpace = (void *)user_page_table;
-	KCCopy(&current_process->curr_kc, init_proc, NULL);
+	//KCCopy(&current_process->curr_kc, init_proc, NULL);
 
 	//a UserContext (from the the uctxt argument to KernelStart))
 	memcpy(&init_proc->curr_uc, KernelUC, sizeof(UserContext));

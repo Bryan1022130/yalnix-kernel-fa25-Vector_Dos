@@ -1,0 +1,3 @@
+The pid for each process is now in sync
+The frame number finding logic is now in sync
+init.c looks fine for now but i need to check more

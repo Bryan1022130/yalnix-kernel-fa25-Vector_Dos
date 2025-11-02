@@ -155,7 +155,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1, "------------------------------------- WE ARE NOW GOING TO CALL KERNELBRK :) -------------------------------------\n");
 
 	// Initialize kernel heap pointer (current_kernel_brk)  
-    	/*
 	uintptr_t orig_brk_address = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
 	current_kernel_brk = (void *)orig_brk_address;
 
@@ -164,7 +163,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(0, "There was an error in SetKernelBrk\n");
 		return;
 	}
-	*/
+
 	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n\n");
 
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
@@ -176,13 +175,13 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	/*
+	
 	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 		Halt();
 	}
-	*/
+	Pause();
 
 	/*
 
@@ -196,15 +195,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
         }
 	
 	TracePrintf(0, "KernelContectSwitch Worked !\n");
-
-	//Handle Ready Queue switch after KCS
-	//Init would be runnning && Idle would be in the ready Queue
-	(PCB *) next_proc = Dequeue(readyQueue);
-	next_proc->RUNNING;
-
-	//Change it state from RUNNING to READY
-	idle_proc->currState = READY;
-	Enqueue(readyQueue, idle_proc);
 
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
