@@ -33,7 +33,7 @@ int Fork(void) {
      *  Create a new process that is a copy of the current one.
      *
      * STEPS:
-     *  1. Allocate a new PCB via proc_alloc().
+     *  1. Allocate a new PCB.
      *  2. Copy parent's address space and kernel/user contexts.
      *  3. Set child->state = READY and add to scheduler queue.
      *  4. Return child's PID to parent, and 0 to child.
@@ -42,7 +42,7 @@ int Fork(void) {
 
     TracePrintf(1, "Fork called by pid %d\n", current_process->pid);
 
-    PCB *child = proc_alloc();
+    PCB *child = (PCB *)malloc(sizeof(PCB));
     if (!child) return ERROR;
 
     // --- duplicate address space ---
@@ -51,7 +51,6 @@ int Fork(void) {
     // allocate page table frame for child
     int child_pt_pfn = find_frame(track_global, frame_count);
     if (child_pt_pfn == ERROR) return ERROR;
-    frame_alloc(track_global, child_pt_pfn);
 
     // temporarily map it in kernel region 0
     int free_vpn = (KERNEL_STACK_BASE >> PAGESHIFT) - 2;
@@ -69,7 +68,6 @@ int Fork(void) {
         if (!parent_pt[vpn].valid) continue;
         int pfn = find_frame(track_global, frame_count);
         if (pfn == ERROR) return ERROR;
-        frame_alloc(track_global, pfn);
 
         // map parent + child pages temporarily
         int tmp_parent = free_vpn - 1;
@@ -149,7 +147,7 @@ int Exec(char *filename, char *argv[]) {
     if (result == ERROR) return ERROR;
 
     TracePrintf(1, "Exec success -> now running new program %s\n", filename);
-    return 0;  // not reached if program runs, but safe
+    return 0;
 }
 
 void Exit(int status) {

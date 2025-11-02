@@ -179,14 +179,26 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
 	//Create the idle proc or process 1
-	idle_proc_create(track, frame_count, user_page_table, uctxt);
+	int idle_ret = idle_proc_create(track, frame_count, user_page_table, uctxt);
+	if(idle_ret == ERROR){
+		TracePrintf(0, "Idle process failed!\n");
+		return;
+	}
 
+	/*
 	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 		Halt();
 	}
 
+	//KernelContextSwitch so that we can be in init pcb
+	TracePrintf(0, "We are going to KernelContextSwitch now! -=++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
+        if(kc_ret = ERROR){
+                TracePrintf(0, "There was an error with Context Switch!\n");
+                return;
+        }
 
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
@@ -207,7 +219,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
+	*/
 
-	TracePrintf(1, "KernelStart complete.\n");
+	TracePrintf(1, "KernelStart complete+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=.\n");
 	return;
 }

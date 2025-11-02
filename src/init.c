@@ -23,30 +23,30 @@
 extern pte_t *kernel_page_table;
 extern PCB *current_process;
 extern UserContext *KernelUC;
+extern Queue *readyQueue;
 extern unsigned long int frame_count;
 
+
+//This should be process 2 
 PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_size){
         TracePrintf(0, "We are creating the init process {This should be process 2}\n");
+	TracePrintf(0, "If we atleast get this message than that means we are in a good place :)\n");
 
         PCB *init_proc =(PCB *)malloc(sizeof(PCB));
-
         if(init_proc == NULL){
                 TracePrintf(0, "Error with Malloc for init_pcb\n");
                 return NULL;
         }
 
 	// -------------------------------->> Setting up Region Table
-
 	//Get new pid with the help of the hardware
 	init_proc->pid = helper_new_pid(user_page_table);
+	TracePrintf(0, "This is the pid of the new process -> %d\n", init_proc->pid);
 
         // Allocate a physical framem for the process
         int pt_pfn = find_frame(track, track_size);
-	frame_alloc(track, pt_pfn);
-
          if (pt_pfn == ERROR) {
              TracePrintf(0, "idle_proc_create(): ERROR allocating PT frame\n");
-             //pcb_free(init_proc->pid);
              return NULL;
          }
 
@@ -58,7 +58,8 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 
         TracePrintf(0, "Flushing Region 1\n");
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-
+	
+	/*
 	//Point to region 1 page table
         pte_t *init_pt = (pte_t *)user_page_table;
 	memset(init_pt, 0, sizeof(MAX_PT_LEN * sizeof(pte_t)));
@@ -69,6 +70,7 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 		init_pt[x].valid = FALSE;
 		init_pt[x].pfn= 0;
 	}
+	*/
 
 	//Set up its Kernel Frames
 	create_sframes(init_proc, track, frame_count);
@@ -87,8 +89,10 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 
 	WriteRegister(REG_PTBR1, (unsigned int)init_proc->AddressSpace);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-
-	current_process = init_proc;
+	
+	//Queue the process into the Queue {Maybe this wrong}
+	//Enqueue(readyQueue,(void *)init_proc); 
+	
         return init_proc;
 }
 

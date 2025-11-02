@@ -33,6 +33,7 @@ void init_frames(unsigned char *track, int track_size){
 int find_frame(unsigned char *track, int track_size){
 	for(int z = 0; z < track_size; z++){
 		if(track[z] == UNUSED){
+			frame_alloc(track, z);
 			TracePrintf(0, "This is where we found a free frame ---> %d\n", z);
 			return z;
 		}

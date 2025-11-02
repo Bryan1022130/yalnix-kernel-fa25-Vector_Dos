@@ -37,11 +37,12 @@ void DoIdle(void) {
  * Idle Process that runs when there is not other process being runned 
  * ===================================================================================================================
  */
-void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_table, UserContext *uctxt){
+int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_table, UserContext *uctxt){
         TracePrintf(0, "Start of the idle_proc_create function <|> \n");
 
-        //Malloc space for PCB idle struct
+        //Create idle_process and clear the memory 
         idle_process = (PCB *)malloc(sizeof(PCB));
+	memset(idle_process, 0, sizeof(PCB));
 
         //Point to our user_page_table and clear the table
         pte_t *idle_pt = user_page_table;
@@ -49,20 +50,18 @@ void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tab
 
         //Get a pid from the help of hardware
         int pid_find = helper_new_pid(user_page_table);
-        idle_process->pid = READY;
-
-	TracePrintf(0, "idle_process->AddressSpace = %p\n", idle_process->AddressSpace);
-	TracePrintf(0, "idle_process kernel stack frame[0] = %d\n", idle_process->kernel_stack_frames[0]);
+        idle_process->pid = pid_find;
 
         //Allocate a physical page for the process
         int pfn = find_frame(track, track_size);
-	frame_alloc(track, pfn);
         if(pfn == ERROR){
+		free(idle_process);
                 TracePrintf(0, "No frames were found!\n");
-                return;
+                return ERROR;
         }
 
         //We are storing it at the top of the user stack region
+	//This should have one valid page, for idle’s user stack
         unsigned long stack_page_index = MAX_PT_LEN - 1;
         idle_pt[stack_page_index].valid = TRUE;
         idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
@@ -78,14 +77,11 @@ void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tab
         idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
         idle_process->currState = READY;
 
-        //Copy in idle PCB properties into the KernelUC
-        memset(&idle_process->curr_kc, 0, sizeof(KernelContext));
-
 	// Allocate kernel stack frames for idle
-	extern int create_sframes(PCB *free_proc, unsigned char *track, int track_size);
-	if (create_sframes(idle_process, track, track_size) == ERROR) {
+	if(create_sframes(idle_process, track, track_size) == ERROR){
 	    TracePrintf(0, "idle_proc_create: failed to allocate kernel stack\n");
-	    return;
+	    free(idle_process);
+	    return ERROR;
 	}
 
         /* =======================================
@@ -97,22 +93,23 @@ void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tab
         WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
-        //write the current UserContext back into uctxt
-        memcpy(uctxt, &idle_process->curr_uc, sizeof(UserContext));
+        //write the current UserContext back into uctxt so the hardware knows
+	memcpy(uctxt, &idle_process->curr_uc, sizeof(UserContext));
 
         //Set global variable for current process as the idle process
         current_process = idle_process;
 
-        TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====\n");
-        TracePrintf(0, " This is the num of the array for the kernel_page_table --> %d\n", MAX_PT_LEN);
+        TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG ++++++++++++++++++++++++++++++++++++++++++++++\n");
+	TracePrintf(0, "idle_process->AddressSpace = %p\n", idle_process->AddressSpace);
+	TracePrintf(0, "idle_process kernel stack frame[0] = %d\n", idle_process->kernel_stack_frames[0]);
         TracePrintf(0, "This is idle pc -- > %p and this is sp --> %p\n", idle_process->curr_uc.pc, idle_process->curr_uc.sp);
-        TracePrintf(0, "idle_process ptr =------------->>> : %p\n", idle_process);
+        TracePrintf(0, "idle_process memory location ===========>: %p\n", idle_process);
         TracePrintf(0, "idle_process->pid: %d\n", idle_process->pid);
-        TracePrintf(0, "This is the value of the VMEM_1_LIMIT ==> %p and this is the VMEM_1_BASE ==> %p\n", VMEM_1_LIMIT, VMEM_1_BASE);
         TracePrintf(0, "current_process ptr: %p\n", current_process);
-        TracePrintf(0, "(This is our region 1 Addressspace= %p\n", idle_process->AddressSpace);
         TracePrintf(0, "===============================================================================================\n");
         TracePrintf(0, "End of the idle_proc_create function <|> \n\n");
+
+	return SUCCESS;
 }
 
 

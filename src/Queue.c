@@ -1,4 +1,5 @@
 #include "Queue.h"
+#include "process.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -94,9 +95,14 @@ int isEmpty(Queue *MQueue){
 
 QueueNode *peek(Queue *MQueue){
 	if(MQueue->head == NULL){
-		TracePrintf(0, "The Queue is empty!");
+		TracePrintf(0, "The Queue is empty!\n");
 		return NULL;
 	}
+	QueueNode *temp = MQueue->head;
+	PCB *tempdata = temp->data;
+	int pid_extract = tempdata->pid; 
 
+	TracePrintf(0, "This is the number of the pid that we extracted  --> %d\n", pid_extract);
+	TracePrintf(0, "Okay we are not leaving the peek funciton\n");
 	return MQueue->head;
 }

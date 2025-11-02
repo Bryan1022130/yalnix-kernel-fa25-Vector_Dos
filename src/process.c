@@ -203,7 +203,6 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     PCB *curr = (PCB *)curr_pcb_p;
     PCB *next = (PCB *)next_pcb_p;
 
-    // Defensive check: don't try to switch to or from NULL
     if (next == NULL) {
         TracePrintf(0, "KCSwitch: next NULL, switching to idle_process\n");
         next = idle_process;
@@ -214,7 +213,6 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
         curr = current_process;
     }
 
-    // Defensive check: skip if both PCBs are the same
     if (curr == next) {
         TracePrintf(1, "KCSwitch: same process, skipping\n");
         return kc_in;
@@ -223,14 +221,17 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     // Save current kernel context into PCB to resume later
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
+    return &next->curr_kc;
+
     // Mark old process as ready to run again
     if (curr->currState == RUNNING)
         curr->currState = READY;
+    	//Proably enque to ready list
 
     if (next->curr_kc.lc.uc_mcontext.gregs[REG_ESP] == 0) {
         TracePrintf(1, "KCSwitch: first run of PID %d - copying kernel stack\n", next->pid);
         
-	//memcpy(&next->curr_kc, kc_in, sizeof(KernelContext));
+	memcpy(&next->curr_kc, kc_in, sizeof(KernelContext));
 
         // Copy kernel stack from current to next
         int temp_vpn = -1;
@@ -240,7 +241,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
                 break;
             }
         }
-        
+
         if (temp_vpn < 0) {
             TracePrintf(0, "KCSwitch: no free VPN for stack copy!\n");
             return &next->curr_kc;
@@ -280,13 +281,15 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     }
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_KSTACK);
     */
+    
     next->currState = RUNNING;
     current_process = next;
     
     TracePrintf(1, "KCSwitch: first-run complete, returning current context\n");
-    
+
     return kc_in;
   }
+
   
     // Normal switch code for already-running processes
     if (next->AddressSpace != NULL) {

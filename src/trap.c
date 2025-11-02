@@ -133,6 +133,7 @@ void HandleClockTrap(UserContext *CurrUC){
     TracePrintf(0, "In HandleClockTrap\n");
 
     QueueNode *node = peek(sleepQueue);
+
     // wake up processes whose Delay expired
     PCB *p = (node ?(PCB *)node->data : NULL);
 
