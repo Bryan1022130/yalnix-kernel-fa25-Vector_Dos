@@ -59,7 +59,7 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
         kernel_page_table[stack_find].valid = TRUE;
 
         TracePrintf(0, "Flushing Region 1\n");
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
 	
 	//Point to region 1 page table
         pte_t *init_pt = (pte_t *)user_page_table;

@@ -1,6 +1,5 @@
 //Header files from yalnix_framework && libc library
 #include <sys/types.h> //For u_long
-#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
 #include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ... 
@@ -10,10 +9,10 @@
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 
 //Our Header Files
-#include "Queue.h" //API calls for our queue data structure 
-#include "trap.h" //API for trap handling and initializing the Interrupt Vector Table
-#include "memory.h" //API for Frame tracking in our program
-#include "process.h" //API for process block control
+#include "Queue.h"
+#include "trap.h"
+#include "memory.h" 
+#include "process.h" 
 #include "idle.h"
 #include "init.h"
 
@@ -77,18 +76,10 @@ int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
         for(int i = 0; i < KERNEL_STACK_PAGES; i++){
                 //Allocate a physical frame for kernel stack
 		int pfn = find_frame(track, track_size);
-		frame_alloc(track, pfn);
-		free_proc->kernel_stack_frames[i] = pfn;
                 if(pfn == ERROR){
                         TracePrintf(0, "There is no more frames to give!\n");
-
-                        //free the pcb itself
-                        //pcb_free(pid);
-
                         return ERROR;
                 }
-
-		frame_alloc(track, pfn);
                 free_proc->kernel_stack_frames[i] = pfn;
         }
 	return 0;
@@ -103,7 +94,7 @@ int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
  */ 
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
-	TracePrintf(0, "---------> We are the start of the KernelStart function <-----------");
+	TracePrintf(0, "----------> We are the start of the KernelStart function <-----------");
 
 	/* <<<---------------------------------------------------------
 	 * Boot up the free frame data structure && define global vars
@@ -185,12 +176,14 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	/*
+	
 	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 		Halt();
 	}
+
+	/*
 
 	//KernelContextSwitch so that we can be in init pcb
 	TracePrintf(0, "We are going to KernelContextSwitch now! -=++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");

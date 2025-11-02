@@ -1,3 +1,4 @@
+//Our header files
 #include "memory.h"
 #include <stdio.h>
 #include <yalnix.h>
@@ -26,7 +27,6 @@ void init_frames(unsigned char *track, int track_size){
 	//Alloc frames for the kernel stack
 	frame_alloc(track, V1_KSTACK);
 	frame_alloc(track, V2_KSTACK);
-
 }
 
 //Loop through the current buffer and just return the first frame available
