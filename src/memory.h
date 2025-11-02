@@ -11,21 +11,8 @@
 //Our Header File
 #include "process.h" //API for process block control
 	
-typedef struct Frame {
-    int pfn;          // frame number
-    int in_use;       // 0 = free, 1 = used
-    int owner_pid;   
-    int refcount;
-} Frame;
-
-// Core memory-management functions
-//void frames_init(unsigned int pmem_size);
-//int  frame_alloc(int owner_pid);
-//void frame_free(int pfn);
-
 //KernelStart.c function declarations
 int  SetKernelBrk(void *addr);
-void DoIdle(void);
 PCB *createInit(void);
 void InitPcbTable(void);
 PCB *pcb_alloc(void);

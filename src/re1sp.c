@@ -1,6 +1,5 @@
 //Header files from yalnix_framework && libc library
 #include <sys/types.h> //For u_long
-#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
 #include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
@@ -15,6 +14,7 @@
 
 //Set up the region 1 user_page_table as invaid
 void SetupRegion1(pte_t *user_page_table){
+
 	//Clear out the malloc region 
 	memset(user_page_table, 0, (MAX_PT_LEN * sizeof(pte_t)));
 

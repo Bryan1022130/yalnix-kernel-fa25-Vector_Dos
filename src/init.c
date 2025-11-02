@@ -15,17 +15,13 @@
 #include "memory.h" //API for Frame tracking in our program
 #include "process.h" //API for process block control
 
+//Macros
 #define FALSE 0
 #define TRUE 1
 
-
-extern pte_t kernel_page_table[MAX_PT_LEN];
+extern pte_t *kernel_page_table;
 extern PCB *current_process;
 extern UserContext *KernelUC; 
-/* ===========================================
- * Function for setting up the init function
- * ===========================================
- */
 
 /*
 PCB *createInit(void){
@@ -116,6 +112,7 @@ PCB *createInit(void){
 	current_process = init_proc;
         return init_proc;
 }
+*/
 
 void init(void){
 	while(1){
@@ -124,4 +121,4 @@ void init(void){
 	}
 
 }
-*/
+

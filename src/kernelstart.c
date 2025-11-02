@@ -14,6 +14,7 @@
 #include "trap.h" //API for trap handling and initializing the Interrupt Vector Table
 #include "memory.h" //API for Frame tracking in our program
 #include "process.h" //API for process block control
+#include "idle.h"
 
 //Macros for if VM is enabled
 #define TRUE 1
@@ -29,6 +30,9 @@
 
 //Virtual Memory
 short int vm_enabled = FALSE;
+
+//Physical Memory
+unsigned char *track_global;
 
 //Process Block Control
 PCB *current_process = NULL; 
@@ -86,79 +90,6 @@ int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
 	return 0;
 }
 
-/* ==================================================================================================================
- * Proc Create Flow
- * This the most up to date and corrected version
- * ==================================================================================================================
- */
-
-void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_table, UserContext *uctxt){
-	TracePrintf(0, "Start of the idle_proc_create function <|> \n");
-
-	//Malloc space for PCB idle struct 
-	PCB *idle_process = (PCB *)malloc(sizeof(PCB));
-
-	//Point to our user_page_table and clear the table 
-	pte_t *idle_pt = user_page_table;	
-	memset(idle_pt, 0, sizeof(pte_t) * MAX_PT_LEN);	
-
-	//Get a pid from the help of hardware
-  	int pid_find = helper_new_pid(user_page_table);
-	idle_process->pid = pid_find;
-
-	//Allocate a physical page for the process
-	int pfn = find_frame(track, track_size);
-	if(pfn == ERROR){
-		TracePrintf(0, "No frames were found!\n");
-		return;
-	}
-	
-	//We are storing it at the top of the user stack region 
-    	unsigned long stack_page_index = MAX_PT_LEN - 1;
-	idle_pt[stack_page_index].valid = TRUE;
-   	idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
-   	idle_pt[stack_page_index].pfn = pfn;
-
-	/* =======================
-	 * idle_process field setup
-	 * =======================
-	 */
-
-	idle_process->AddressSpace = user_page_table;
-	idle_process->curr_uc.pc = (void*)DoIdle;
-	idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
-	idle_process->currState = READY;
-
-	//Copy in idle PCB properties into the KernelUC
-	memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
-
-	/* =======================================
-	 * Write region 1 table to Hardware
-	 * =======================================
-	 */
-
-	WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
-	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-	
-	//write the current UserContext back into uctxt
-	memcpy(uctxt, &idle_process->curr_uc, sizeof(UserContext));
-
-	//Set global variable for current process as the idle process
-	current_process = idle_process;
-
-	TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG +++++++++++++++++++++++++++++++++++++++++++====\n");
-	TracePrintf(0, " This is the num of the array for the kernel_page_table --> %d\n", MAX_PT_LEN); 	
-	TracePrintf(0, "This is idle pc -- > %p and this is sp --> %p\n", idle_process->curr_uc.pc, idle_process->curr_uc.sp);
-	TracePrintf(0, "idle_process ptr =------------->>> : %p\n", idle_process);
-	TracePrintf(0, "idle_process->pid: %d\n", idle_process->pid);
-	TracePrintf(0, "This is the value of the VMEM_1_LIMIT ==> %p and this is the VMEM_1_BASE ==> %p\n", VMEM_1_LIMIT, VMEM_1_BASE);
-	TracePrintf(0, "current_process ptr: %p\n", current_process);	
-	TracePrintf(0, "(This is our region 1 Addressspace= %p\n", idle_process->AddressSpace);
-	TracePrintf(0, "===============================================================================================\n");
-	TracePrintf(0, "End of the idle_proc_create function <|> \n\n");
-}
-
 /* ==========================================================================================================================================================
  * Initializing Virtual Memory
  * char *cmd_args: Vector of strings, holding a pointer to each argc in boot command line {Terminated by NULL pointer}
@@ -180,6 +111,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Free frames creation
 	unsigned char *track = (unsigned char*)malloc(frame_count);
+	track_global = track;
 	init_frames(track, frame_count);
 
 	//initialize process queues
