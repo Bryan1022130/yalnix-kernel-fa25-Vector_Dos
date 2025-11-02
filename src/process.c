@@ -1,5 +1,4 @@
 //Header files from yalnix_framework
-//Header files from yalnix_framework
 #include <ykernel.h>
 #include <hardware.h>
 #include <ctype.h>
@@ -11,7 +10,7 @@
 #include "process.h"
 #include "Queue.h"
 
-// extern globals defined in kernelstart.c
+//extern globals defined in kernelstart.c
 extern PCB *current_process;
 extern PCB *idle_process;
 extern Queue *readyQueue;
@@ -23,35 +22,6 @@ extern PCB *process_free_head;
 #define TRUE 1
 #define FALSE 0
 
-
-//-------------------------------------------------------------------------------------------PCB Logic for KernelStart
-
-/* ===================================================================================================================
- * Process Logic Functions
- * InitPcbTable()
- * Clears all PCBs in the process table and marks them as FREE.
- * ===================================================================================================================
- */
-/*
-void InitPcbTable(void){
-    // Zero out the entire array
-    memset(process_table, 0, sizeof(process_table));
-
-    // Set all entries in the pcb table as free
-    for (int i = MAX_PROCS - 1; i >= 0 ; i--) {
-        process_table[i].currState = FREE;
-
-        //Set up the internal linked list
-        process_table[i].prev = NULL;
-        process_table[i].next = process_free_head;
-        process_free_head = &process_table[i];
-
-    }
-
-    TracePrintf(0, "Initialized PCB table: all entries marked FREE.\n");
-}
-*/
-
 /* ===============================================================================================================
  * pcb_alloc()
  * Returns a pointer to the first FREE PCB in the table.
@@ -59,6 +29,7 @@ void InitPcbTable(void){
  * ===============================================================================================================
  */
 PCB *proc_alloc(void) {
+	//This is wrong
     static int next_pid = 1;  // simple incremental pid generator
 
     if (process_free_head == NULL) return NULL;
@@ -70,36 +41,6 @@ PCB *proc_alloc(void) {
 
     return p;
 }
-/*
-PCB *proc_alloc(void){
-
-        //Check if there is PCBs left to use
-        if(process_free_head == NULL){
-                TracePrintf(0, "There was an error and no PCB were found! No PCB free!\n");
-                return NULL;
-        }
-
-        TracePrintf(1, "Allocating new PCB...\n");
-
-        PCB *free_proc = process_free_head;
-
-        //Update the head to the next pointer
-        process_free_head = process_free_head->next;
-
-        //Disconnect from other nodes
-        free_proc->next = NULL;
-        free_proc->prev = NULL;
-
-        //Clear out the data in case there is left over data
-        memset(free_proc, 0, sizeof(PCB));
-
-        //Assign the new pid and set the state as running
-        free_proc->currState = READY;
-
-        return free_proc;
-
-}
-*/
 
 /* ===============================================================================================================
  * pcb_free(pid)
@@ -116,81 +57,7 @@ void proc_free(PCB *p) {
     p->next = process_free_head;
     process_free_head = p;
 }
-/*
-int proc_free(int pid){
 
-    if(pid < 0 || pid >= MAX_PROCS){
-        TracePrintf(0, "Invalid PID passed to pcb_free().\n");
-        return ERROR;
-    }
-
-    //Index into buffer to get the PCB at index pid
-    PCB *proc = &process_table[pid];
-
-    if(proc->currState == FREE){
-        TracePrintf(1, "Process %d already FREE.\n");
-        return ERROR;
-    }
-
-    if(proc->AddressSpace == NULL){
-            return ERROR;
-    }
-
-    //Get the VPN
-    int vpnfind = (uintptr_t)proc->AddressSpace >> PAGESHIFT;
-
-    //Get the PFN from the VPN in the kernel page table
-    int kernel_proc_pfn = kernel_page_table[vpnfind].pfn;
-
-    // Now access the page table
-    pte_t *pt_r1 = (pte_t *)proc->AddressSpace;
-
-    // Free all frames mapped in the process's Region 1
-    int num_r1_pages = MAX_PT_LEN - 1; // This is based on the diagram but can be changed if causes problems
-    for (int vpn1 = 0; vpn1 < num_r1_pages; vpn1++) {
-            if (pt_r1[vpn1].valid) {
-                    frame_free(pt_r1[vpn1].pfn);
-                    pt_r1[vpn1].valid = FALSE;
-                    pt_r1[vpn1].prot = 0;
-                    pt_r1[vpn1].pfn = 0;
-
-            }
-    }
-
-    //Set the kernel page that we used as invalid again
-    kernel_page_table[vpnfind].valid = FALSE;
-    kernel_page_table[vpnfind].prot = 0;
-    kernel_page_table[vpnfind].pfn = 0;
-
-    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
-
-    // Free the physical frame that held the page table itself
-    // This is a field inside of the pte_t.pfn
-    frame_free(kernel_proc_pfn);
-
-    //Free the PCBs Kernel Stack Frame
-    for (int i = 0; i < KSTACKS; i++) {
-            if (proc->kernel_stack_frames[i] > 0) {
-                    frame_free(proc->kernel_stack_frames[i]);
-                    proc->kernel_stack_frames[i] = 0;
-            }
-    }
-
-    // Clear the PCB
-    memset(proc, 0, sizeof(PCB));
-    proc->currState = FREE;
-
-    //Add back into the linked list of free Processes
-    proc->prev = NULL;
-    proc->next = process_free_head;
-
-    //Make the freed process the head
-    process_free_head = proc;
-
-    TracePrintf(1, "Freed PCB for PID %d.\n");
-    return 0;
-}
-*/
 // ----------------- Context Switching -----------------------------
 PCB *get_next_ready_process(void) {
     if (isEmpty(readyQueue)) {
@@ -203,6 +70,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     PCB *curr = (PCB *)curr_pcb_p;
     PCB *next = (PCB *)next_pcb_p;
 
+    //Error Checking
     if (next == NULL) {
         TracePrintf(0, "KCSwitch: next NULL, switching to idle_process\n");
         next = idle_process;
@@ -312,6 +180,9 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     TracePrintf(1, "KCSwitch: switched from PID %d to PID %d\n", curr->pid, next->pid);
     return &next->curr_kc;
 }
+
+
+
 
 KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 	// Copy kernel context (and later, kernel stack) for a newly forked process.

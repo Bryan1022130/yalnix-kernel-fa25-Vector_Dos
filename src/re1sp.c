@@ -1,6 +1,5 @@
 //Header files from yalnix_framework && libc library
 #include <sys/types.h> //For u_long
-#include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
 #include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
@@ -18,7 +17,7 @@ void SetupRegion1(pte_t *user_page_table){
 	//Clear out the malloc region 
 	memset(user_page_table, 0, (MAX_PT_LEN * sizeof(pte_t)));
 
-	//Set all of the region 1 space as invalid
+	//Set all of the region 1 space as invalid {May be redundant?}
 	for(int x = 0; x < MAX_PT_LEN; x++){
 		user_page_table[x].prot = 0;
                 user_page_table[x].pfn = 0;

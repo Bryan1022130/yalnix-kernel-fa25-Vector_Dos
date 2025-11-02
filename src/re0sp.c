@@ -1,6 +1,5 @@
 //Header files from yalnix_framework && libc library
 #include <sys/types.h> //For u_long
-#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
 #include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
@@ -14,7 +13,7 @@
 
 void SetupRegion0(pte_t *kernel_page_table){
 	//Clear out the malloc space
-	memset(kernel_page_table, 0, (VMEM_0_SIZE / PAGESIZE * (sizeof(pte_t))));
+	memset(kernel_page_table, 0, (MAX_PT_LEN* (sizeof(pte_t))));
 
 	TracePrintf(0, "This is the value of MAX_PT_LEN ---> %d, and this is the value of VMEM_0_SIZE / PAGESIZE --> %d\n", MAX_PT_LEN, (VMEM_0_SIZE / PAGESIZE));
         TracePrintf(1,"------------------------------------------------- Region 0 Set up ----------------------------------------------------\n");
@@ -55,10 +54,7 @@ void SetupRegion0(pte_t *kernel_page_table){
         }
 
         TracePrintf(1, "This is the base of the kernel_page_table ===> %p\n", kernel_page_table);
-	
         WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
         WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
-
         TracePrintf(1,"############################################## Region 0 Setup Done #############################################################\n\n");
-
 }
