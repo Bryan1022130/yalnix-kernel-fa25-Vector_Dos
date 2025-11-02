@@ -189,10 +189,22 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//KernelContextSwitch so that we can be in init pcb
 	TracePrintf(0, "We are going to KernelContextSwitch now! -=++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
+
         if(kc_ret = ERROR){
                 TracePrintf(0, "There was an error with Context Switch!\n");
                 return;
         }
+	
+	TracePrintf(0, "KernelContectSwitch Worked !\n");
+
+	//Handle Ready Queue switch after KCS
+	//Init would be runnning && Idle would be in the ready Queue
+	(PCB *) next_proc = Dequeue(readyQueue);
+	next_proc->RUNNING;
+
+	//Change it state from RUNNING to READY
+	idle_proc->currState = READY;
+	Enqueue(readyQueue, idle_proc);
 
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");

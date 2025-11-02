@@ -53,6 +53,8 @@ void Enqueue(Queue *MQueue, void *data){
 	MQueue->tail->next = Node;
 	MQueue->tail = Node;
 	MQueue->size++;
+	PCB *convert = (PCB *)data;
+	TracePrintf(0, "You have enqueued and this is state of your PCB --> %d\n", convert->currState);
 	return;
 
 }

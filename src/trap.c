@@ -1,6 +1,5 @@
 //Header files from yalnix_framework
 #include <sys/types.h> //For u_long
-#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
 #include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
@@ -8,9 +7,11 @@
 #include <ylib.h> // Function declarations for many libc functions, Macro for NULL
 #include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
+
+//Our header files
 #include "Queue.h"     
 #include "process.h"   
-#include "trap.h" //For function declarations for other files
+#include "trap.h" 
 
 //Extern Variables
 extern unsigned long current_tick;
