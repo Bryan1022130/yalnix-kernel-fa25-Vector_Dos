@@ -129,39 +129,42 @@ void HandleKernelTrap(UserContext *CurrUC){
  */
 
 void HandleClockTrap(UserContext *CurrUC){
-	current_tick++;
-	TracePrintf(0, "In HandleClockTrap\n");
+    current_tick++;
+    TracePrintf(0, "In HandleClockTrap\n");
 
-	QueueNode *node = peek(sleepQueue);
-	// wake up processes whose Delay expired
-	PCB *p = (node ?(PCB *)node->data : NULL);
+    QueueNode *node = peek(sleepQueue);
+    // wake up processes whose Delay expired
+    PCB *p = (node ?(PCB *)node->data : NULL);
 
-	while (p && p->wake_tick <= current_tick) {
-		Dequeue(sleepQueue);
-		p->currState = READY;
-		Enqueue(readyQueue, p);
+    while (p && p->wake_tick <= current_tick) {
+        Dequeue(sleepQueue);
+        p->currState = READY;
+        Enqueue(readyQueue, p);
 
-		node = peek(sleepQueue);
-		p = (node ? (PCB *)node->data : NULL);
-	}
-	
-	TracePrintf(0, "Leaving HandleClockTrap\n");
-	
-	/*
-	PCB *old_pcb = current_process;
-	
-	//Copy the current UserContext into the PCB of curr process
-	memcpy(&old_pcb->curr_uc, KernelUC, sizeof(UserContext));
+        node = peek(sleepQueue);
+        p = (node ? (PCB *)node->data : NULL);
+    }
 
-	PCB *proc_find = get_proc(); //We will need to implement this
-
-	KernelContextSwitch(KCSwitch, (void *)old_pcb, (void *)proc_find);
-
-	memcpy(
-	TracePrintf(0, "Leaving HandleKernelTrap");
-	*/
-
-	return;
+    PCB *next = get_next_ready_process();
+    if (next && next != current_process) {
+        TracePrintf(0, "About to switch from PID %d to PID %d\n", 
+                    current_process->pid, next->pid);
+        
+        // Save current user context
+        memcpy(&current_process->curr_uc, CurrUC, sizeof(UserContext));
+        
+        // Switch kernel contexts
+        KernelContextSwitch(KCSwitch, current_process, next);
+        
+        // Load new process's user context
+        memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
+        
+        TracePrintf(0, "After switch: CurrUC->pc=%p, sp=%p\n",
+                    CurrUC->pc, CurrUC->sp);
+    }
+    
+    TracePrintf(0, "Leaving HandleClockTrap\n");
+    return;
 }
 
 void HandleIllegalTrap(UserContext *CurrUC) {

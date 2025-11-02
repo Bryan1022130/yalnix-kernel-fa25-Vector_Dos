@@ -42,6 +42,7 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 
         // Allocate a physical framem for the process
         int pt_pfn = find_frame(track, track_size);
+	frame_alloc(track, pt_pfn);
 
          if (pt_pfn == ERROR) {
              TracePrintf(0, "idle_proc_create(): ERROR allocating PT frame\n");
@@ -78,7 +79,7 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 
 	//Set up information for the PCB
 	memcpy(&init_proc->curr_uc, KernelUC, sizeof(UserContext)); // Copy in the curr UserContext
-	init_proc->currState = RUNNING;	
+	init_proc->currState = READY;	
 	init_proc->parent = NULL;
 	init_proc->first_child = NULL;
 	init_proc->next_sibling = NULL;
@@ -92,6 +93,7 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 }
 
 void init(void){
+	TracePrintf(0, ">>> init() started <<<\n");
 	int x = 0;
 	while(x < 10){
 		x++;

@@ -77,6 +77,8 @@ int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
         for(int i = 0; i < KERNEL_STACK_PAGES; i++){
                 //Allocate a physical frame for kernel stack
 		int pfn = find_frame(track, track_size);
+		frame_alloc(track, pfn);
+		free_proc->kernel_stack_frames[i] = pfn;
                 if(pfn == ERROR){
                         TracePrintf(0, "There is no more frames to give!\n");
 
@@ -86,6 +88,7 @@ int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
                         return ERROR;
                 }
 
+		frame_alloc(track, pfn);
                 free_proc->kernel_stack_frames[i] = pfn;
         }
 	return 0;
@@ -199,7 +202,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	
+	// make sure hardware points to init’s page table
+	WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
+	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
 
 	TracePrintf(1, "KernelStart complete.\n");
 	return;

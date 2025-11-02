@@ -17,6 +17,7 @@
 //Extern
 extern UserContext *KernelUC;
 extern PCB *current_process;
+extern PCB *idle_process;
 
 /* ===================================================================================================================
  * Idle Function that runs in Kernel Space
@@ -40,7 +41,7 @@ void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tab
         TracePrintf(0, "Start of the idle_proc_create function <|> \n");
 
         //Malloc space for PCB idle struct
-        PCB *idle_process = (PCB *)malloc(sizeof(PCB));
+        idle_process = (PCB *)malloc(sizeof(PCB));
 
         //Point to our user_page_table and clear the table
         pte_t *idle_pt = user_page_table;
@@ -48,10 +49,14 @@ void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tab
 
         //Get a pid from the help of hardware
         int pid_find = helper_new_pid(user_page_table);
-        idle_process->pid = pid_find;
+        idle_process->pid = READY;
+
+	TracePrintf(0, "idle_process->AddressSpace = %p\n", idle_process->AddressSpace);
+	TracePrintf(0, "idle_process kernel stack frame[0] = %d\n", idle_process->kernel_stack_frames[0]);
 
         //Allocate a physical page for the process
         int pfn = find_frame(track, track_size);
+	frame_alloc(track, pfn);
         if(pfn == ERROR){
                 TracePrintf(0, "No frames were found!\n");
                 return;
@@ -74,7 +79,14 @@ void idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tab
         idle_process->currState = READY;
 
         //Copy in idle PCB properties into the KernelUC
-        memcpy(KernelUC, &idle_process->curr_uc, sizeof(UserContext));
+        memset(&idle_process->curr_kc, 0, sizeof(KernelContext));
+
+	// Allocate kernel stack frames for idle
+	extern int create_sframes(PCB *free_proc, unsigned char *track, int track_size);
+	if (create_sframes(idle_process, track, track_size) == ERROR) {
+	    TracePrintf(0, "idle_proc_create: failed to allocate kernel stack\n");
+	    return;
+	}
 
         /* =======================================
          * Write region 1 table to Hardware

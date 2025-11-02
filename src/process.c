@@ -58,9 +58,20 @@ void InitPcbTable(void){
  * Sets the state to READY and assigns its PID.
  * ===============================================================================================================
  */
+PCB *proc_alloc(void) {
+    static int next_pid = 1;  // simple incremental pid generator
 
+    if (process_free_head == NULL) return NULL;
+    PCB *p = process_free_head;
+    process_free_head = p->next;
+    memset(p, 0, sizeof(PCB));
+    p->currState = READY;
+    p->pid = next_pid++;  // assign pid here
+
+    return p;
+}
 /*
-PCB *pcb_alloc(void){
+PCB *proc_alloc(void){
 
         //Check if there is PCBs left to use
         if(process_free_head == NULL){
@@ -99,8 +110,14 @@ PCB *pcb_alloc(void){
  * ===============================================================================================================
  */
 
+void proc_free(PCB *p) {
+    if (!p) return;
+    p->currState = FREE;
+    p->next = process_free_head;
+    process_free_head = p;
+}
 /*
-int pcb_free(int pid){
+int proc_free(int pid){
 
     if(pid < 0 || pid >= MAX_PROCS){
         TracePrintf(0, "Invalid PID passed to pcb_free().\n");
@@ -174,60 +191,123 @@ int pcb_free(int pid){
     return 0;
 }
 */
-
 // ----------------- Context Switching -----------------------------
 PCB *get_next_ready_process(void) {
     if (isEmpty(readyQueue)) {
-        return idle_process;   // nothing ready? run idle
+        return idle_process;
     }
     return Dequeue(readyQueue);
 }
 
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
-	// Save current kernel context into its PCB, restore the next PCB’s context,
-	// and return pointer to the next context to run.
+    PCB *curr = (PCB *)curr_pcb_p;
+    PCB *next = (PCB *)next_pcb_p;
 
-	//Check if the process is valid
-	PCB *curr = (PCB *)curr_pcb_p;
-	PCB *next = (PCB *)next_pcb_p;
+    // Defensive check: don't try to switch to or from NULL
+    if (next == NULL) {
+        TracePrintf(0, "KCSwitch: next NULL, switching to idle_process\n");
+        next = idle_process;
+    }
 
-	// Defensive check dont try to switch to or from NULL
-	if(!curr || !next){
-		TracePrintf(0, "KCSwitch: invalid PCB pointers\n");
-		return kc_in;
-	}
-	// Defensive check skip if both PCBs are the same
-	if (curr == next){
-		TracePrintf(1, "KCSwitch: same process, skipping\n");
-		return kc_in;
-	}
-	// Save current kernel context into PCB to resume later
-	memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
+    if (curr == NULL) {
+        TracePrintf(0, "KCSwitch: curr NULL, using current_process\n");
+        curr = current_process;
+    }
 
-	//Marks old process as ready to run again
-	if (curr->currState == RUNNING)
-		curr->currState = READY;
+    // Defensive check: skip if both PCBs are the same
+    if (curr == next) {
+        TracePrintf(1, "KCSwitch: same process, skipping\n");
+        return kc_in;
+    }
 
-	// Switches Region 1 to the next process's page table
-	// Changes the virtual memory context the CPU sees
-	if (next->AddressSpace != NULL){
-		WriteRegister(REG_PTBR1, (unsigned int) next->AddressSpace);
-		WriteRegister(REG_PTLR1, (unsigned int) MAX_PT_LEN);
-		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-	}else {
-		TracePrintf(0, "KCSwitch: Warning - next process has NULL AddressSpace\n");
-	}
+    // Save current kernel context into PCB to resume later
+    memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
-	// Marks the new process as active and updates the global pointer that syscalls refrence 
-	next->currState = RUNNING;
-	current_process = next;
+    // Mark old process as ready to run again
+    if (curr->currState == RUNNING)
+        curr->currState = READY;
 
-	TracePrintf(1, "KCSwitch: switched from PID %d to PID %d\n",
-		curr->pid, next->pid);
+    if (next->curr_kc.lc.uc_mcontext.gregs[REG_ESP] == 0) {
+        TracePrintf(1, "KCSwitch: first run of PID %d - copying kernel stack\n", next->pid);
+        
+	//memcpy(&next->curr_kc, kc_in, sizeof(KernelContext));
 
-    // Update global
-	return &next->curr_kc;
-	
+        // Copy kernel stack from current to next
+        int temp_vpn = -1;
+        for (int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--) {
+            if (kernel_page_table[i].valid == FALSE) {
+                temp_vpn = i;
+                break;
+            }
+        }
+        
+        if (temp_vpn < 0) {
+            TracePrintf(0, "KCSwitch: no free VPN for stack copy!\n");
+            return &next->curr_kc;
+        }
+        
+        void *temp_va = (void *)(temp_vpn << PAGESHIFT);
+        
+        for (int i = 0; i < KSTACKS; i++) {
+            void *src_va = (void *)(KERNEL_STACK_BASE + (i * PAGESIZE));
+            
+            // Map next's frame temporarily
+            kernel_page_table[temp_vpn].pfn = next->kernel_stack_frames[i];
+            kernel_page_table[temp_vpn].valid = 1;
+            kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
+            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+            
+            // Copy from curr (at KERNEL_STACK_BASE) to next
+            memcpy(temp_va, src_va, PAGESIZE);
+	    // Unmap
+            kernel_page_table[temp_vpn].valid = 0;
+            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+        }  
+            
+             if (next->AddressSpace != NULL) {
+        WriteRegister(REG_PTBR1, (unsigned int)next->AddressSpace);
+        WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+    }
+    
+    // Remap kernel stack
+    /*
+    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
+    for (int i = 0; i < KSTACKS; i++) {
+        kernel_page_table[ks_base_vpn + i].pfn = next->kernel_stack_frames[i];
+        kernel_page_table[ks_base_vpn + i].prot = PROT_READ | PROT_WRITE;
+        kernel_page_table[ks_base_vpn + i].valid = 1;
+    }
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_KSTACK);
+    */
+    next->currState = RUNNING;
+    current_process = next;
+    
+    TracePrintf(1, "KCSwitch: first-run complete, returning current context\n");
+    
+    return kc_in;
+  }
+  
+    // Normal switch code for already-running processes
+    if (next->AddressSpace != NULL) {
+        WriteRegister(REG_PTBR1, (unsigned int)next->AddressSpace);
+        WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+    }
+
+    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
+    for (int i = 0; i < KSTACKS; i++) {
+        kernel_page_table[ks_base_vpn + i].pfn = next->kernel_stack_frames[i];
+        kernel_page_table[ks_base_vpn + i].prot = PROT_READ | PROT_WRITE;
+        kernel_page_table[ks_base_vpn + i].valid = 1;
+    }
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_KSTACK);
+
+    next->currState = RUNNING;
+    current_process = next;
+
+    TracePrintf(1, "KCSwitch: switched from PID %d to PID %d\n", curr->pid, next->pid);
+    return &next->curr_kc;
 }
 
 KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){

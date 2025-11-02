@@ -213,7 +213,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
    */
 
   //Loop from text_pg1 to MAX_PT_LEN - 1
-  unsigned int PAGE_CYCLES = MAX_PT_LEN - 1;
+  unsigned int PAGE_CYCLES = MAX_PT_LEN;
 
   //Get the byte address of the start of the page table for region 1
   //This is stored in our PCB and points to the virtual space
@@ -250,11 +250,12 @@ LoadProgram(char *name, char *args[], PCB *proc)
    */
 
   // First set up the text regions
-  unsigned int text_end = text_pg1 + li.t_npg - 1;
+  unsigned int text_end = text_pg1 + li.t_npg;
 
-  for(unsigned int j = text_pg1; j < text_end; j++){
+  for(unsigned int j = text_pg1; j <= text_end; j++){
         //Grab a physical frame; based on the manual
         unsigned int pfn_grab = find_frame(track_global, frame_count);
+	frame_alloc(track_global, pfn_grab);
 
         if(pfn_grab == ERROR){
                 TracePrintf(0, "Error when allocating a frame !\n");
@@ -273,10 +274,11 @@ LoadProgram(char *name, char *args[], PCB *proc)
    * ==>> These pages should be marked valid, with a protection of
    * ==>> (PROT_READ | PROT_WRITE).
    */
-  unsigned int data_end = data_pg1 + data_npg - 1;
+  unsigned int data_end = data_pg1 + data_npg;
 
-  for(unsigned int u = data_pg1; u < data_end; u++){
+  for(unsigned int u = data_pg1; u <= data_end; u++){
 	  unsigned int pfn_grab = find_frame(track_global, frame_count);
+	  frame_alloc(track_global, pfn_grab);
 
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");
@@ -297,9 +299,10 @@ LoadProgram(char *name, char *args[], PCB *proc)
    */
   unsigned int stack_start = MAX_PT_LEN - stack_npg;
 
-  for(unsigned int t = stack_start; t < PAGE_CYCLES; t++){
+  for(unsigned int t = stack_start; t <= PAGE_CYCLES; t++){
           //Allocated a physical frame to store in region 1
           unsigned int pfn_grab = find_frame(track_global, frame_count);
+	  frame_alloc(track_global, pfn_grab);
 
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");
