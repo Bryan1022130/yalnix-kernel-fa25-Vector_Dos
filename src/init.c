@@ -77,6 +77,8 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 	//Set up proces informatio
 	init_proc->AddressSpace = (void *)user_page_table;
 	
+	TracePrintf(0, "<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>\n\n\n");
+
 	//Put the kernel contect into init_proc
 	int copy = KernelContextSwitch(KCCopy, init_proc, NULL);
 	if(copy < 0){
@@ -93,30 +95,9 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 	
 	//Queue the process into the Queue {Maybe this wrong}
-//	Enqueue(readyQueue,(void *)init_proc); 
+	Enqueue(readyQueue,(void *)init_proc); 
 
-
-	// ==================== INIT PROCESS DEBUG START ====================
-	TracePrintf(1, "\nINIT_PROC DEBUG: Verifying Context and Stack Setup:\n");
-
-	// --- PCB Contexts ---
-	TracePrintf(1, "  INIT PID: %d\n", init_proc->pid);
-	TracePrintf(1, "  INIT PCB AddressSpace (PTBR1): 0x%p\n", init_proc->AddressSpace);
-	TracePrintf(1, "  INIT PCB currState: %d (Should be READY)\n", init_proc->currState);
-
-	// --- Kernel Stack Frames (Crucial for KCCopy source) ---
-	TracePrintf(1, "  INIT Kernel Stack Frame 0 (PFN): %d\n", init_proc->kernel_stack_frames[0]);
-	TracePrintf(1, "  INIT Kernel Stack Frame 1 (PFN): %d\n", init_proc->kernel_stack_frames[1]);
-
-	// --- User Context (The starting point for User Mode) ---
-	// If these are (nil) or garbage, the system crashes on return to user mode.
-	TracePrintf(1, "  INIT User Context PC: 0x%p (Should be USER_TEXT_START)\n", init_proc->curr_uc.pc);
-	TracePrintf(1, "  INIT User Context SP: 0x%p (Should be USER_STACK_LIMIT)\n", init_proc->curr_uc.sp);
-	TracePrintf(1, "  INIT User Context R0 (Fork RetVal): %d\n", init_proc->curr_uc.regs[REG_SS]);
-
-	TracePrintf(1, "  INIT Kernel Context Address: 0x%p\n", &init_proc->curr_kc);
-
-  	TracePrintf(0, "End of the init process </> \n");
+  	TracePrintf(0, "End of the init process </> \n\n\n");
         return init_proc;
 }
 

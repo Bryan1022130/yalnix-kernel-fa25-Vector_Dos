@@ -67,6 +67,10 @@ PCB *get_next_ready_process(void) {
 }
 
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
+	
+
+    TracePrintf(1, "This is the start of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>\n");
+
     PCB *curr = (PCB *)curr_pcb_p;
     PCB *next = (PCB *)next_pcb_p;
 
@@ -85,15 +89,11 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
         TracePrintf(1, "KCSwitch: same process, skipping\n");
         return kc_in;
     }
-    TracePrintf(0,"Are we being called?\n");
     //copy the bytes of the kernel context into the current process’s PCB 
-    memcpy(&(curr->curr_kc), kc_in, sizeof(KernelContext));
+    memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
     // Mark old process as ready to run again
     if (curr->currState == RUNNING){
-	    //Take the next process of the Queue
-	    //Dequeue(readyQueue);	
-	    //Setup current process for readyQueue and enqueue 
 	    curr->currState = READY;
 	    Enqueue(readyQueue, curr);
     }
@@ -119,6 +119,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     current_process = next;
 
     TracePrintf(1, "KCSwitch: switched from PID %d to PID %d\n", curr->pid, next->pid);
+    TracePrintf(1, "This is the end of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>\n\n\n");
     return &next->curr_kc;
 }
 
@@ -130,11 +131,6 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 		return NULL;
 	}
 
-	TracePrintf(0, "Address of kc_in pointer: %p\n", (void *)&kc_in); 
-    
-    	// Print the value (the address it points to) of kc_in
-   	 TracePrintf(0, "Value (address) of kc_in: %p\n", (void *)kc_in);
-
 	//Check if the process is valid
 	PCB *new_pcb = (PCB *)new_pcb_p;
 	if(new_pcb == NULL){
@@ -144,22 +140,6 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 	//Copy over the the KernelContext into the new_pcb with a memcpy
 	memcpy(&new_pcb->curr_kc, kc_in, sizeof(KernelContext));
 	
-	/*
-	int holdvpn = -1;
-	for(int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--){
-		if(kernel_page_table[i].valid == FALSE){
-			TracePrintf(0, "I found a vpn at this value ==> %d\n", i);
-			holdvpn = i;
-			break;
-		}
-	}
-
-	if(holdvpn < 0){
-		TracePrintf(0, "There was an error! I could not find a free kernel vpn :(\n");
-		return NULL;
-	}
-	*/
-
 	int holdvpn = (((KERNEL_STACK_BASE) >> PAGESHIFT) - 1);
 	int stack_base = KERNEL_STACK_BASE >> PAGESHIFT;
 
@@ -196,9 +176,8 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
-	TracePrintf(0, "This is the sp --> %p and this is the pc ---> %p\n", new_pcb->curr_uc.sp, new_pcb->curr_uc.pc);
 	//return the kc_in as stated in the manual
-	TracePrintf(0,"This is the end of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++++++++++++>\n");
+	TracePrintf(0,"This is the end of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++++++++++++>\n\n\n");
 
 	return kc_in;
 }

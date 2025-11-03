@@ -81,10 +81,6 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
 	idle_process->kernel_stack_frames[0] = 126;
 	idle_process->kernel_stack_frames[1] = 127;
 
-	for(int x =  0; x < KERNEL_STACK_MAXSIZE / PAGESIZE; x++){
-		TracePrintf(0, "This is the value --> %d\n", idle_process->kernel_stack_frames[x]);
-	}
-
         /* =======================================
          * Write region 1 table to Hardware
          * =======================================
@@ -99,6 +95,8 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
 
         //Set global variable for current process as the idle process
         current_process = idle_process;
+	
+	TracePrintf(0, "End of the idle_proc_create function <|> \n\n\n");
 
 	return SUCCESS;
 }
