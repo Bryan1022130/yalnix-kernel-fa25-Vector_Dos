@@ -14,6 +14,9 @@
 //Set up the region 1 user_page_table as invaid
 void SetupRegion1(pte_t *user_page_table){
 
+	TracePrintf(1, "\n\n");
+ 	TracePrintf(1,"------------------------------------------------- Region 1 Setup ----------------------------------------------------\n");
+
 	//Clear out the malloc region 
 	memset(user_page_table, 0, (MAX_PT_LEN * sizeof(pte_t)));
 
@@ -24,7 +27,7 @@ void SetupRegion1(pte_t *user_page_table){
 		user_page_table[x].valid = INVALID;
 	}
 
-	TracePrintf(0, "We are going to write out the base of the region 1 page table here --> %p\n", user_page_table);
 	WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+	TracePrintf(1,"################################################# Region 1 Setup Done ###############################################\n\n\n");
 }

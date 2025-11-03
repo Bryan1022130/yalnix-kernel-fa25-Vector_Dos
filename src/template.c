@@ -137,8 +137,6 @@ LoadProgram(char *name, char *args[], PCB *proc)
    */
   cp2 = (caddr_t)cpp - INITIAL_STACK_FRAME_SIZE;
 
-
-
   TracePrintf(1, "prog_size %d, text %d data %d bss %d pages\n",
               li.t_npg + data_npg, li.t_npg, li.id_npg, li.ud_npg);
 
@@ -220,7 +218,6 @@ LoadProgram(char *name, char *args[], PCB *proc)
   //but physical memory is also change since its mapped
   
   pte_t *PT = (pte_t *)proc->AddressSpace;
-  TracePrintf(0, "This is the value of our pointer ==> %p", PT);
 
   for(unsigned int i = 0; i < PAGE_CYCLES; i++){
           if(PT[i].valid == VALID){
@@ -249,14 +246,14 @@ LoadProgram(char *name, char *args[], PCB *proc)
    * ==>> (PROT_READ | PROT_WRITE).
    */
 
+  TracePrintf(0, "We are going to set up region 1 space now\n");
   // First set up the text regions
   unsigned int text_end = text_pg1 + li.t_npg;
 
   for(unsigned int j = text_pg1; j <= text_end; j++){
         //Grab a physical frame; based on the manual
         unsigned int pfn_grab = find_frame(track_global, frame_count);
-	frame_alloc(track_global, pfn_grab);
-
+	TracePrintf(0, "This is the pfn we got for text -- > %d", pfn_grab);
         if(pfn_grab == ERROR){
                 TracePrintf(0, "Error when allocating a frame !\n");
                 return ERROR;
@@ -278,8 +275,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
 
   for(unsigned int u = data_pg1; u <= data_end; u++){
 	  unsigned int pfn_grab = find_frame(track_global, frame_count);
-	  frame_alloc(track_global, pfn_grab);
-
+	TracePrintf(0, "This is the pfn we got for data -- > %d", pfn_grab);
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");
                   return ERROR;
@@ -302,8 +298,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
   for(unsigned int t = stack_start; t <= PAGE_CYCLES; t++){
           //Allocated a physical frame to store in region 1
           unsigned int pfn_grab = find_frame(track_global, frame_count);
-	  frame_alloc(track_global, pfn_grab);
-
+	TracePrintf(0, "This is the pfn we got for stack -- > %d", pfn_grab);
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");
                   return ERROR;

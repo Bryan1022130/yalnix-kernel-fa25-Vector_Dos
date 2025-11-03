@@ -160,7 +160,9 @@ void Exit(int status) {
      *  3. Wake up any waiting parent process.
      *  4. Call scheduler to switch to next runnable process.
      */
+
     TracePrintf(1, "Process %d exiting with status %d\n", current_process->pid, status);
+    TracePrintf(1, "This is exit syscall\n");
     current_process->exitstatus = status;
     current_process->currState = ZOMBIE;
 

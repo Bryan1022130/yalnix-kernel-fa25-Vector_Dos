@@ -12,11 +12,12 @@
 #define FALSE 0
 
 void SetupRegion0(pte_t *kernel_page_table){
+
 	//Clear out the malloc space
 	memset(kernel_page_table, 0, (MAX_PT_LEN* (sizeof(pte_t))));
-
-	TracePrintf(0, "This is the value of MAX_PT_LEN ---> %d, and this is the value of VMEM_0_SIZE / PAGESIZE --> %d\n", MAX_PT_LEN, (VMEM_0_SIZE / PAGESIZE));
-        TracePrintf(1,"------------------------------------------------- Region 0 Set up ----------------------------------------------------\n");
+	
+	TracePrintf(1, "\n\n");
+        TracePrintf(1,"------------------------------------------------- Region 0 Setup ----------------------------------------------------\n");
 
 	// -------------------------------------- TEXT --------------------------------------------------
         unsigned long int text_start = _first_kernel_text_page;
@@ -53,8 +54,7 @@ void SetupRegion0(pte_t *kernel_page_table){
                 kernel_page_table[stack_loop].pfn = stack_loop;
         }
 
-        TracePrintf(1, "This is the base of the kernel_page_table ===> %p\n", kernel_page_table);
         WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
         WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
-        TracePrintf(1,"############################################## Region 0 Setup Done #############################################################\n\n");
+        TracePrintf(1,"############################################## Region 0 Setup Done #############################################################\n\n\n");
 }

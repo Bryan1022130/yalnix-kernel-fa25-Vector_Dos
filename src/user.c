@@ -1,6 +1,8 @@
-#include <stdio.h>
+#include <hardware.h>
 int main (void){
-	while(1){
-		printf("Hello i am called\n");
+	int x = 0;
+	while(x < 5){
+		x++;
+		TracePrintf(0, "Hello i am called\n");
 	}
 }

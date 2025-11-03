@@ -94,7 +94,8 @@ int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
  */ 
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
-	TracePrintf(0, "----------> We are the start of the KernelStart function <-----------");
+	TracePrintf(0,"\n\n");
+	TracePrintf(0, "--------------------------------> We are the start of the KernelStart function <---------------------------------\n");
 
 	/* <<<---------------------------------------------------------
 	 * Boot up the free frame data structure && define global vars
@@ -137,6 +138,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1, "------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------\n\n");
 	WriteRegister(REG_VM_ENABLE, TRUE);
 	vm_enabled = TRUE;
+	TracePrintf(1, "#######################################################################################################################\n\n\n\n");
 
 	/* <<<------------------------------
 	 * Set up the Interrupt Vector Table
@@ -145,7 +147,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	TracePrintf(1,"+++++ We are setting up the IVT and im going to call the function | CALLED KERNELSTART \n");
 	setup_trap_handler(Interrupt_Vector_Table);
-	TracePrintf(1,"+++++ We have left the function and are now going to set up region 0 | CALLED KERNELSTART\n\n");
+	TracePrintf(1,"+++++ We have left the function and are now going to set up region 0 | CALLED KERNELSTART\n\n\n");
 
 	/* <<<------------------------------
 	 * Call SetKernelBrk()
@@ -164,7 +166,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n\n");
+	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n\n\n");
 
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
@@ -175,7 +177,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	TracePrintf(1, "------------------------------------- CHECK POINT HERE TO SEE IF CALLED-------------------------------------\n");
 	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
@@ -183,37 +184,33 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	}
 	
 	//KernelContextSwitch so that we can be in init pcb
-	TracePrintf(0, "We are going to KernelContextSwitch now! -=++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-
-	//Pause();
 	int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
         if(kc_ret == ERROR){
                 TracePrintf(0, "There was an error with Context Switch!\n");
                 Halt();
         }
 	
-	TracePrintf(0, "KernelContectSwitch Worked and we are back in the kernelstart file !\n");
-
+	//Check If there is args passed in
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
 		init();
+		Halt();
 	}
 	
 	TracePrintf(0, "Great this the name of your program --> %s\n", cmd_args[0]);
 	TracePrintf(0, "I am going to load your program \n");
 	int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
-
 	if(lp_ret == ERROR){
 		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
 		return;
 	}
 
-	// make sure hardware points to init’s page table
+	//Write to hardware where init is in region 1
 	WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
 	
-	TracePrintf(1, "KernelStart complete+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=.\n");
+	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
 	return;
 }

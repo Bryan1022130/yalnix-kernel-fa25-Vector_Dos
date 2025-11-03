@@ -63,6 +63,7 @@ void HandleKernelTrap(UserContext *CurrUC){
 			break;
 		
 		case YALNIX_EXIT:
+			TracePrintf(0, "This is HandleKernelTrap and we are calling Exit()\n");
 			Exit((int)CurrUC->regs[0]);
 			break;
 
@@ -148,6 +149,7 @@ void HandleClockTrap(UserContext *CurrUC){
     }
 
     PCB *next = get_next_ready_process();
+
     if (next && next != current_process) {
         TracePrintf(0, "About to switch from PID %d to PID %d\n", 
                     current_process->pid, next->pid);
