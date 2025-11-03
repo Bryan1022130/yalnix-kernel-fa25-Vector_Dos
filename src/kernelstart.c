@@ -182,6 +182,10 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 		Halt();
 	}
+
+	TracePrintf(0, "I AM WRITING THIS TO SHOW YOU THAT YOU ARE AFTER INIT WAS CALLED AND MAYBE KC SEITCH IS CALLED TWICE?\n"
+			"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+			"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	
 	//KernelContextSwitch so that we can be in init pcb
 	int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
@@ -189,7 +193,10 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
                 TracePrintf(0, "There was an error with Context Switch!\n");
                 Halt();
         }
-	
+	TracePrintf(0, "I AM WRITING THIS TO SHOW YOU THAT YOU ARE BACK IN KERNEL START AND THAT WE JUST LEFT CONTEXT SWITCH ON GOOD STATUS\n"
+			"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+			"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+
 	//Check If there is args passed in
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");

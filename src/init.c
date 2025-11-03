@@ -96,6 +96,7 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 	
 	//Queue the process into the Queue {Maybe this wrong}
+	TracePrintf(0,"We are putting into the ready queue init! Since we need to context switch it!\n");
 	Enqueue(readyQueue,(void *)init_proc); 
 
   	TracePrintf(0, "End of the init process </> \n\n\n");

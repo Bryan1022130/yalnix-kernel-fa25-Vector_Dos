@@ -93,10 +93,10 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
     // Mark old process as ready to run again
-    if (curr->currState == RUNNING && curr != idle_process){
+    if (curr->currState == RUNNING){
 	    TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	    TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	    TracePrintf(0, " We are going to Enqueu the current process with a pid of --> %d\n", curr->pid);
+	    TracePrintf(0, " We are going to say that the state ofthe current process is ready with a pid of -- %d\n", curr->pid);
 	    curr->currState = READY;
 	    Enqueue(readyQueue, curr);
     }
