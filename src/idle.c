@@ -77,10 +77,6 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
         idle_process->curr_uc.sp = (void*)(VMEM_1_LIMIT - 1);
         idle_process->currState = READY;
 
-	//Mark its kernel stack frames
-	idle_process->kernel_stack_frames[0] = 126;
-	idle_process->kernel_stack_frames[1] = 127;
-
         /* =======================================
          * Write region 1 table to Hardware
          * =======================================
@@ -89,6 +85,10 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
         WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
         WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
+	//Mark its kernel stack frames
+	idle_process->kernel_stack_frames[0] = 126;
+	idle_process->kernel_stack_frames[1] = 127;
 
         //write the current UserContext back into uctxt so the hardware knows
 	memcpy(uctxt, &idle_process->curr_uc, sizeof(UserContext));

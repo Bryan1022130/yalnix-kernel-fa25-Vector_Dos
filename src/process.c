@@ -99,12 +99,13 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     }
 
    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
-
+   TracePrintf(0, "This is the value of the base_vpn --> %d\n", ks_base_vpn);
     for (int i = 0; i < KSTACKS; i++) {
         kernel_page_table[ks_base_vpn + i].pfn = next->kernel_stack_frames[i];
         kernel_page_table[ks_base_vpn + i].prot = PROT_READ | PROT_WRITE;
         kernel_page_table[ks_base_vpn + i].valid = 1;
     }
+    
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_KSTACK);
 
     
@@ -147,11 +148,11 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 
 	//Copy over the content of the current kernel stack into frames that have been allocated
 	for(int t = 0; t < KSTACKS; t++){
-		TracePrintf(0, "This is the value of KERNEL_STACK_BASE ==> %lx\n", KERNEL_STACK_BASE);	
-
+		
 		//Get the current pfn from our process && current proc
 		int kernel_curr_pfn = current_process->kernel_stack_frames[t];
 		int kernel_new_pfn = new_pcb->kernel_stack_frames[t];
+		TracePrintf(0, "THis is the kernel pfn opf curr -> %d, and this is pfn of new -> %d", kernel_curr_pfn, kernel_new_pfn);
 			
 		//Map this value in kernel virtual memory 
 		kernel_page_table[holdvpn].pfn = kernel_new_pfn;
