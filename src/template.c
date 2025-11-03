@@ -95,7 +95,6 @@ LoadProgram(char *name, char *args[], PCB *proc)
 
   /*
    * Figure out in what region 1 page the different program sections
-   * start and end
    */
   text_pg1 = (li.t_vaddr - VMEM_1_BASE) >> PAGESHIFT; //The start of the text section
   data_pg1 = (li.id_vaddr - VMEM_1_BASE) >> PAGESHIFT; //The start of the data section
@@ -211,7 +210,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
    */
 
   //Loop from text_pg1 to MAX_PT_LEN - 1
-  unsigned int PAGE_CYCLES = MAX_PT_LEN;
+  unsigned int PAGE_CYCLES = MAX_PT_LEN - 1;
 
   //Get the byte address of the start of the page table for region 1
   //This is stored in our PCB and points to the virtual space
@@ -249,11 +248,10 @@ LoadProgram(char *name, char *args[], PCB *proc)
   TracePrintf(0, "We are going to set up region 1 space now\n");
   // First set up the text regions
   unsigned int text_end = text_pg1 + li.t_npg;
-
-  for(unsigned int j = text_pg1; j <= text_end; j++){
+  for(unsigned int j = text_pg1; j < text_end; j++){
         //Grab a physical frame; based on the manual
         unsigned int pfn_grab = find_frame(track_global, frame_count);
-	TracePrintf(0, "This is the pfn we got for text -- > %d", pfn_grab);
+	TracePrintf(0, "This is the pfn we got for text -- > %d\n", pfn_grab);
         if(pfn_grab == ERROR){
                 TracePrintf(0, "Error when allocating a frame !\n");
                 return ERROR;
@@ -272,10 +270,9 @@ LoadProgram(char *name, char *args[], PCB *proc)
    * ==>> (PROT_READ | PROT_WRITE).
    */
   unsigned int data_end = data_pg1 + data_npg;
-
-  for(unsigned int u = data_pg1; u <= data_end; u++){
+  for(unsigned int u = data_pg1; u < data_end; u++){
 	  unsigned int pfn_grab = find_frame(track_global, frame_count);
-	TracePrintf(0, "This is the pfn we got for data -- > %d", pfn_grab);
+	  TracePrintf(0, "This is the pfn we got for data -- > %d\n", pfn_grab);
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");
                   return ERROR;
@@ -294,11 +291,10 @@ LoadProgram(char *name, char *args[], PCB *proc)
    * ==>> protection of (PROT_READ | PROT_WRITE).
    */
   unsigned int stack_start = MAX_PT_LEN - stack_npg;
-
   for(unsigned int t = stack_start; t <= PAGE_CYCLES; t++){
           //Allocated a physical frame to store in region 1
           unsigned int pfn_grab = find_frame(track_global, frame_count);
-	TracePrintf(0, "This is the pfn we got for stack -- > %d", pfn_grab);
+	  TracePrintf(0, "This is the pfn we got for stack -- > %d\n<D-p>", pfn_grab);
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");
                   return ERROR;
@@ -312,7 +308,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
   /*
    * ==>> (Finally, make sure that there are no stale region1 mappings left in the TLB!)
    */
-
+  TracePrintf(0, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! THIS IS WHERE THE SEGFAULT OCCURS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
   /*

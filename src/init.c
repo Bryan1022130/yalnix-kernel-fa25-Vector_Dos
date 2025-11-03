@@ -52,14 +52,15 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
              return NULL;
          }
 
-        //Map the pfn into the the kernel_page_table
+        //Map the pfn into the the user_page_table 
+	//This is because init must be in region 1 space
 	int stack_find = MAX_PT_LEN - 2;
-        kernel_page_table[stack_find].pfn = pt_pfn;
-        kernel_page_table[stack_find].prot = PROT_READ | PROT_WRITE;
-        kernel_page_table[stack_find].valid = TRUE;
+        user_page_table[stack_find].pfn = pt_pfn;
+        user_page_table[stack_find].prot = PROT_READ | PROT_WRITE;
+        user_page_table[stack_find].valid = TRUE;
 
         TracePrintf(0, "Flushing Region 1\n");
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 	
 	//Point to region 1 page table
         pte_t *init_pt = (pte_t *)user_page_table;
@@ -74,7 +75,7 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 		return NULL;
 	}
 	
-	//Set up proces informatio
+	//Set up proces information
 	init_proc->AddressSpace = (void *)user_page_table;
 	
 	TracePrintf(0, "<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>\n\n\n");

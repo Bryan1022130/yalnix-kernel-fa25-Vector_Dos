@@ -18,6 +18,7 @@
 extern UserContext *KernelUC;
 extern PCB *current_process;
 extern PCB *idle_process;
+extern pte_t *kernel_page_table;
 
 /* ===================================================================================================================
  * Idle Function that runs in Kernel Space
@@ -40,6 +41,9 @@ void DoIdle(void) {
 int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_table, UserContext *uctxt){
         TracePrintf(0, "Start of the idle_proc_create function <|> \n");
 
+	TracePrintf(0, "Frame 126 status: %d\n", track[126]);
+	TracePrintf(0, "Frame 127 status: %d\n", track[127]);
+
         //Create idle_process and clear the memory 
         idle_process = (PCB *)malloc(sizeof(PCB));
 	memset(idle_process, 0, sizeof(PCB));
@@ -53,7 +57,7 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
         idle_process->pid = pid_find;
 
        //Allocate a physical page for the process
-        int pfn = find_frame(track, track_size);
+       int pfn = find_frame(track, track_size);
         if(pfn == ERROR){
 		free(idle_process);
                 TracePrintf(0, "No frames were found!\n");
@@ -81,14 +85,27 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
          * Write region 1 table to Hardware
          * =======================================
          */
+	unsigned int sbase = (KERNEL_STACK_BASE >> PAGESHIFT);
+
+	
+	TracePrintf(0, "SETTING THE PFN PERMISSION AS TRUE FOR THE KERNEL STACK BASE\n");
+	kernel_page_table[sbase].prot = PROT_READ | PROT_WRITE;
+	kernel_page_table[sbase].pfn= 126;
+	kernel_page_table[sbase].valid = TRUE
+		;
+	kernel_page_table[sbase + 1].prot = PROT_READ | PROT_WRITE;
+	kernel_page_table[sbase + 1].pfn= 127;
+	kernel_page_table[sbase + 1].valid = TRUE;
+	
+	//Mark its kernel stack frames
+	idle_process->kernel_stack_frames[0] = 126;
+	idle_process->kernel_stack_frames[1] = 127;
+
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
         WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
         WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-
-	//Mark its kernel stack frames
-	idle_process->kernel_stack_frames[0] = 126;
-	idle_process->kernel_stack_frames[1] = 127;
 
         //write the current UserContext back into uctxt so the hardware knows
 	memcpy(uctxt, &idle_process->curr_uc, sizeof(UserContext));
