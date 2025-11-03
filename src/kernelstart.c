@@ -175,26 +175,24 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	
+	TracePrintf(1, "------------------------------------- CHECK POINT HERE TO SEE IF CALLED-------------------------------------\n");
 	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 		Halt();
 	}
-	Pause();
-
-	/*
-
+	
 	//KernelContextSwitch so that we can be in init pcb
 	TracePrintf(0, "We are going to KernelContextSwitch now! -=++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
 
-        if(kc_ret = ERROR){
+	//Pause();
+	int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
+        if(kc_ret == ERROR){
                 TracePrintf(0, "There was an error with Context Switch!\n");
-                return;
+                Halt();
         }
 	
-	TracePrintf(0, "KernelContectSwitch Worked !\n");
+	TracePrintf(0, "KernelContectSwitch Worked and we are back in the kernelstart file !\n");
 
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
@@ -215,8 +213,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
-	*/
-
+	
 	TracePrintf(1, "KernelStart complete+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=.\n");
 	return;
 }

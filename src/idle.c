@@ -52,7 +52,7 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
         int pid_find = helper_new_pid(user_page_table);
         idle_process->pid = pid_find;
 
-        //Allocate a physical page for the process
+       //Allocate a physical page for the process
         int pfn = find_frame(track, track_size);
         if(pfn == ERROR){
 		free(idle_process);
@@ -78,10 +78,19 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
         idle_process->currState = READY;
 
 	// Allocate kernel stack frames for idle
+	/*
 	if(create_sframes(idle_process, track, track_size) == ERROR){
 	    TracePrintf(0, "idle_proc_create: failed to allocate kernel stack\n");
 	    free(idle_process);
 	    return ERROR;
+	}
+	*/
+
+	idle_process->kernel_stack_frames[0] = 126;
+	idle_process->kernel_stack_frames[1] = 127;
+
+	for(int x =  0; x < KERNEL_STACK_MAXSIZE / PAGESIZE; x++){
+		TracePrintf(0, "This is the value --> %d\n", idle_process->kernel_stack_frames[x]);
 	}
 
         /* =======================================
@@ -101,10 +110,12 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
 
         TracePrintf(0, "===+++++++++++++++++++++++++ IDLE PROCESS DEBUG ++++++++++++++++++++++++++++++++++++++++++++++\n");
 	TracePrintf(0, "idle_process->AddressSpace = %p\n", idle_process->AddressSpace);
+	TracePrintf(0, "This is the current kernel context --> %p\n", idle_process->curr_kc);
 	TracePrintf(0, "idle_process kernel stack frame[0] = %d\n", idle_process->kernel_stack_frames[0]);
         TracePrintf(0, "This is idle pc -- > %p and this is sp --> %p\n", idle_process->curr_uc.pc, idle_process->curr_uc.sp);
         TracePrintf(0, "idle_process memory location ===========>: %p\n", idle_process);
         TracePrintf(0, "idle_process->pid: %d\n", idle_process->pid);
+	TracePrintf(0, "DEBUG: Address of idle_process->curr_kc: 0x%p\n", &(idle_process->curr_kc));
         TracePrintf(0, "current_process ptr: %p\n", current_process);
         TracePrintf(0, "===============================================================================================\n");
         TracePrintf(0, "End of the idle_proc_create function <|> \n\n");

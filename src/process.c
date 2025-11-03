@@ -85,96 +85,21 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
         TracePrintf(1, "KCSwitch: same process, skipping\n");
         return kc_in;
     }
-
+    TracePrintf(0,"Are we being called?\n");
     //copy the bytes of the kernel context into the current process’s PCB 
-    memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
+    memcpy(&(curr->curr_kc), kc_in, sizeof(KernelContext));
 
     // Mark old process as ready to run again
     if (curr->currState == RUNNING){
 	    //Take the next process of the Queue
-	    Dequeue(readyQueue);
-		
+	    //Dequeue(readyQueue);	
 	    //Setup current process for readyQueue and enqueue 
 	    curr->currState = READY;
 	    Enqueue(readyQueue, curr);
     }
 
+   int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
 
-
-
-
-    if (next->curr_kc.lc.uc_mcontext.gregs[REG_ESP] == 0) {
-        TracePrintf(1, "KCSwitch: first run of PID %d - copying kernel stack\n", next->pid);
-        
-	memcpy(&next->curr_kc, kc_in, sizeof(KernelContext));
-
-        // Copy kernel stack from current to next
-        int temp_vpn = -1;
-        for (int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--) {
-            if (kernel_page_table[i].valid == FALSE) {
-                temp_vpn = i;
-                break;
-            }
-        }
-
-        if (temp_vpn < 0) {
-            TracePrintf(0, "KCSwitch: no free VPN for stack copy!\n");
-            return &next->curr_kc;
-        }
-        
-        void *temp_va = (void *)(temp_vpn << PAGESHIFT);
-        
-        for (int i = 0; i < KSTACKS; i++) {
-            void *src_va = (void *)(KERNEL_STACK_BASE + (i * PAGESIZE));
-            
-            // Map next's frame temporarily
-            kernel_page_table[temp_vpn].pfn = next->kernel_stack_frames[i];
-            kernel_page_table[temp_vpn].valid = 1;
-            kernel_page_table[temp_vpn].prot = PROT_READ | PROT_WRITE;
-            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-            
-            // Copy from curr (at KERNEL_STACK_BASE) to next
-            memcpy(temp_va, src_va, PAGESIZE);
-	    // Unmap
-            kernel_page_table[temp_vpn].valid = 0;
-            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-        }  
-            
-             if (next->AddressSpace != NULL) {
-        WriteRegister(REG_PTBR1, (unsigned int)next->AddressSpace);
-        WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-    }
-    
-    // Remap kernel stack
-    /*
-
-    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
-    for (int i = 0; i < KSTACKS; i++) {
-        kernel_page_table[ks_base_vpn + i].pfn = next->kernel_stack_frames[i];
-        kernel_page_table[ks_base_vpn + i].prot = PROT_READ | PROT_WRITE;
-        kernel_page_table[ks_base_vpn + i].valid = 1;
-    }
-    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_KSTACK);
-    */
-    
-    next->currState = RUNNING;
-    current_process = next;
-    
-    TracePrintf(1, "KCSwitch: first-run complete, returning current context\n");
-
-    return kc_in;
-  }
-
-  
-    // Normal switch code for already-running processes
-    if (next->AddressSpace != NULL) {
-        WriteRegister(REG_PTBR1, (unsigned int)next->AddressSpace);
-        WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-    }
-
-    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
     for (int i = 0; i < KSTACKS; i++) {
         kernel_page_table[ks_base_vpn + i].pfn = next->kernel_stack_frames[i];
         kernel_page_table[ks_base_vpn + i].prot = PROT_READ | PROT_WRITE;
@@ -182,6 +107,14 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     }
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_KSTACK);
 
+    
+    if(next->AddressSpace != NULL) {
+        WriteRegister(REG_PTBR1, (unsigned int)next->AddressSpace);
+        WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+    }
+
+    //Update next as the current process and runnning
     next->currState = RUNNING;
     current_process = next;
 
@@ -189,31 +122,33 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     return &next->curr_kc;
 }
 
-
-
-
 KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
-	// Copy kernel context (and later, kernel stack) for a newly forked process.
-	// This produces a child that resumes right after Fork().
+	TracePrintf(1, "This is the start of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++>\n");
+
+	if(kc_in == NULL){
+		TracePrintf(0, "In KCCopy kc_in was null");
+		return NULL;
+	}
+
+	TracePrintf(0, "Address of kc_in pointer: %p\n", (void *)&kc_in); 
+    
+    	// Print the value (the address it points to) of kc_in
+   	 TracePrintf(0, "Value (address) of kc_in: %p\n", (void *)kc_in);
 
 	//Check if the process is valid
 	PCB *new_pcb = (PCB *)new_pcb_p;
-
 	if(new_pcb == NULL){
 		TracePrintf(0, "Error with one of the PCB being NULL!");
 	}
 
 	//Copy over the the KernelContext into the new_pcb with a memcpy
-	//Copy the Kernel Context into the new pcb
 	memcpy(&new_pcb->curr_kc, kc_in, sizeof(KernelContext));
 	
-	//find a temp vpn to map data from the current kernel stack into the frames that have been allocated for the new process's kernel stack 
-	// We need to make a better way for this
+	/*
 	int holdvpn = -1;
-
 	for(int i = (KERNEL_STACK_BASE >> PAGESHIFT) - 1; i > _orig_kernel_brk_page; i--){
 		if(kernel_page_table[i].valid == FALSE){
-			TracePrintf(0, "I found a pid at this value ==> %d", i);
+			TracePrintf(0, "I found a vpn at this value ==> %d\n", i);
 			holdvpn = i;
 			break;
 		}
@@ -223,39 +158,48 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 		TracePrintf(0, "There was an error! I could not find a free kernel vpn :(\n");
 		return NULL;
 	}
+	*/
 
-	//This is the byte address of our current pte that is in kernel_page_tavble
-	void * vpn_table_addr = (void *)(holdvpn << PAGESHIFT);
+	int holdvpn = (((KERNEL_STACK_BASE) >> PAGESHIFT) - 1);
+	int stack_base = KERNEL_STACK_BASE >> PAGESHIFT;
 
-	//.Copy over the content of the current kernel stack into frames that have been allocated
+	TracePrintf(0,"This is the value of holdvpn --> %d\n", holdvpn);
+
+	//Copy over the content of the current kernel stack into frames that have been allocated
 	for(int t = 0; t < KSTACKS; t++){
+		TracePrintf(0, "This is the value of KERNEL_STACK_BASE ==> %lx\n", KERNEL_STACK_BASE);	
 
-		TracePrintf(0, "This is the value of KERNEL_STACK_BASE ==> %lx\n", KERNEL_STACK_BASE);
-
-		//This is the vaddr of the currently running kernel stack
-		void *pagefind = (void *)(KERNEL_STACK_BASE + (t * PAGESIZE));
-		TracePrintf(0, "This is the value of the pagefind ==> %lx", pagefind);
-		
-		//Get the current pfn from our process
-		int kernel_pfn_find = new_pcb->kernel_stack_frames[t];
-		
+		//Get the current pfn from our process && current proc
+		int kernel_curr_pfn = current_process->kernel_stack_frames[t];
+		int kernel_new_pfn = new_pcb->kernel_stack_frames[t];
+			
 		//Map this value in kernel virtual memory 
-		kernel_page_table[holdvpn].pfn = kernel_pfn_find;
+		kernel_page_table[holdvpn].pfn = kernel_new_pfn;
 		kernel_page_table[holdvpn].valid = TRUE;
 		kernel_page_table[holdvpn].prot = PROT_READ | PROT_WRITE;
-		WriteRegister(REG_TLB_FLUSH, (unsigned int)vpn_table_addr);
+		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+
+		//This is the vaddr of the currently running kernel stack
+		unsigned long int pagefind = (stack_base + t) << PAGESHIFT;
+		TracePrintf(0, "This is the value of the pagefind ==> %lx\n", pagefind);
 		
 		//We are copying the content of the kernel stack table from
-		//pagefind into our kernel stack memory 
-		memcpy(vpn_table_addr, pagefind, PAGESIZE);
-		
+		memcpy((void *)((holdvpn) << PAGESHIFT), (void *)pagefind, PAGESIZE);
+
 		//Reset the virtual kernel page table
 		kernel_page_table[holdvpn].pfn = 0;
 		kernel_page_table[holdvpn].valid = FALSE;
 		kernel_page_table[holdvpn].prot = 0;
+		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+		
 	}
-	
+
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+
+	TracePrintf(0, "This is the sp --> %p and this is the pc ---> %p\n", new_pcb->curr_uc.sp, new_pcb->curr_uc.pc);
 	//return the kc_in as stated in the manual
+	TracePrintf(0,"This is the end of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++++++++++++>\n");
+
 	return kc_in;
 }
 
