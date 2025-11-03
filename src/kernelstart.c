@@ -7,7 +7,7 @@
 #include <ylib.h> // Function declarations for many libc functions, Macro for NULL 
 #include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
-
+#include <stdio.h> // for snprintf
 //Our Header Files
 #include "Queue.h"
 #include "trap.h"
@@ -206,18 +206,19 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	
 	TracePrintf(0, "Great this the name of your program --> %s\n", cmd_args[0]);
 	TracePrintf(0, "I am going to load your program \n");
+
+
 	int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
 	if(lp_ret == ERROR){
 		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
 		return;
 	}
-
+	
 	//Write to hardware where init is in region 1
 	WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
-	
 	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
 	return;
 }
