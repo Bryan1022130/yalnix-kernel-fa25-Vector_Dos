@@ -1,9 +1,18 @@
 #include <yalnix.h>
 #include <stdio.h>
+#include <hardware.h>
+#include <ylib.h>
+#include <yuser.h>
 
 int main(void) {
-    TtyPrintf(0, "Hello from userland! The kernel made it here :)\n");
-    Pause();
+	while(1){
+		TracePrintf(0, "We are tracing printing and waiting for a clock trap to execute (INIT) :)\n");
+		TracePrintf(0, "We are tracing printing and waiting for a clock trap to execute (INIT) :)\n");
+		TracePrintf(0, "We are tracing printing and waiting for a clock trap to execute (INIT):)\n");
+		TracePrintf(0, "We are tracing printing and waiting for a clock trap to execute(INIT) :)\n");
+		TracePrintf(0, "We are tracing printing and waiting for a clock trap to execute (INIT):)\n");
+		Pause();
+	}
     return 0;
 }
 
