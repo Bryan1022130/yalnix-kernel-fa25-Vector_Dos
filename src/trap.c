@@ -132,12 +132,26 @@ void HandleKernelTrap(UserContext *CurrUC){
 
 void HandleClockTrap(UserContext *CurrUC){
     current_tick++;
-    TracePrintf(0, "In HandleClockTrap\n");
+    TracePrintf(0, "In HandleClockTrap ==================================================================== \n\n\n\n");
 
+    // Save current user context
+    memcpy(&current_process->curr_uc, CurrUC, sizeof(UserContext));
+    current_process
+
+    //Check if there is node
     QueueNode *node = peek(sleepQueue);
 
-    // wake up processes whose Delay expired
-    PCB *p = (node ?(PCB *)node->data : NULL);
+    if(node == NULL){
+	    TracePrintf(0, "There was nothing in the Queue for me to look at\n");
+	    return;
+    }
+
+    //Extract the PCB from the Queue
+    PCB *p = (PCB *)node->data;
+    if(p->pid == 0){
+	    TracePrintf(0, "THIS IS THE IDLE PROCESS AND WE ARE GOING TO DEQUEU IT");
+    }
+	TracePrintf(0, "THIS IS THE INIT PROCESS AND WE ARE GOING TO DEQUEU IT");
 
     while (p && p->wake_tick <= current_tick) {
         Dequeue(sleepQueue);
@@ -147,16 +161,7 @@ void HandleClockTrap(UserContext *CurrUC){
         node = peek(sleepQueue);
         p = (node ? (PCB *)node->data : NULL);
     }
-
-    PCB *next = get_next_ready_process();
-
-    if (next && next != current_process) {
-        TracePrintf(0, "About to switch from PID %d to PID %d\n", 
-                    current_process->pid, next->pid);
-        
-        // Save current user context
-        memcpy(&current_process->curr_uc, CurrUC, sizeof(UserContext));
-        
+ 
         // Switch kernel contexts
         KernelContextSwitch(KCSwitch, current_process, next);
         
@@ -167,7 +172,7 @@ void HandleClockTrap(UserContext *CurrUC){
                     CurrUC->pc, CurrUC->sp);
     }
     
-    TracePrintf(0, "Leaving HandleClockTrap\n");
+    TracePrintf(0, "Leaving HandleClockTrap ========================================================================================\n\n\n\n");
     return;
 }
 

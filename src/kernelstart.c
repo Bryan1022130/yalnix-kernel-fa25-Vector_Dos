@@ -113,7 +113,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//initialize process queues
 	readyQueue = initializeQueue();
 	sleepQueue = initializeQueue();
-	
+	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue -- > %d\n", readyQueue->size);
+
 	//Store current UserContext globally
 	KernelUC = uctxt;
 
@@ -176,6 +177,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(0, "Idle process failed!\n");
 		return;
 	}
+	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue after we created idle proc -- > %d\n", readyQueue->size);
 
 	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 	if(init_pcb == NULL){
@@ -193,9 +195,14 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
                 TracePrintf(0, "There was an error with Context Switch!\n");
                 Halt();
         }
-	TracePrintf(0, "I AM WRITING THIS TO SHOW YOU THAT YOU ARE BACK IN KERNEL START AND THAT WE JUST LEFT CONTEXT SWITCH ON GOOD STATUS\n"
-			"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-			"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+
+	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue -- > %d\n", readyQueue->size);
+
+	if( ((PCB *)(peek(readyQueue)->data))->pid == 0 ){
+		TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND THIS CORRECT :)\n\n\n\n");
+	}else{
+		TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
+	}
 
 	//Check If there is args passed in
 	if(cmd_args[0] == NULL){

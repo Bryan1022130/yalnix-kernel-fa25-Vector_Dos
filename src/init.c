@@ -10,7 +10,6 @@
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 
 //Our Header Files
-#include "Queue.h" //API calls for our queue data structure
 #include "trap.h" //API for trap handling and initializing the Interrupt Vector Table
 #include "memory.h" //API for Frame tracking in our program
 #include "process.h" //API for process block control
@@ -23,7 +22,6 @@
 extern pte_t *kernel_page_table;
 extern PCB *current_process;
 extern UserContext *KernelUC;
-extern Queue *readyQueue;
 extern unsigned long int frame_count;
 
 PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_size){
@@ -95,10 +93,6 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 	
-	//Queue the process into the Queue {Maybe this wrong}
-	TracePrintf(0,"We are putting into the ready queue init! Since we need to context switch it!\n");
-	Enqueue(readyQueue,(void *)init_proc); 
-
   	TracePrintf(0, "End of the init process </> \n\n\n");
         return init_proc;
 }

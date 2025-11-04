@@ -67,8 +67,6 @@ PCB *get_next_ready_process(void) {
 }
 
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
-	
-
     TracePrintf(1, "This is the start of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>\n");
 
     PCB *curr = (PCB *)curr_pcb_p;
@@ -93,13 +91,12 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
     // Mark old process as ready to run again
-    if (curr->currState == RUNNING){
-	    TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	    TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	    TracePrintf(0, " We are going to say that the state ofthe current process is ready with a pid of -- %d\n", curr->pid);
-	    curr->currState = READY;
-	    Enqueue(readyQueue, curr);
-    }
+    //
+    	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	TracePrintf(0, " We are going to say that the state ofthe current process is ready with a pid of -- %d\n", curr->pid);
+	curr->currState = READY;
+	Enqueue(readyQueue, curr);
 
    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
    TracePrintf(0, "This is the value of the base_vpn --> %d\n", ks_base_vpn);
@@ -111,12 +108,9 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_KSTACK);
 
-    
-    if(next->AddressSpace != NULL) {
-        WriteRegister(REG_PTBR1, (unsigned int)next->AddressSpace);
-        WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-    }
+    WriteRegister(REG_PTBR1, (unsigned int)next->AddressSpace);
+    WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
     //Update next as the current process and runnning
     next->currState = RUNNING;

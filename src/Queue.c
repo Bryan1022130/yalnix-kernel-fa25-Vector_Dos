@@ -54,8 +54,16 @@ void Enqueue(Queue *MQueue, void *data){
 	MQueue->tail = Node;
 	MQueue->size++;
 	PCB *convert = (PCB *)data;
-	TracePrintf(0, "You have enqueued and this is state of your PCB --> %d\n", convert->currState);
-	return;
+	
+	if(convert->pid == 0){
+		TracePrintf(0, "This is the IDLE PROCESS\n");
+	}else{
+		TracePrintf(0, "This is the INIT PROCESS\n");
+	}
+
+	TracePrintf(0, "You have enqueued and this is state of your PCB PID--> %d\n", convert->pid);
+        TracePrintf(0, "You have enqueued and this is state of your PCB PID --> %d\n", convert->pid);
+        TracePrintf(0, "You have enqueued and this is state of your PCB PID--> %d\n", convert->pid);
 
 }
 

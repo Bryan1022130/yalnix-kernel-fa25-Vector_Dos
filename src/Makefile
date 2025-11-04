@@ -16,10 +16,10 @@ K_SRCS = kernelstart.c memory.c process.c Queue.c syscalls.c trap.c idle.c re1sp
 K_INCS = memory.h process.h Queue.h syscalls.h trap.h idle.h init.h
 
 # Where's your user source?
-U_SRC_DIR = .
+U_SRC_DIR = ../user
 
 # What are the user c and include files?
-U_SRCS = user.c 
+U_SRCS = init.c syscall_test.c
 U_INCS =  
 
 
