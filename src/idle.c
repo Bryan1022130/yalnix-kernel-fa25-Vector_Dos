@@ -30,6 +30,15 @@ void DoIdle(void) {
         int count = 0;
         while(1) {
                 TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		TracePrintf(1,"Idle loop running (%d)\n", count++);
                 Pause();
         }
 }

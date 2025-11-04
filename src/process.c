@@ -91,12 +91,15 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
     // Mark old process as ready to run again
-    //
+    
     	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	TracePrintf(0, " We are going to say that the state ofthe current process is ready with a pid of -- %d\n", curr->pid);
+	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	TracePrintf(0, " We are going to Enqueue for this process -- %d\n", curr->pid);
 	curr->currState = READY;
 	Enqueue(readyQueue, curr);
+	
 
    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
    TracePrintf(0, "This is the value of the base_vpn --> %d\n", ks_base_vpn);

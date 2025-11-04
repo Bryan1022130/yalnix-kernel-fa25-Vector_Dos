@@ -226,6 +226,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
+	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue -- > %d\n", readyQueue->size);
+
 	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
 	return;
 }

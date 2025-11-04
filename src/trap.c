@@ -136,41 +136,55 @@ void HandleClockTrap(UserContext *CurrUC){
 
     // Save current user context
     memcpy(&current_process->curr_uc, CurrUC, sizeof(UserContext));
-    current_process
+
+    //For context switch
+    PCB *old_proc = current_process;
 
     //Check if there is node
-    QueueNode *node = peek(sleepQueue);
-
+    QueueNode *node = peek(readyQueue);
     if(node == NULL){
 	    TracePrintf(0, "There was nothing in the Queue for me to look at\n");
 	    return;
     }
 
-    //Extract the PCB from the Queue
-    PCB *p = (PCB *)node->data;
-    if(p->pid == 0){
-	    TracePrintf(0, "THIS IS THE IDLE PROCESS AND WE ARE GOING TO DEQUEU IT");
+    //Extract the next PCB from the Queue
+    PCB *next = (PCB *)Dequeue(readyQueue);
+    if(next->pid == 0){
+	    TracePrintf(0, "THIS IS THE IDLE PROCESS AND WE ARE GOING TO DEQUEU IT\n");
+    } else{
+	    TracePrintf(0, "THIS IS THE INIT PROCESS AND WE ARE GOING TO DEQUEU IT\n");
     }
-	TracePrintf(0, "THIS IS THE INIT PROCESS AND WE ARE GOING TO DEQUEU IT");
 
-    while (p && p->wake_tick <= current_tick) {
+    /*
+    while (next && next->wake_tick <= current_tick) {
+	TracePrintf(0, "This is logic for sleep queue\n");
         Dequeue(sleepQueue);
-        p->currState = READY;
-        Enqueue(readyQueue, p);
+        next->currState = READY;
+        Enqueue(readyQueue, next);
 
         node = peek(sleepQueue);
-        p = (node ? (PCB *)node->data : NULL);
+        next = (node ? (PCB *)node->data : NULL);
     }
- 
-        // Switch kernel contexts
-        KernelContextSwitch(KCSwitch, current_process, next);
+
+    */
+
+    if(current_process->currState == RUNNING){
+	    TracePrintf(0, "The CURRENT PROCESS WAS RUNNING SETTING TO THE READ QUEUE\n");
+	    Enqueue(readyQueue, current_process);
+    }
+
+    // Switch kernel contexts
+    int kcs = KernelContextSwitch(KCSwitch, old_proc, next);
+    if(kcs == ERROR){
+	    TracePrintf(0, "There was an error with Kernel context switch!\n");
+	    return;
+    }
         
-        // Load new process's user context
-        memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
+    // Load new process's user context
+    memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
         
-        TracePrintf(0, "After switch: CurrUC->pc=%p, sp=%p\n",
+    TracePrintf(0, "After switch: CurrUC->pc=%p, sp=%p\n",
                     CurrUC->pc, CurrUC->sp);
-    }
     
     TracePrintf(0, "Leaving HandleClockTrap ========================================================================================\n\n\n\n");
     return;
