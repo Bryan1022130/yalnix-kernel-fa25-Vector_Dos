@@ -113,7 +113,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//initialize process queues
 	readyQueue = initializeQueue();
 	sleepQueue = initializeQueue();
-	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue -- > %d\n", readyQueue->size);
 
 	//Store current UserContext globally
 	KernelUC = uctxt;
@@ -172,13 +171,13 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
 	//Create the idle proc or process 1
+	//Stored in the idlk_proc global variable
 	int idle_ret = idle_proc_create(track, frame_count, user_page_table, uctxt);
 	if(idle_ret == ERROR){
 		TracePrintf(0, "Idle process failed!\n");
 		return;
 	}
-	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue after we created idle proc -- > %d\n", readyQueue->size);
-
+	
 	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 	if(init_pcb == NULL){
 		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
@@ -196,25 +195,23 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
                 Halt();
         }
 
-	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue -- > %d\n", readyQueue->size);
-
-	if( ((PCB *)(peek(readyQueue)->data))->pid == 0 ){
+	if(((PCB *)(peek(readyQueue)->data))->pid == 0 ){
 		TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND THIS CORRECT :)\n\n\n\n");
 	}else{
 		TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
 	}
 
-	//Check If there is args passed in
+	//If no arguments passed in then spawn in the default init
 	if(cmd_args[0] == NULL){
 		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
-		init();
-		Halt();
+		int lp_ret = LoadProgram("init", cmd_args, current_process);
+		if(lp_ret == ERROR){
+		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
+		return;
+		}
 	}
 	
-	TracePrintf(0, "Great this the name of your program --> %s\n", cmd_args[0]);
-	TracePrintf(0, "I am going to load your program \n");
-
-
+	//Otherwise spawn in the user program
 	int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
 	if(lp_ret == ERROR){
 		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");

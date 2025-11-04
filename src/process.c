@@ -87,11 +87,12 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
         TracePrintf(1, "KCSwitch: same process, skipping\n");
         return kc_in;
     }
+
     //copy the bytes of the kernel context into the current process’s PCB 
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
     // Mark old process as ready to run again
-    
+    /*
     	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
@@ -99,6 +100,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 	TracePrintf(0, " We are going to Enqueue for this process -- %d\n", curr->pid);
 	curr->currState = READY;
 	Enqueue(readyQueue, curr);
+	*/
 	
 
    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
@@ -116,7 +118,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
     //Update next as the current process and runnning
-    next->currState = RUNNING;
+    //next->currState = RUNNING;
     current_process = next;
 
     TracePrintf(1, "KCSwitch: switched from PID %d to PID %d\n", curr->pid, next->pid);

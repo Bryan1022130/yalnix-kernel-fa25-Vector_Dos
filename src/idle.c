@@ -50,9 +50,6 @@ void DoIdle(void) {
 int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_table, UserContext *uctxt){
         TracePrintf(0, "Start of the idle_proc_create function <|> \n");
 
-	TracePrintf(0, "Frame 126 status: %d\n", track[126]);
-	TracePrintf(0, "Frame 127 status: %d\n", track[127]);
-
         //Create idle_process and clear the memory 
         idle_process = (PCB *)malloc(sizeof(PCB));
 	memset(idle_process, 0, sizeof(PCB));
@@ -96,7 +93,7 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
          */
 	unsigned int sbase = (KERNEL_STACK_BASE >> PAGESHIFT);
 
-	
+/*	
 	TracePrintf(0, "SETTING THE PFN PERMISSION AS TRUE FOR THE KERNEL STACK BASE\n");
 	kernel_page_table[sbase].prot = PROT_READ | PROT_WRITE;
 	kernel_page_table[sbase].pfn= 126;
@@ -105,6 +102,8 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
 	kernel_page_table[sbase + 1].prot = PROT_READ | PROT_WRITE;
 	kernel_page_table[sbase + 1].pfn= 127;
 	kernel_page_table[sbase + 1].valid = TRUE;
+
+	*/
 	
 	//Mark its kernel stack frames
 	idle_process->kernel_stack_frames[0] = 126;

@@ -18,6 +18,7 @@ extern unsigned long current_tick;
 extern Queue *readyQueue;
 extern Queue *sleepQueue;
 extern PCB *current_process;
+extern PCB *idle_process;
 
 /*|==================================|
  *| Trap Handlers for Check Point 2  |
@@ -131,19 +132,29 @@ void HandleKernelTrap(UserContext *CurrUC){
  */
 
 void HandleClockTrap(UserContext *CurrUC){
-    current_tick++;
     TracePrintf(0, "In HandleClockTrap ==================================================================== \n\n\n\n");
-
+    
     // Save current user context
-    memcpy(&current_process->curr_uc, CurrUC, sizeof(UserContext));
-
-    //For context switch
     PCB *old_proc = current_process;
+    memcpy(&old_proc->curr_uc, CurrUC, sizeof(UserContext));
+    current_tick++;
 
     //Check if there is node
     QueueNode *node = peek(readyQueue);
     if(node == NULL){
 	    TracePrintf(0, "There was nothing in the Queue for me to look at\n");
+
+	    if(old_proc->currState != RUNNING){
+		// Switch kernel contexts
+   		 int kcs = KernelContextSwitch(KCSwitch, old_proc, idle_process);
+		 if(kcs == ERROR){
+			 TracePrintf(0, "There was an error with Kernel context switch!\n");
+			 Halt();
+		 }
+		 // Load new process's user context
+		 memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext)); 
+    	}
+
 	    return;
     }
 
@@ -155,37 +166,25 @@ void HandleClockTrap(UserContext *CurrUC){
 	    TracePrintf(0, "THIS IS THE INIT PROCESS AND WE ARE GOING TO DEQUEU IT\n");
     }
 
-    /*
-    while (next && next->wake_tick <= current_tick) {
-	TracePrintf(0, "This is logic for sleep queue\n");
-        Dequeue(sleepQueue);
-        next->currState = READY;
-        Enqueue(readyQueue, next);
-
-        node = peek(sleepQueue);
-        next = (node ? (PCB *)node->data : NULL);
-    }
-
-    */
 
     if(current_process->currState == RUNNING){
 	    TracePrintf(0, "The CURRENT PROCESS WAS RUNNING SETTING TO THE READ QUEUE\n");
 	    Enqueue(readyQueue, current_process);
     }
 
+
+    next->currState = RUNNING;
+
     // Switch kernel contexts
     int kcs = KernelContextSwitch(KCSwitch, old_proc, next);
     if(kcs == ERROR){
 	    TracePrintf(0, "There was an error with Kernel context switch!\n");
-	    return;
+	    Halt();
     }
         
     // Load new process's user context
     memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
-        
-    TracePrintf(0, "After switch: CurrUC->pc=%p, sp=%p\n",
-                    CurrUC->pc, CurrUC->sp);
-    
+
     TracePrintf(0, "Leaving HandleClockTrap ========================================================================================\n\n\n\n");
     return;
 }
