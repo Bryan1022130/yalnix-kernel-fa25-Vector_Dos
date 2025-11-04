@@ -170,18 +170,18 @@ void HandleKernelTrap(UserContext *CurrUC){
  */
 
 void HandleClockTrap(UserContext *CurrUC){
+    TracePrintf(0, "\n\n");
     TracePrintf(0, "In HandleClockTrap ==================================================================== \n");
     if(current_process->pid == 0){TracePrintf(0, "********************************************************** This is the IDLE PROCESS (CURRENT)\n");}
     else{TracePrintf(0, "********************************************************** This is the INIT PROCESS (CURRENT)\n");}
-    TracePrintf(0, "Queue size: %d\n", readyQueue->size);
-    
+    TracePrintf(0, "This is the size of the Queue -- > %d\n", readyQueue->size);
+
     //Increment how many ticks
     current_tick++;
 
     // Save current user context
     PCB *old_proc = current_process;
     memcpy(&old_proc->curr_uc, CurrUC, sizeof(UserContext));
-    current_tick++;
 
     if(idle_process == current_process && current_process->currState == READY){
 	    Enqueue(readyQueue, current_process);
@@ -193,8 +193,6 @@ void HandleClockTrap(UserContext *CurrUC){
 	    TracePrintf(0,"There is no new process that is ready!");
 	    return;
     }
-
-    TracePrintf(0, "This is the pid of next - > %d, and this is queue->next -> %d\n", (PCB *)node->data, (PCB *)node->next->data);
 
     //Extract the next PCB from the Queue
     PCB *next = idle_process;

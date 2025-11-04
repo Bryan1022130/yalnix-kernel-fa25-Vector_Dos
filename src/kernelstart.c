@@ -215,23 +215,23 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 			TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
 		}
 	}
-
-		
-		/*
-		if(((PCB *)(peek(readyQueue)->data))->pid == 0 ){
-			TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND THIS CORRECT :)\n\n\n\n");
-		}else{
-			TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
-		}
-		*/
+	
+	if(((PCB *)(peek(readyQueue)->data))->pid == 0 ){
+		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
+		TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND THIS CORRECT :)\n\n\n\n");
+	}else{	
+		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
+		TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
+	}
+	
 
 		
 	//Write to hardware where init is in region 1
-	WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
-	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	//WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
+	//WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
-	idle_process->currState = READY;
-	Enqueue(readyQueue, idle_process);
+	//idle_process->currState = READY;
+	//Enqueue(readyQueue, idle_process);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
 	TracePrintf(0, "This is the size of the Queue -- > %d\n", readyQueue->size);

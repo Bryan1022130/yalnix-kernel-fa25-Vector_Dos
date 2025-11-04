@@ -125,6 +125,6 @@ QueueNode *peek(Queue *MQueue){
 	int pid_extract = tempdata->pid; 
 
 	TracePrintf(0, "This is the number of the pid that we extracted  --> %d\n", pid_extract);
-	TracePrintf(0, "Okay we are not leaving the peek funciton\n");
+	TracePrintf(0, "Okay we are now leaving the peek funciton\n");
 	return MQueue->head;
 }
