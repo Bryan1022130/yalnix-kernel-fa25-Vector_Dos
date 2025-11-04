@@ -206,7 +206,7 @@ int Wait(int *status_ptr) {
         if (child->currState == ZOMBIE) {
             if (status_ptr != NULL) *status_ptr = child->exitstatus;
             int pid = child->pid;
-            proc_free(child);
+            //proc_free(child);
             return pid;
         }
         child = child->next_sibling;

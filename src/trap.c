@@ -19,13 +19,51 @@ extern Queue *readyQueue;
 extern Queue *sleepQueue;
 extern PCB *current_process;
 extern PCB *idle_process;
+extern PCB *process_free_head;
 
-/*|==================================|
- *| Trap Handlers for Check Point 2  |
- *| -> TRAP_CLOCK		     |
- *| -> TRAP_KERNEL		     |
- *|==================================|
+/* ===============================================================================================================
+ * pcb_alloc()
+ * Returns a pointer to the first FREE PCB in the table.
+ * Sets the state to READY and assigns its PID.
+ * ===============================================================================================================
  */
+PCB *proc_alloc(void) {
+	//This is wrong
+    static int next_pid = 1;  // simple incremental pid generator
+
+    if (process_free_head == NULL) return NULL;
+    PCB *p = process_free_head;
+    process_free_head = p->next;
+    memset(p, 0, sizeof(PCB));
+    p->currState = READY;
+    p->pid = next_pid++;  // assign pid here
+
+    return p;
+}
+
+/* ===============================================================================================================
+ * pcb_free(pid)
+ * Frees all resources associated with a process:
+ *  - Unmaps Region 1 frames
+ *  - Frees its kernel stack frames
+ *  - Resets PCB state to FREE
+ * ===============================================================================================================
+ */
+
+void proc_free(PCB *p) {
+    if (!p) return;
+    p->currState = FREE;
+    p->next = process_free_head;
+    process_free_head = p;
+}
+
+// ----------------- Context Switching -----------------------------
+PCB *get_next_ready_process(void) {
+    if (isEmpty(readyQueue)) {
+        return idle_process;
+    }
+    return Dequeue(readyQueue);
+}
 
 //declaration of the default place holder function
 void HandleTrap(UserContext *CurrUC){
@@ -133,53 +171,52 @@ void HandleKernelTrap(UserContext *CurrUC){
 
 void HandleClockTrap(UserContext *CurrUC){
     TracePrintf(0, "In HandleClockTrap ==================================================================== \n\n\n\n");
+    if(current_process->pid == 0){
+	    TracePrintf(0, "********************************************************** This is the IDLE PROCESS (CURRENT)\n\n\n\n");
+    }else{
+	    TracePrintf(0, "********************************************************** This is the INIT PROCESS (CURRENT)\n\n\n\n");
+    }
     
     // Save current user context
     PCB *old_proc = current_process;
     memcpy(&old_proc->curr_uc, CurrUC, sizeof(UserContext));
     current_tick++;
 
+    if(idle_process == current_process && current_process->currState == READY){
+	    Enqueue(readyQueue, current_process);
+    } 
+
     //Check if there is node
     QueueNode *node = peek(readyQueue);
     if(node == NULL){
 	    TracePrintf(0, "There was nothing in the Queue for me to look at\n");
-
-	    if(old_proc->currState != RUNNING){
-		// Switch kernel contexts
-   		 int kcs = KernelContextSwitch(KCSwitch, old_proc, idle_process);
-		 if(kcs == ERROR){
-			 TracePrintf(0, "There was an error with Kernel context switch!\n");
-			 Halt();
-		 }
-		 // Load new process's user context
-		 memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext)); 
-    	}
-
-	    return;
+	    TracePrintf(0, "Subbing int the idle Queue\n");
+	    Enqueue(readyQueue, current_process);
     }
 
     //Extract the next PCB from the Queue
     PCB *next = (PCB *)Dequeue(readyQueue);
+
     if(next->pid == 0){
 	    TracePrintf(0, "THIS IS THE IDLE PROCESS AND WE ARE GOING TO DEQUEU IT\n");
     } else{
 	    TracePrintf(0, "THIS IS THE INIT PROCESS AND WE ARE GOING TO DEQUEU IT\n");
     }
 
-
     if(current_process->currState == RUNNING){
-	    TracePrintf(0, "The CURRENT PROCESS WAS RUNNING SETTING TO THE READ QUEUE\n");
+	    TracePrintf(0, "The CURRENT PROCESS WAS RUNNING SETTING TO THE READY QUEUE\n");
+	    current_process->currState = READY;
 	    Enqueue(readyQueue, current_process);
     }
 
 
-    next->currState = RUNNING;
-
-    // Switch kernel contexts
-    int kcs = KernelContextSwitch(KCSwitch, old_proc, next);
-    if(kcs == ERROR){
-	    TracePrintf(0, "There was an error with Kernel context switch!\n");
-	    Halt();
+    if(next != old_proc){
+    	// Switch kernel contexts
+    	int kcs = KernelContextSwitch(KCSwitch, old_proc, next);
+    	if(kcs == ERROR){
+	  	  TracePrintf(0, "There was an error with Kernel context switch!\n");
+		  return;
+    	}
     }
         
     // Load new process's user context

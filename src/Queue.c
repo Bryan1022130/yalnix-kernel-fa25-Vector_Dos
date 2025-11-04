@@ -1,6 +1,8 @@
 #include "Queue.h"
 #include "process.h"
 
+extern PCB *current_process;
+
 #define TRUE 1
 #define FALSE 0
 
@@ -105,6 +107,12 @@ int isEmpty(Queue *MQueue){
 
 QueueNode *peek(Queue *MQueue){
 	if(MQueue->head == NULL){
+		if(current_process->pid == 0){
+			TracePrintf(0, "IDLE CALLED\n");
+		}else{
+			TracePrintf(0, "INIT CALLED\n");
+		}
+
 		TracePrintf(0, "The Queue is empty!\n");
 		return NULL;
 	}

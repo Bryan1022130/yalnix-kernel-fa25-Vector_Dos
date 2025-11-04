@@ -22,50 +22,6 @@ extern PCB *process_free_head;
 #define TRUE 1
 #define FALSE 0
 
-/* ===============================================================================================================
- * pcb_alloc()
- * Returns a pointer to the first FREE PCB in the table.
- * Sets the state to READY and assigns its PID.
- * ===============================================================================================================
- */
-PCB *proc_alloc(void) {
-	//This is wrong
-    static int next_pid = 1;  // simple incremental pid generator
-
-    if (process_free_head == NULL) return NULL;
-    PCB *p = process_free_head;
-    process_free_head = p->next;
-    memset(p, 0, sizeof(PCB));
-    p->currState = READY;
-    p->pid = next_pid++;  // assign pid here
-
-    return p;
-}
-
-/* ===============================================================================================================
- * pcb_free(pid)
- * Frees all resources associated with a process:
- *  - Unmaps Region 1 frames
- *  - Frees its kernel stack frames
- *  - Resets PCB state to FREE
- * ===============================================================================================================
- */
-
-void proc_free(PCB *p) {
-    if (!p) return;
-    p->currState = FREE;
-    p->next = process_free_head;
-    process_free_head = p;
-}
-
-// ----------------- Context Switching -----------------------------
-PCB *get_next_ready_process(void) {
-    if (isEmpty(readyQueue)) {
-        return idle_process;
-    }
-    return Dequeue(readyQueue);
-}
-
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
     TracePrintf(1, "This is the start of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>\n");
 
@@ -118,7 +74,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
     //Update next as the current process and runnning
-    //next->currState = RUNNING;
+    next->currState = RUNNING;
     current_process = next;
 
     TracePrintf(1, "KCSwitch: switched from PID %d to PID %d\n", curr->pid, next->pid);
@@ -150,7 +106,6 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 
 	//Copy over the content of the current kernel stack into frames that have been allocated
 	for(int t = 0; t < KSTACKS; t++){
-		
 		//Get the current pfn from our process && current proc
 		int kernel_curr_pfn = current_process->kernel_stack_frames[t];
 		int kernel_new_pfn = new_pcb->kernel_stack_frames[t];
@@ -174,14 +129,11 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 		kernel_page_table[holdvpn].valid = FALSE;
 		kernel_page_table[holdvpn].prot = 0;
 		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-		
 	}
 
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-
 	//return the kc_in as stated in the manual
 	TracePrintf(0,"This is the end of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++++++++++++>\n\n\n");
-
 	return kc_in;
 }
 

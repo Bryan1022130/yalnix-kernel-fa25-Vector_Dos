@@ -177,45 +177,38 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(0, "Idle process failed!\n");
 		return;
 	}
-	
-	PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
-	if(init_pcb == NULL){
-		TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
-		Halt();
-	}
 
-	TracePrintf(0, "I AM WRITING THIS TO SHOW YOU THAT YOU ARE AFTER INIT WAS CALLED AND MAYBE KC SEITCH IS CALLED TWICE?\n"
-			"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-			"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	
-	//KernelContextSwitch so that we can be in init pcb
-	int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
-        if(kc_ret == ERROR){
-                TracePrintf(0, "There was an error with Context Switch!\n");
-                Halt();
-        }
-
-	if(((PCB *)(peek(readyQueue)->data))->pid == 0 ){
-		TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND THIS CORRECT :)\n\n\n\n");
-	}else{
-		TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
-	}
-
-	//If no arguments passed in then spawn in the default init
 	if(cmd_args[0] == NULL){
-		TracePrintf(0 ,"No argument was passed! Calling the init default function\n");
-		int lp_ret = LoadProgram("init", cmd_args, current_process);
-		if(lp_ret == ERROR){
-		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
-		return;
+		TracePrintf(0, "Nothing was passed so I will just loop cause Idle :)");
+	}else{
+		//Create Idle
+		PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
+		if(init_pcb == NULL){
+			TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
+			return;
 		}
-	}
+		
+		/*
+		KernelContextSwitch so that we can be in init pcb
+		int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
+		if(kc_ret == ERROR){
+			TracePrintf(0, "There was an error with Context Switch!\n");
+		}	
+
+		if(((PCB *)(peek(readyQueue)->data))->pid == 0 ){
+			TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND THIS CORRECT :)\n\n\n\n");
+		}else{
+			TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
+		}
+
+		*/
 	
-	//Otherwise spawn in the user program
-	int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
-	if(lp_ret == ERROR){
-		TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
-		return;
+		//Otherwise spawn in the user program
+		int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
+		if(lp_ret == ERROR){
+			TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
+			return;
+		}
 	}
 	
 	//Write to hardware where init is in region 1
