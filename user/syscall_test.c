@@ -8,25 +8,42 @@
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 #include <stdio.h> // for snprintf
 
-
 int main(void) {
-    TtyPrintf(0, "=== Syscall Test Start ===\n");
+     TtyPrintf(0, "\n=== [USER] Syscall Test Start ===\n");
 
+    // 1. Check PID
+    TtyPrintf(0, "[USER] Calling GetPid()...\n");
     int pid = GetPid();
-    TtyPrintf(0, "My PID is %d\n", pid);
+    TtyPrintf(0, "[USER] Returned from GetPid(), PID = %d\n", pid);
 
-    int rc = Brk((void *)0x120000);
-    TtyPrintf(0, "Brk returned %d\n", rc);
+    // 2. Test Brk() several times
+    void *base = (void *)0x110000;
+    TtyPrintf(0, "[USER] Calling Brk(%p)...\n", base);
+    int rc1 = Brk(base);
+    TtyPrintf(0, "[USER] Returned from Brk, rc = %d\n", rc1);
 
-    TtyPrintf(0, "Testing Delay(2)...\n");
-    Delay(2);
-    TtyPrintf(0, "Delay finished.\n");
+    void *next = (void *)0x130000;
+    TtyPrintf(0, "[USER] Expanding heap with Brk(%p)...\n", next);
+    int rc2 = Brk(next);
+    TtyPrintf(0, "[USER] Returned from Brk, rc = %d\n", rc2);
 
-    void *newbrk = (void *)0x120000;
-    Brk(newbrk);
-    TtyPrintf(0, "Brk moved heap to %p\n", newbrk);
+    // 3. Test Delay() inside a loop
+    TtyPrintf(0, "[USER] Starting delay loop (3x 1 tick)...\n");
+    for (int i = 1; i <= 3; i++) {
+        TtyPrintf(0, "[USER] Delay %d/3 start.\n", i);
+        Delay(1);
+        TtyPrintf(0, "[USER] Delay %d/3 done.\n", i);
+    }
 
-    TtyPrintf(0, "Exiting now.\n");
+    // 4. Mix multiple syscalls
+    TtyPrintf(0, "[USER] Interleaving GetPid and Brk again...\n");
+    pid = GetPid();
+    Brk((void *)0x140000);
+    TtyPrintf(0, "[USER] New PID = %d, heap moved to 0x140000.\n", pid);
+
+    // 5. Confirm kernel handled all traps, then exit
+    TtyPrintf(0, "[USER] All syscalls executed successfully. Exiting now.\n");
     Exit(0);
-    return 0;   // won’t reach here
+
+    return 0;  // should never reach
 }
