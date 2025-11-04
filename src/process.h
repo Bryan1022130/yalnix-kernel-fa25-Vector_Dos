@@ -20,7 +20,6 @@ typedef enum{
 struct pcb{
 
 	//Kernel Stack Frames
-	//Holds pfns
 	unsigned int kernel_stack_frames[KERNEL_STACK_MAXSIZE / PAGESIZE];
 
 	//Context Switch Logic
@@ -56,6 +55,5 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used);
 PCB *get_next_ready_process(void);
 
 //Process allocation functions
-void InitPcbTable(void);
-PCB *pcb_alloc(void);
-int pcb_free(int pid);
+PCB *spawn_proc(pte_t *user_page_table);
+void free_proc(PCB *proc);
