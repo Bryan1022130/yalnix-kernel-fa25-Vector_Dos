@@ -191,7 +191,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 		TracePrintf(0, "<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>\n\n\n");
 
-		if( KernelContextSwitch(KCCopy, init_pcb, NULL) < 0) return;
+		if(KernelContextSwitch(KCCopy, init_pcb, NULL) < 0) return;
 
         	if (idle_process->pid == current_process->pid){
                 	TracePrintf(0, "This is the pid of the idle process because current and idle are the same --> %d\n", current_process->pid);
@@ -215,16 +215,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 			TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
 		}
 	}
-	
-	if(((PCB *)(peek(readyQueue)->data))->pid == 0 ){
-		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
-		TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND THIS CORRECT :)\n\n\n\n");
-	}else{	
-		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
-		TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
-	}
-	
-
 		
 	//Write to hardware where init is in region 1
 	//WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
@@ -234,7 +224,17 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Enqueue(readyQueue, idle_process);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
-	TracePrintf(0, "This is the size of the Queue -- > %d\n", readyQueue->size);
+	if(((PCB *)(peek(readyQueue)->data))->pid == 0 && current_process->pid == 0){
+		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
+		TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND MY HEAD IS THE SAME [WRONG]\n");
+	}else{	
+		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
+		TracePrintf(0, "********************************************************** This is the INIT FUNCTION \n");
+	}
+	
+	QueueNode *node = peek(readyQueue);
+	PCB *data = (PCB *)node->data;
+	TracePrintf(0, "This is the pid of the front the queue -> %d\n", data->pid);
 	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
 	return;
 }

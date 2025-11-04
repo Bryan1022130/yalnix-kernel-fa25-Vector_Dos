@@ -111,7 +111,6 @@ PCB *create_init_proc(pte_t *user_page_table, unsigned char *track, int track_si
 	WriteRegister(REG_PTBR1, (unsigned int)init_proc->AddressSpace);
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-	//current_process = init_proc;
   	TracePrintf(0, "End of the init process </> \n\n\n");
 	TracePrintf(0, "End of the init process </> \n\n\n");
         return init_proc;
