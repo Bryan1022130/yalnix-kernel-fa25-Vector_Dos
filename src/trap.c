@@ -170,13 +170,13 @@ void HandleKernelTrap(UserContext *CurrUC){
  */
 
 void HandleClockTrap(UserContext *CurrUC){
-    TracePrintf(0, "In HandleClockTrap ==================================================================== \n\n\n\n");
-    if(current_process->pid == 0){
-	    TracePrintf(0, "********************************************************** This is the IDLE PROCESS (CURRENT)\n\n\n\n");
-    }else{
-	    TracePrintf(0, "********************************************************** This is the INIT PROCESS (CURRENT)\n\n\n\n");
-    }
+    TracePrintf(0, "In HandleClockTrap ==================================================================== \n");
+    if(current_process->pid == 0){TracePrintf(0, "********************************************************** This is the IDLE PROCESS (CURRENT)\n");}
+    else{TracePrintf(0, "********************************************************** This is the INIT PROCESS (CURRENT)\n");}
     TracePrintf(0, "Queue size: %d\n", readyQueue->size);
+    
+    //Increment how many ticks
+    current_tick++;
 
     // Save current user context
     PCB *old_proc = current_process;
@@ -194,13 +194,20 @@ void HandleClockTrap(UserContext *CurrUC){
 	    return;
     }
 
+    TracePrintf(0, "This is the pid of next - > %d, and this is queue->next -> %d\n", (PCB *)node->data, (PCB *)node->next->data);
+
     //Extract the next PCB from the Queue
-    PCB *next = (PCB *)Dequeue(readyQueue);
+    PCB *next = idle_process;
+	    //get_next_ready_process();
     if(next->pid == 0){
-	    TracePrintf(0, "THIS IS THE IDLE PROCESS AND WE ARE GOING TO DEQUEU IT\n");
+	    TracePrintf(0, "THIS IS THE IDLE PROCESS AND WE ARE GOING TO DEQUEU IT AND THIS IS THE PID -> %d\n", next->pid);
+	 TracePrintf(0, "THIS IS THE CURRENT PROCESSS -> %d\n", current_process->pid);
+
     } else{
 	    TracePrintf(0, "THIS IS THE INIT PROCESS AND WE ARE GOING TO DEQUEU IT\n");
     }
+
+
 
     if(old_proc->currState == RUNNING){
 	    TracePrintf(0, "THE CURRENT PROCESS WAS RUNNING SETTING TO THE READY QUEUE\n");
@@ -209,20 +216,20 @@ void HandleClockTrap(UserContext *CurrUC){
     }
 
     next->currState = RUNNING;
-
-    if(next != old_proc){
+    TracePrintf(0, "Hello this is to check right before the kernel contect switch\n");
+    //if(next != old_proc){
     	// Switch kernel contexts
-	TracePrintf(0, "Switching from PID %d to PID %d\n", old_proc->pid, next->pid);
+	TracePrintf(0, "Switching from PID %d to PID %d\n", old_proc->pid, idle_process->pid);
     	int kcs = KernelContextSwitch(KCSwitch, old_proc, next);
     	if(kcs == ERROR){
 	  	  TracePrintf(0, "There was an error with Kernel context switch!\n");
 		  return;
     	}
-    }
+    //}
         
     // Load new process's user context
-    memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
-
+    //memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
+	*CurrUC = current_process->curr_uc;
     TracePrintf(0, "Leaving HandleClockTrap ============================================================================\n\n\n\n");
     return;
 }

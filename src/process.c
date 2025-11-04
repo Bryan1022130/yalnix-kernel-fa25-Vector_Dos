@@ -27,7 +27,6 @@ extern unsigned long int frame_count;
 
 KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
     TracePrintf(1, "This is the start of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>\n");
-
     PCB *curr = (PCB *)curr_pcb_p;
     PCB *next = (PCB *)next_pcb_p;
 
@@ -49,18 +48,6 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 
     //copy the bytes of the kernel context into the current process’s PCB 
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
-
-    // Mark old process as ready to run again
-    
-    	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	TracePrintf(0, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	TracePrintf(0, " We are going to Enqueue for this process -- %d\n", curr->pid);
-	curr->currState = READY;
-	Enqueue(readyQueue, curr);
-	
-	
 
    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
    TracePrintf(0, "This is the value of the base_vpn --> %d\n", ks_base_vpn);

@@ -294,7 +294,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
   for(unsigned int t = stack_start; t <= PAGE_CYCLES; t++){
           //Allocated a physical frame to store in region 1
           unsigned int pfn_grab = find_frame(track_global, frame_count);
-	  TracePrintf(0, "This is the pfn we got for stack -- > %d\n<D-p>", pfn_grab);
+	  TracePrintf(0, "This is the pfn we got for stack -- > %d\n", pfn_grab);
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");
                   return ERROR;
@@ -308,7 +308,6 @@ LoadProgram(char *name, char *args[], PCB *proc)
   /*
    * ==>> (Finally, make sure that there are no stale region1 mappings left in the TLB!)
    */
-  TracePrintf(0, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! THIS IS WHERE THE SEGFAULT OCCURS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
   /*

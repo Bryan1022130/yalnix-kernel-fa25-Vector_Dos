@@ -8,6 +8,7 @@
 #include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 #include <stdio.h> // for snprintf
+
 //Our Header Files
 #include "Queue.h"
 #include "trap.h"
@@ -85,12 +86,12 @@ int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
 	return 0;
 }
 
-/* ==========================================================================================================================================================
+/* ================================================================================================================================
  * Initializing Virtual Memory
  * char *cmd_args: Vector of strings, holding a pointer to each argc in boot command line {Terminated by NULL pointer}
  * unsigned int pmem_size: Size of the physical memory of the machine {Given in bytes}
  * UserContext *uctxt: pointer to an initial UserContext structure
- * ==========================================================================================================================================================
+ * ================================================================================================================================
  */ 
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
@@ -130,7 +131,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Malloc region 0 & 1 page table
 	kernel_page_table = malloc(MAX_PT_LEN * sizeof(pte_t));
 	pte_t *user_page_table = malloc(MAX_PT_LEN * sizeof(pte_t));
-
 	SetupRegion0(kernel_page_table);
 	SetupRegion1(user_page_table);
 
@@ -171,46 +171,61 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
 
 	//Create the idle proc or process 1
-	//Stored in the idlk_proc global variable
 	int idle_ret = idle_proc_create(track, frame_count, user_page_table, uctxt);
 	if(idle_ret == ERROR){
 		TracePrintf(0, "Idle process failed!\n");
 		return;
 	}
-
+	
 	if(cmd_args[0] == NULL){
-		TracePrintf(0, "Nothing was passed so I will just loop cause Idle :)");
+		TracePrintf(0, "Nothing was passed so I will just loop cause Idle :)\n");
 	}else{
-		//Create Idle
+		TracePrintf(0, "We have a program to execute!\n");
+		
 		PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
 		if(init_pcb == NULL){
 			TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
+			TracePrintf(0, "Returning to idle process\n");
 			return;
 		}
-		
-		
-		//KernelContextSwitch so that we can be in init pcb
-		int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
-		if(kc_ret == ERROR){
-			TracePrintf(0, "There was an error with Context Switch!\n");
-		}	
 
+		TracePrintf(0, "<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>\n\n\n");
+
+		if( KernelContextSwitch(KCCopy, init_pcb, NULL) < 0) return;
+
+        	if (idle_process->pid == current_process->pid){
+                	TracePrintf(0, "This is the pid of the idle process because current and idle are the same --> %d\n", current_process->pid);
+        	}else{
+                	TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
+			TracePrintf(0, "We should load program here\n");
+			TracePrintf(0, "We should load program here\n");
+			TracePrintf(0, "We should load program here\n");
+			TracePrintf(0, "We should load program here\n");
+			if(LoadProgram(cmd_args[0], cmd_args, current_process) < 0) return;
+        	}
+
+		if (idle_process->pid == current_process->pid){
+                	TracePrintf(0, "This is the pid of the idle process because current and idle are the same --> %d\n", current_process->pid);
+			//KernelContextSwitch [idle -> init]	
+			int kc_ret = KernelContextSwitch(KCSwitch, (void *)idle_process, (void *)init_pcb);
+			if(kc_ret == ERROR){
+				TracePrintf(0, "There was an error with Context Switch!\n");
+			}	
+		} else{
+			TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
+		}
+	}
+
+		
+		/*
 		if(((PCB *)(peek(readyQueue)->data))->pid == 0 ){
 			TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND THIS CORRECT :)\n\n\n\n");
 		}else{
 			TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
 		}
+		*/
 
 		
-	
-		//Otherwise spawn in the user program
-		int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
-		if(lp_ret == ERROR){
-			TracePrintf(0, "ERROR WITH LOAD PROGRAM CALL\n");
-			return;
-		}
-	}
-	
 	//Write to hardware where init is in region 1
 	WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
@@ -219,8 +234,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	Enqueue(readyQueue, idle_process);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
-	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue -- > %d\n", readyQueue->size);
-
+	TracePrintf(0, "This is the size of the Queue -- > %d\n", readyQueue->size);
 	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
 	return;
 }
