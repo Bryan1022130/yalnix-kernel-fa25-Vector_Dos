@@ -188,8 +188,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 			return;
 		}
 		
-		/*
-		KernelContextSwitch so that we can be in init pcb
+		
+		//KernelContextSwitch so that we can be in init pcb
 		int kc_ret = KernelContextSwitch(KCSwitch, (void *)current_process, (void *)init_pcb);
 		if(kc_ret == ERROR){
 			TracePrintf(0, "There was an error with Context Switch!\n");
@@ -201,7 +201,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 			TracePrintf(0, "********************************************************** This is the wrong process and is init : ( \n\n\n\n");
 		}
 
-		*/
+		
 	
 		//Otherwise spawn in the user program
 		int lp_ret = LoadProgram(cmd_args[0], cmd_args, current_process);
@@ -214,6 +214,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Write to hardware where init is in region 1
 	WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+
+	idle_process->currState = READY;
+	Enqueue(readyQueue, idle_process);
 
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
 	TracePrintf(0, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$This is the size of the Queue -- > %d\n", readyQueue->size);

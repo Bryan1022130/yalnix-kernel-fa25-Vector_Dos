@@ -176,7 +176,8 @@ void HandleClockTrap(UserContext *CurrUC){
     }else{
 	    TracePrintf(0, "********************************************************** This is the INIT PROCESS (CURRENT)\n\n\n\n");
     }
-    
+    TracePrintf(0, "Queue size: %d\n", readyQueue->size);
+
     // Save current user context
     PCB *old_proc = current_process;
     memcpy(&old_proc->curr_uc, CurrUC, sizeof(UserContext));
