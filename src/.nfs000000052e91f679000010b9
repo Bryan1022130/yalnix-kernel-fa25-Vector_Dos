@@ -1,0 +1,242 @@
+** Hardware level 1 tracing enabled **
+** Yalnix level 1 tracing enabled **
+** User Prog level 1 tracing enabled **
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 6 blocks allocated, 1848 bytes total
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(10), depth 1
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 1
+Hardware   ----
+Hardware   | Calling KernelStart
+Hardware   ----
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 7 blocks allocated, 1936 bytes total
+Yalnix     
+
+Yalnix     --------------------------------> We are the start of the KernelStart function <---------------------------------
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 12 blocks allocated, 3516 bytes total
+Yalnix     
+
+Yalnix     ------------------------------------------------- Region 0 Setup ----------------------------------------------------
+Yalnix      this is the value of text_start --> 16 and this is text_end --> 21 
+Yalnix      this is the value of heapdata_start --> 21 and this is heapdata_end --> 27 
+Yalnix      this is the value of stack_start --> 126 and this is stackend --> 128 
+Hardware       | WriteRegister(REG_PTBR0,0x02eabc)
+Hardware       | WriteRegister(REG_PTLR0,0x000080)
+Yalnix     ############################################## Region 0 Setup Done ###################################################
+
+
+Yalnix     
+
+Yalnix     ------------------------------------------------- Region 1 Setup ----------------------------------------------------
+Hardware       | WriteRegister(REG_PTBR1,0x02ecd8)
+Hardware       | WriteRegister(REG_PTLR1,0x000080)
+Yalnix     ################################################# Region 1 Setup Done ###############################################
+
+
+Yalnix     ------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------
+
+Hardware       | WriteRegister(REG_VM_ENABLE,0x000001)
+Hardware   Enabling VM
+Hardware   _first_kernel_text_page 16
+Hardware   _first_kernel_data_page 21
+Hardware   _orig_kernel_brk_page 27
+Hardware   initializing TLB to be empty
+Hardware   PhysLimit 36000, my_break 36000
+Hardware   clearing TLB
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x2ecd8, PTLR1 0x80
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x2eabc, PTLR0 0x80
+Hardware   moving kernel text,data,heap into TLB
+Hardware   PageInTLB[16] addr 0x20000: 0 -> 1
+Hardware   PageInTLB[17] addr 0x22000: 0 -> 1
+Hardware   PageInTLB[18] addr 0x24000: 0 -> 1
+Hardware   PageInTLB[19] addr 0x26000: 0 -> 1
+Hardware   PageInTLB[20] addr 0x28000: 0 -> 1
+Hardware   PageInTLB[21] addr 0x2a000: 0 -> 1
+Hardware   PageInTLB[22] addr 0x2c000: 0 -> 1
+Hardware   PageInTLB[23] addr 0x2e000: 0 -> 1
+Hardware   PageInTLB[24] addr 0x30000: 0 -> 1
+Hardware   PageInTLB[25] addr 0x32000: 0 -> 1
+Hardware   PageInTLB[26] addr 0x34000: 0 -> 1
+Hardware   moving kernel stack into TLB
+Yalnix     ###################################################################################################################
+
+Yalnix     +++++ We are setting up the IVT and im going to call the function | CALLED KERNELSTART 
+Yalnix     We are setting up the Interrupt vector table
+Hardware       | WriteRegister(REG_VECTOR_BASE,0x02bf60)
+Yalnix     We just finshed writing the Interrupt Vector Table
+Yalnix     +++++ We have left the function and are now going to set up region 0 | CALLED KERNELSTART
+
+
+Yalnix     ------------------------------------- WE ARE NOW GOING TO CALL KERNELBRK :) -------------------------------------
+Yalnix     We are in the function SetKernelBrk
+Yalnix     VIRTUAL MEMORY HAS BEEN ENABLED 
+Yalnix     [SetKernelBrk-VM] Comparing new_brk: 0x36000 against heap_start: 0x36000
+Yalnix     [SetKernelBrk] Moved break to 0x36000 (VM enabled)
+Yalnix     ##################################### WE HAVE CALLED KERNELBREAK ##################################################
+Yalnix     ------------------------------------- TIME TO CREATE OUR PROCESS (IDLE) -------------------------------------
+Yalnix     Start of the idle_proc_create function <|> 
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 13 blocks allocated, 4000 bytes total
+Yalnix     This is where we found a free frame ---> 27
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x2eabc, PTLR0 0x80
+Hardware       | WriteRegister(REG_PTBR1,0x02ecd8)
+Hardware       | WriteRegister(REG_PTLR1,0x000080)
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1)
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x2ecd8, PTLR1 0x80
+Yalnix     End of the idle_proc_create function <|> 
+
+
+Yalnix     We have a program to execute!
+Yalnix     ------------------------------------- TIME TO CREATE OUR PROCESS (INIT) -------------------------------------
+Yalnix     Start of the init process </> 
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 14 blocks allocated, 4484 bytes total
+Yalnix     Creating the Kernel Stack for the Process this many --> 2
+Yalnix     This is where we found a free frame ---> 28
+Yalnix     This is where we found a free frame ---> 29
+Hardware       | WriteRegister(REG_PTBR1,0x02f2ec)
+Hardware       | WriteRegister(REG_PTLR1,0x000080)
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1)
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x2f2ec, PTLR1 0x80
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 15 blocks allocated, 5000 bytes total
+Yalnix     End of the init process </> 
+
+
+Yalnix     <@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy SHOULD BE ONCE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>
+
+
+Hardware   ----
+Hardware   | On [kcs stack] invoking  MyKCS function 0x021a67
+Hardware   | From kernelmode SP [region 0] 0xff090 | PC [libhardware.so] 0xf1b0dcfb
+Hardware   | pid 1 | PTBR1 0x02f2ec | kstack 126 127
+Hardware   ----
+Yalnix     This is the start of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++>
+Yalnix     This is the value of holdvpn --> 125
+Yalnix     This is the kernel pfn opf curr -> 126, and this is pfn of new -> 28Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x2eabc, PTLR0 0x80
+Yalnix     This is the value of the pagefind ==> fc000
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 2
+Hardware       ----
+Hardware       | TLB miss p:125  -> pfn:028
+Hardware       | In SP [kcs stack] 0xf1b24bdc | PC [region 0] 0x25eac
+Hardware       | pid 1 | PTBR1 0x02f2ec | kstack 126 127
+Hardware       ----
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x2eabc, PTLR0 0x80
+Yalnix     This is the kernel pfn opf curr -> 127, and this is pfn of new -> 29Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x2eabc, PTLR0 0x80
+Yalnix     This is the value of the pagefind ==> fe000
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 2
+Hardware       ----
+Hardware       | TLB miss p:125  -> pfn:029
+Hardware       | In SP [kcs stack] 0xf1b24bdc | PC [region 0] 0x25eac
+Hardware       | pid 1 | PTBR1 0x02f2ec | kstack 126 127
+Hardware       ----
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x2eabc, PTLR0 0x80
+Yalnix     This is the pid of the current process -> 0Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 16 blocks allocated, 5012 bytes total
+Yalnix     You have enqueued and this is state of your PCB PID--> 1
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_0)
+Hardware   FlushTLB(TLB_FLUSH_0): PTBR0 0x2eabc, PTLR0 0x80
+Yalnix     This is the end of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++++++++++++>
+
+
+Hardware   ----
+Hardware   | On [kcs stack] returning from MyKCS function 0x021a67
+Hardware   | Going to kernelmode SP [region 0] 0xff090 | PC [libhardware.so] 0xf1b0dcfb
+Hardware   | pid 1 | PTBR1 0x02f2ec | kstack 126 127
+Hardware   ----
+Yalnix     This is the pid of the idle process because current and idle are the same --> 0
+Yalnix     Just run idle
+Hardware       | WriteRegister(REG_PTBR1,0x02ecd8)
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1)
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x2ecd8, PTLR1 0x80
+Yalnix     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+Hardware   ----
+Hardware   | Back from KernelStart
+Hardware   | HELPER setting Proc 0 kstack to 126 127
+Hardware   | Off to usermode SP [region 1] 0x1fffff | PC [region 0] 0x23490
+Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
+Hardware   ----
+Yalnix     Idle loop running (0)
+Yalnix     Idle loop running (1)
+Yalnix     Idle loop running (2)
+Yalnix     Idle loop running (3)
+Yalnix     Idle loop running (4)
+Yalnix     Idle loop running (5)
+Yalnix     Idle loop running (6)
+Yalnix     Idle loop running (7)
+Yalnix     Idle loop running (8)
+Yalnix     Idle loop running (9)
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(14), depth 1
+Hardware   clock tick 1
+Hardware   ----
+Hardware   | Trap Alarm clock
+Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf1b87579
+Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
+Hardware   | Calling Yalnix handler 0x23092 for trap TRAP_CLOCK
+Hardware   ----
+Yalnix     
+
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 17 blocks allocated, 5024 bytes total
+Yalnix     You have enqueued and this is state of your PCB PID--> 0
+Yalnix     This is the IDLE PROCESS
+Yalnix     This is the number of the pid that we extracted  --> 1
+Yalnix     Okay we are now leaving the peek funciton
+Yalnix     Dequeued node: 0x2f508
+Hardware   Kernel heap OK.
+Hardware   Kernel heap usage: 16 blocks allocated, 5012 bytes total
+Yalnix     Switching from PID 0 to PID 192752
+Hardware   ----
+Hardware   | On [kcs stack] invoking  MyKCS function 0x021867
+Hardware   | From kernelmode SP [region 0] 0xff0a0 | PC [libhardware.so] 0xf1b0dcfb
+Hardware   | pid 0 | PTBR1 0x02ecd8 | kstack 126 127
+Hardware   ----
+Yalnix     This is the start of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>
+Yalnix     This is the value of the base_vpn --> 126
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_KSTACK)
+Hardware       | WriteRegister(REG_PTBR1,0x02f2ec)
+Hardware       | WriteRegister(REG_PTLR1,0x000080)
+Hardware       | WriteRegister(REG_TLB_FLUSH,TLB_FLUSH_1)
+Hardware   FlushTLB(TLB_FLUSH_1): PTBR1 0x2f2ec, PTLR1 0x80
+Yalnix     KCSwitch: switched from PID 0 to PID 1
+Yalnix     This is the end of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>
+
+
+Hardware   ----
+Hardware   | On [kcs stack] returning from MyKCS function 0x021867
+Hardware   | Going to kernelmode SP [region 0] 0xff090 | PC [libhardware.so] 0xf1b0dcfb
+Hardware   | pid 1 | PTBR1 0x02f2ec | kstack 028 029
+Hardware   ----
+Yalnix     This is the pid of current process and they are not the same as idle  --> 1
+Yalnix     We should load program here
+Yalnix     LoadProgram: can't open file 'syscall_test'
+Hardware   ----
+Hardware   | Back from KernelStart
+Hardware   | HELPER setting Proc 1 kstack to 28 29
+Hardware   | Off to usermode SP [region 1] 0x1ffe93 | PC [vdso] 0xf1b87579
+Hardware   | pid 1 | PTBR1 0x02f2ec | kstack 028 029
+Hardware   ----
+Hardware   ========= Hardware receives signal ==============
+Hardware   FrameworkSignalHandler(11), depth 1
+Hardware   ----
+Hardware   | Trap Segmentation fault
+Hardware   | From usermode  SP [region 1] 0x1ffe93 | PC [vdso] 0xf1b87579
+Hardware   | pid 1 | PTBR1 0x02f2ec | kstack 028 029
+Hardware   | Calling Yalnix handler 0x232bf for trap TRAP_MEMORY
+Hardware   ----
+Yalnix     TRAP: Memory error! Halting.
+Hardware   
+** Machine Halted **
