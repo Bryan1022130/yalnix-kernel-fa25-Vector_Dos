@@ -189,6 +189,7 @@ void HandleClockTrap(UserContext *CurrUC){
 
     //Check if there is node
     QueueNode *node = peek(readyQueue);
+    TracePrintf(0, "Dequeued node: %p\n", node);
     if(node == NULL && current_process->currState == RUNNING){
 	    TracePrintf(0,"There is no new process that is ready!");
 	    return;
@@ -196,30 +197,23 @@ void HandleClockTrap(UserContext *CurrUC){
 
     //Extract the next PCB from the Queue
     PCB *next = get_next_ready_process();
+    TracePrintf(0, "Next PCB: %p, PID: %d\n", next, next->pid);
     if(next->pid == 0){
 	    TracePrintf(0, "THIS IS THE IDLE PROCESS AND WE ARE GOING TO DEQUEU IT AND THIS IS THE PID -> %d\n", next->pid);
-	 TracePrintf(0, "THIS IS THE CURRENT PROCESSS -> %d\n", current_process->pid);
-
+	    TracePrintf(0, "THIS IS THE CURRENT PROCESSS -> %d\n", current_process->pid);
     } else{
 	    TracePrintf(0, "THIS IS THE INIT PROCESS AND WE ARE GOING TO DEQUEU IT\n");
     }
 
-
-
     if(old_proc->currState == RUNNING){
-	    TracePrintf(0, "THE CURRENT PROCESS WAS RUNNING SETTING TO THE READY QUEUE\n");
-	    TracePrintf(0, "THE CURRENT PROCESS WAS RUNNING SETTING TO THE READY QUEUE\n");
-	    TracePrintf(0, "THE CURRENT PROCESS WAS RUNNING SETTING TO THE READY QUEUE\n");
 	    TracePrintf(0, "THE CURRENT PROCESS WAS RUNNING SETTING TO THE READY QUEUE\n");
 	    current_process->currState = READY;
 	    Enqueue(readyQueue, current_process);
     }
 
     next->currState = RUNNING;
-    TracePrintf(0, "Hello this is to check right before the kernel contect switch\n");
     if(next != old_proc){
-    	// Switch kernel contexts
-	TracePrintf(0, "Switching from PID %d to PID %d\n", old_proc->pid, idle_process->pid);
+	TracePrintf(0, "Switching from PID %d to PID %d\n", old_proc->pid, next);
     	int kcs = KernelContextSwitch(KCSwitch, old_proc, next);
     	if(kcs == ERROR){
 	  	  TracePrintf(0, "There was an error with Kernel context switch!\n");

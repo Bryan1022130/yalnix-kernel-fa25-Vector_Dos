@@ -87,19 +87,24 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 	}
 
 	//Copy over the the KernelContext into the new_pcb with a memcpy
-	memcpy(&new_pcb->curr_kc, kc_in, sizeof(KernelContext));
+	new_pcb->curr_kc = *kc_in;
 	
 	int holdvpn = (((KERNEL_STACK_BASE) >> PAGESHIFT) - 1);
 	int stack_base = KERNEL_STACK_BASE >> PAGESHIFT;
 
+	//char *src = (char *)KERNEL_STACK_BASE;
+	int num_stack_pages = KERNEL_STACK_MAXSIZE / PAGESIZE;
+
+	//pte_t *region0_pt = (pte_t *)ReadRegister(REG_PTBR0);
+
 	TracePrintf(0,"This is the value of holdvpn --> %d\n", holdvpn);
 
 	//Copy over the content of the current kernel stack into frames that have been allocated
-	for(int t = 0; t < KSTACKS; t++){
+	for(int t = 0; t < num_stack_pages; t++){
 		//Get the current pfn from our process && current proc
 		int kernel_curr_pfn = current_process->kernel_stack_frames[t];
 		int kernel_new_pfn = new_pcb->kernel_stack_frames[t];
-		TracePrintf(0, "THis is the kernel pfn opf curr -> %d, and this is pfn of new -> %d", kernel_curr_pfn, kernel_new_pfn);
+		TracePrintf(0, "This is the kernel pfn opf curr -> %d, and this is pfn of new -> %d", kernel_curr_pfn, kernel_new_pfn);
 			
 		//Map this value in kernel virtual memory 
 		kernel_page_table[holdvpn].pfn = kernel_new_pfn;
@@ -107,12 +112,23 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 		kernel_page_table[holdvpn].prot = PROT_READ | PROT_WRITE;
 		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
+		/*
+		region0_pt[holdvpn].prot = PROT_READ | PROT_WRITE;
+		region0_pt[holdvpn].valid = TRUE;
+		region0_pt[holdvpn].pfn = new_pcb->kernel_stack_frames[t];
+		*/
+
+		//void *dest = (void *)(holdvpn << PAGESHIFT);
+
 		//This is the vaddr of the currently running kernel stack
 		unsigned long int pagefind = (stack_base + t) << PAGESHIFT;
 		TracePrintf(0, "This is the value of the pagefind ==> %lx\n", pagefind);
 		
 		//We are copying the content of the kernel stack table from
 		memcpy((void *)((holdvpn) << PAGESHIFT), (void *)pagefind, PAGESIZE);
+		//memcpy(dest, src, PAGESIZE);
+
+		//src += PAGESIZE;
 
 		//Reset the virtual kernel page table
 		kernel_page_table[holdvpn].pfn = 0;
@@ -120,6 +136,12 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 		kernel_page_table[holdvpn].prot = 0;
 		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 	}
+	//region0_pt[holdvpn].prot = 0;
+	//region0_pt[holdvpn].valid = 0;
+	//region0_pt[holdvpn].pfn = 0;
+	TracePrintf(0, "This is the pid of the current process -> %d", current_process->pid);
+	
+	Enqueue(readyQueue, new_pcb);
 
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 	//return the kc_in as stated in the manual

@@ -168,7 +168,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n\n\n");
 
-	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS-------------------------------------\n");
+	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS (IDLE) -------------------------------------\n");
 
 	//Create the idle proc or process 1
 	int idle_ret = idle_proc_create(track, frame_count, user_page_table, uctxt);
@@ -176,25 +176,28 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(0, "Idle process failed!\n");
 		return;
 	}
-	
+
 	if(cmd_args[0] == NULL){
 		TracePrintf(0, "Nothing was passed so I will just loop cause Idle :)\n");
+		idle_process->currState = READY;
+		Enqueue(readyQueue, idle_process);
 	}else{
 		TracePrintf(0, "We have a program to execute!\n");
-		
-		PCB *init_pcb = create_init_proc(user_page_table, track, frame_count);
+		TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS (INIT) -------------------------------------\n");
+
+		PCB *init_pcb = create_init_proc(track, frame_count);
 		if(init_pcb == NULL){
 			TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 			TracePrintf(0, "Returning to idle process\n");
 			return;
 		}
-
-		TracePrintf(0, "<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>\n\n\n");
-
+		TracePrintf(0, "<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy SHOULD BE ONCE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>\n\n\n");
 		if(KernelContextSwitch(KCCopy, init_pcb, NULL) < 0) return;
 
-        	if (idle_process->pid == current_process->pid){
+		if (idle_process->pid == current_process->pid){
                 	TracePrintf(0, "This is the pid of the idle process because current and idle are the same --> %d\n", current_process->pid);
+			TracePrintf(0, "Just run idle\n");
+
         	}else{
                 	TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
 			TracePrintf(0, "We should load program here\n");
@@ -203,38 +206,32 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 			TracePrintf(0, "We should load program here\n");
 			if(LoadProgram(cmd_args[0], cmd_args, current_process) < 0) return;
         	}
-
-		if (idle_process->pid == current_process->pid){
-                	TracePrintf(0, "This is the pid of the idle process because current and idle are the same --> %d\n", current_process->pid);
-			//KernelContextSwitch [idle -> init]	
-			int kc_ret = KernelContextSwitch(KCSwitch, (void *)idle_process, (void *)init_pcb);
-			if(kc_ret == ERROR){
-				TracePrintf(0, "There was an error with Context Switch!\n");
-			}	
-		} else{
-			TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
-		}
 	}
 		
 	//Write to hardware where init is in region 1
-	//WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
-	//WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-
-	//idle_process->currState = READY;
-	//Enqueue(readyQueue, idle_process);
-
+	WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);	
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
+
+	/*
 	if(((PCB *)(peek(readyQueue)->data))->pid == 0 && current_process->pid == 0){
 		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
 		TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND MY HEAD IS THE SAME [WRONG]\n");
 	}else{	
 		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
-		TracePrintf(0, "********************************************************** This is the INIT FUNCTION \n");
+		TracePrintf(0, "********************************************************** [Queue] The head of the function is INIT {Check Below for current process}\n");
 	}
-	
+
+	if(current_process->pid == 0){
+		TracePrintf(0, "THE CURRENT PROCESS THAT IS BEING CALLED IS THE IDLE FUNCTION| IGNORE THE MESSAGES ABOVE\n");
+	}else{
+		TracePrintf(0, "THE CURRENT PROCESS THAT IS BEING CALLED IS THE INIT FUNCTION| IGNORE THE MESSAGES ABOVE\n");
+	}
+
 	QueueNode *node = peek(readyQueue);
 	PCB *data = (PCB *)node->data;
 	TracePrintf(0, "This is the pid of the front the queue -> %d\n", data->pid);
+	*/
 	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
 	return;
 }
