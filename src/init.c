@@ -30,11 +30,6 @@ extern PCB *idle_process;
 PCB *create_init_proc(unsigned char *track, int track_size){
         TracePrintf(0, "Start of the init process </> \n");
 
-	//The current_process right now is idle
-	TracePrintf(0, "THIS IS WHERE WE ARE GOING TO ENQUEUE THE CURRENT PROCESS WHICH IS IDLE AND THIS IS THE PID -> %d\n", current_process->pid);
-
-	//Enqueue(readyQueue, current_process);
-
         PCB *init_proc =(PCB *)malloc(sizeof(PCB));
         if(init_proc == NULL){
                 TracePrintf(0, "Malloc error for init_proc\n");
@@ -43,10 +38,6 @@ PCB *create_init_proc(unsigned char *track, int track_size){
         }
 
 	memset(init_proc, 0, sizeof(PCB));
-
-	// -------------------------------->> Setting up Region Table
-        TracePrintf(0, "Flushing Region 1\n");
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 	
 	//Set up its Kernel Frames
 	int kf_ret = create_sframes(init_proc, track, frame_count);
@@ -59,15 +50,16 @@ PCB *create_init_proc(unsigned char *track, int track_size){
 	//Malloc new regions space for 1
 	pte_t *proc_space = (pte_t *)malloc(MAX_PT_LEN * sizeof(pte_t));
 	if(proc_space == NULL){
-		TracePrintf(0,"There was an error with malloc for region 1 space ");
+		TracePrintf(0,"There was an error with malloc for region 1 space");
 		free(init_proc);
 		return NULL;
 	}
+
 	init_proc->pid = helper_new_pid(proc_space);
 	memset(proc_space, 0, sizeof(MAX_PT_LEN * sizeof(pte_t)));
 	init_proc->AddressSpace = proc_space;
 
-	//a UserContext (from the the uctxt argument to KernelStart))
+	//a UserContext (from the the uctxt argument to KernelStart
 	memcpy(&init_proc->curr_uc, KernelUC, sizeof(UserContext));
 	init_proc->currState = READY;	
 
@@ -75,6 +67,5 @@ PCB *create_init_proc(unsigned char *track, int track_size){
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
   	TracePrintf(0, "End of the init process </> \n\n\n");
-	TracePrintf(0, "End of the init process </> \n\n\n");
         return init_proc;
 }

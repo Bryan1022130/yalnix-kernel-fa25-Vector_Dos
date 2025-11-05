@@ -45,8 +45,6 @@ void Enqueue(Queue *MQueue, void *data){
 	
 	PCB *convert = (PCB *)data;
 	TracePrintf(0, "You have enqueued and this is state of your PCB PID--> %d\n", convert->pid);
-	TracePrintf(0, "You have enqueued and this is state of your PCB PID --> %d\n", convert->pid);
-	TracePrintf(0, "You have enqueued and this is state of your PCB PID--> %d\n", convert->pid);
 
 
 	//If the Queue is empty, make the first node the head node and tail 

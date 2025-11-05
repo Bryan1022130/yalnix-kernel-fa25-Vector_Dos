@@ -1,7 +1,5 @@
 //Header files from yalnix_framework && libc library
 #include <sys/types.h> //For u_long
-#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
-#include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
 #include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
@@ -72,10 +70,12 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
 
         //We are storing it at the top of the user stack region
 	//This should have one valid page, for idle’s user stack
+	
         unsigned long stack_page_index = MAX_PT_LEN - 1;
         idle_pt[stack_page_index].valid = TRUE;
         idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
         idle_pt[stack_page_index].pfn = pfn;
+	
 
         /* =======================
          * idle_process field setup
@@ -93,18 +93,6 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
          */
 	unsigned int sbase = (KERNEL_STACK_BASE >> PAGESHIFT);
 
-/*	
-	TracePrintf(0, "SETTING THE PFN PERMISSION AS TRUE FOR THE KERNEL STACK BASE\n");
-	kernel_page_table[sbase].prot = PROT_READ | PROT_WRITE;
-	kernel_page_table[sbase].pfn= 126;
-	kernel_page_table[sbase].valid = TRUE
-		;
-	kernel_page_table[sbase + 1].prot = PROT_READ | PROT_WRITE;
-	kernel_page_table[sbase + 1].pfn= 127;
-	kernel_page_table[sbase + 1].valid = TRUE;
-
-	*/
-	
 	//Mark its kernel stack frames
 	idle_process->kernel_stack_frames[0] = 126;
 	idle_process->kernel_stack_frames[1] = 127;

@@ -71,7 +71,6 @@ HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
  * Kernel Stack Allocation function 
  * ==================================================================================================================
  */
-
 int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
         TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
         for(int i = 0; i < KERNEL_STACK_PAGES; i++){
@@ -138,7 +137,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1, "------------------------------------- WE ARE TURNING ON VIRTUAL MEMORY NOW :) -------------------------------------\n\n");
 	WriteRegister(REG_VM_ENABLE, TRUE);
 	vm_enabled = TRUE;
-	TracePrintf(1, "#######################################################################################################################\n\n\n\n");
+	TracePrintf(1, "###################################################################################################################\n\n");
 
 	/* <<<------------------------------
 	 * Set up the Interrupt Vector Table
@@ -166,7 +165,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		return;
 	}
 
-	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n\n\n");
+	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n");
 
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS (IDLE) -------------------------------------\n");
 
@@ -201,9 +200,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
         	}else{
                 	TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
 			TracePrintf(0, "We should load program here\n");
-			TracePrintf(0, "We should load program here\n");
-			TracePrintf(0, "We should load program here\n");
-			TracePrintf(0, "We should load program here\n");
 			if(LoadProgram(cmd_args[0], cmd_args, current_process) < 0) return;
         	}
 	}
@@ -213,25 +209,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);	
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
 
-	/*
-	if(((PCB *)(peek(readyQueue)->data))->pid == 0 && current_process->pid == 0){
-		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
-		TracePrintf(0, "********************************************************** This is the IDLE FUNCTION AND MY HEAD IS THE SAME [WRONG]\n");
-	}else{	
-		TracePrintf(0, "\n\nThis is the size of the queue --> %d\n", readyQueue->size);
-		TracePrintf(0, "********************************************************** [Queue] The head of the function is INIT {Check Below for current process}\n");
-	}
-
-	if(current_process->pid == 0){
-		TracePrintf(0, "THE CURRENT PROCESS THAT IS BEING CALLED IS THE IDLE FUNCTION| IGNORE THE MESSAGES ABOVE\n");
-	}else{
-		TracePrintf(0, "THE CURRENT PROCESS THAT IS BEING CALLED IS THE INIT FUNCTION| IGNORE THE MESSAGES ABOVE\n");
-	}
-
-	QueueNode *node = peek(readyQueue);
-	PCB *data = (PCB *)node->data;
-	TracePrintf(0, "This is the pid of the front the queue -> %d\n", data->pid);
-	*/
-	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
+	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
 	return;
 }

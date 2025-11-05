@@ -56,5 +56,6 @@ void SetupRegion0(pte_t *kernel_page_table){
 
         WriteRegister(REG_PTBR0,(unsigned int)kernel_page_table);
         WriteRegister(REG_PTLR0, (unsigned int)MAX_PT_LEN);
+
         TracePrintf(1,"############################################## Region 0 Setup Done ###################################################\n\n\n");
 }

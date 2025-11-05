@@ -29,5 +29,6 @@ void SetupRegion1(pte_t *user_page_table){
 
 	WriteRegister(REG_PTBR1, (unsigned int)user_page_table);
 	WriteRegister(REG_PTLR1, (unsigned int)MAX_PT_LEN);
+
 	TracePrintf(1,"################################################# Region 1 Setup Done ###############################################\n\n\n");
 }

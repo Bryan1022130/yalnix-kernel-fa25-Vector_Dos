@@ -1,6 +1,5 @@
 //Header files from yalnix_framework && libc library
 #include <sys/types.h> //For u_long
-#include <ctype.h> // <----- NOT USED RIGHT NOW ----->
 #include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
@@ -41,7 +40,6 @@ int SetKernelBrk(void * addr){
         if(vm_enabled == FALSE){
                 TracePrintf(1, "THIS IS CALLED WHEN VIRTUAL MEMORY IS NOT ENABLED\n");
 
-                //Normalize byte address for brk_addr
                 uintptr_t original_brk_addr = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
 
                 //It can not be less then the current break point since this space is used for data
@@ -93,20 +91,18 @@ int SetKernelBrk(void * addr){
                     (void*)new_kbrk_addr, (void*)heap_start);
 
 
-                // 1. must not go below heap start (data section)
                 if (new_kbrk_addr < heap_start) {
                     TracePrintf(0, "[SetKernelBrk] Error: address %p is below kernel heap start (%p)\n", (void*)new_kbrk_addr, (void*)heap_start);
                     return ERROR;
                 }
 
-                // 2. must not grow into kernel stack
                 if (new_kbrk_addr >= heap_end_limit) {
                     TracePrintf(0, "[SetKernelBrk] Error: address %p overlaps kernel stack base (%p)\n", (void*)new_kbrk_addr, (void*)heap_end_limit);
                     return ERROR;
                 }
 
-                uintptr_t grow_start = UP_TO_PAGE(old_kbrk);        // first new page if growing
-                uintptr_t grow_end   = UP_TO_PAGE(new_kbrk_addr);   // one past last page
+                uintptr_t grow_start = UP_TO_PAGE(old_kbrk);        
+                uintptr_t grow_end   = UP_TO_PAGE(new_kbrk_addr); 
 
                 // Step 2: Growing the heap (allocate frames)
                         // --- Grow the kernel heap ---

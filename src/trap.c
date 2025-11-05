@@ -171,10 +171,6 @@ void HandleKernelTrap(UserContext *CurrUC){
 
 void HandleClockTrap(UserContext *CurrUC){
     TracePrintf(0, "\n\n");
-    TracePrintf(0, "In HandleClockTrap ==================================================================== \n");
-    if(current_process->pid == 0){TracePrintf(0, "********************************************************** This is the IDLE PROCESS (CURRENT)\n");}
-    else{TracePrintf(0, "********************************************************** This is the INIT PROCESS (CURRENT)\n");}
-    TracePrintf(0, "This is the size of the Queue -- > %d\n", readyQueue->size);
 
     //Increment how many ticks
     current_tick++;
@@ -197,14 +193,6 @@ void HandleClockTrap(UserContext *CurrUC){
 
     //Extract the next PCB from the Queue
     PCB *next = get_next_ready_process();
-    TracePrintf(0, "Next PCB: %p, PID: %d\n", next, next->pid);
-    if(next->pid == 0){
-	    TracePrintf(0, "THIS IS THE IDLE PROCESS AND WE ARE GOING TO DEQUEU IT AND THIS IS THE PID -> %d\n", next->pid);
-	    TracePrintf(0, "THIS IS THE CURRENT PROCESSS -> %d\n", current_process->pid);
-    } else{
-	    TracePrintf(0, "THIS IS THE INIT PROCESS AND WE ARE GOING TO DEQUEU IT\n");
-    }
-
     if(old_proc->currState == RUNNING){
 	    TracePrintf(0, "THE CURRENT PROCESS WAS RUNNING SETTING TO THE READY QUEUE\n");
 	    current_process->currState = READY;
