@@ -67,7 +67,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     next->currState = RUNNING;
     current_process = next;
 
-    TracePrintf(1, "KCSwitch: switched from PID %d to PID %d\n", curr->pid, next->pid);
+    TracePrintf(1, "[KCSwitch]: switched from PID %d to PID %d\n", curr->pid, next->pid);
     TracePrintf(1, "This is the end of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>\n\n\n");
     return &next->curr_kc;
 }
@@ -84,6 +84,7 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 	PCB *new_pcb = (PCB *)new_pcb_p;
 	if(new_pcb == NULL){
 		TracePrintf(0, "Error with one of the PCB being NULL!");
+		return NULL;
 	}
 
 	//Copy over the the KernelContext into the new_pcb with a memcpy
@@ -112,23 +113,12 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 		kernel_page_table[holdvpn].prot = PROT_READ | PROT_WRITE;
 		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
-		/*
-		region0_pt[holdvpn].prot = PROT_READ | PROT_WRITE;
-		region0_pt[holdvpn].valid = TRUE;
-		region0_pt[holdvpn].pfn = new_pcb->kernel_stack_frames[t];
-		*/
-
-		//void *dest = (void *)(holdvpn << PAGESHIFT);
-
 		//This is the vaddr of the currently running kernel stack
 		unsigned long int pagefind = (stack_base + t) << PAGESHIFT;
 		TracePrintf(0, "This is the value of the pagefind ==> %lx\n", pagefind);
 		
 		//We are copying the content of the kernel stack table from
 		memcpy((void *)((holdvpn) << PAGESHIFT), (void *)pagefind, PAGESIZE);
-		//memcpy(dest, src, PAGESIZE);
-
-		//src += PAGESIZE;
 
 		//Reset the virtual kernel page table
 		kernel_page_table[holdvpn].pfn = 0;
@@ -136,14 +126,10 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 		kernel_page_table[holdvpn].prot = 0;
 		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 	}
-	//region0_pt[holdvpn].prot = 0;
-	//region0_pt[holdvpn].valid = 0;
-	//region0_pt[holdvpn].pfn = 0;
-	TracePrintf(0, "This is the pid of the current process -> %d", current_process->pid);
-	
-	Enqueue(readyQueue, new_pcb);
 
+	Enqueue(readyQueue, new_pcb);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+
 	//return the kc_in as stated in the manual
 	TracePrintf(0,"This is the end of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++++++++++++>\n\n\n");
 	return kc_in;
