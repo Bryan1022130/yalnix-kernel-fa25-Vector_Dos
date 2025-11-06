@@ -7,7 +7,6 @@
 #include <ylib.h> // Function declarations for many libc functions, Macro for NULL 
 #include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
-#include <stdio.h> // for snprintf
 
 //Our Header Files
 #include "Queue.h"
@@ -16,6 +15,7 @@
 #include "process.h" 
 #include "idle.h"
 #include "init.h"
+#include "terminal.h"
 
 //Macros for if VM is enabled
 #define TRUE 1
@@ -62,7 +62,7 @@ unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
 pte_t *kernel_page_table;
 
 //Functions for terminal {TTY_TRANSMIT && TTY_RECEIVE}
-static unsigned int terminal_array[NUM_TERMINALS];
+Terminal t+array[NUM_TERMINALS];
 
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
@@ -122,6 +122,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	unsigned char *track = (unsigned char*)malloc(frame_count);
 	track_global = track;
 	init_frames(track, frame_count);
+
+	//Setup Terminal
+	TerminalSetup();
 
 	//initialize process queues
 	readyQueue = initializeQueue();

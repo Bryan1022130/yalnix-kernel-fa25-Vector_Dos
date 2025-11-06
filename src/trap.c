@@ -329,19 +329,23 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 /* =========================================
  * General Flow:
  * -> Index into CurrUC->code
- * -> Read the input from terminal with TtyRecieve
- * ---> Buffer if neccessary
- * -> This will get read later on by Ttyread
+ * -> Complete the blocked process that started the terminal
+ * -> Check if there is more output and make sure it runs
  * =========================================
  */
 
 void HandleTransmitTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
-    TracePrintf(0, "TRAP: TTY Transmit called.\n");	
+
+    TracePrintf(0, "TransmitTrap: Hello we are in the TransmitTrap handler!\n");
+    TracePrintf(0,"We will check for blocked processes and any other terminal output\n");
+
+    int terminal = CurrUC->code;
+
+
+
     *CurrUC = current_process->curr_uc;
 }
-
-
 
 void HandleDiskTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
