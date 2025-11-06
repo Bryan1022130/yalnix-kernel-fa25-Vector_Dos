@@ -20,6 +20,8 @@ extern Queue *sleepQueue;
 extern PCB *current_process;
 extern PCB *idle_process;
 extern PCB *process_free_head;
+extern unsigned char *track_global;
+extern unsigned long int frame_count;
 
 //declaration of the default place holder function
 void HandleTrap(UserContext *CurrUC){
@@ -237,14 +239,57 @@ void HandleIllegalTrap(UserContext *CurrUC) {
 
 	*CurrUC = current_process->curr_uc;
 }
+/* =========================================
+ * General Flow:
+ * -> check if its in region 1
+ * -> check if it is not going into heap memory (proc->current_user_brk)
+ * =========================================
+ */
 
 void HandleMemoryTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
 
     TracePrintf(0, "MemoryTrap: You have invoked a Memory Trap!\n");
 
-    Halt();	
-    *CurrUC = current_process->curr_uc;
+    if(CurrUC->addr > (void *)VMEM_1_BASE && CurrUC->addr < (void *)VMEM_1_LIMIT){
+	    TracePrintf(0, "We are in current region 1 space. Nice!\n");
+	    if(CurrUC->addr > current_process->user_heap_brk){
+		    TracePrintf(0, "Great are able to grow the user stack space!\n");
+		    TracePrintf(0, "I will now set up more stack memory for you.\n");
+
+		    int curr_stack_base = (((unsigned long int)current_process->user_stack_ptr) >> PAGESHIFT);
+		    int new_stack_base = (((unsigned long int) CurrUC->addr) >> PAGESHIFT);
+
+		    TracePrintf(0, "Memory Trap: This is the current stack base --> %d\n", curr_stack_base);
+		    TracePrintf(0, "Memory Trap: This is the new stack base --> %d\n", new_stack_base);
+
+		    pte_t *reg1_pt = (pte_t *)current_process->AddressSpace;
+		    //We store our region 1 space in our proc; so we just map it the same way as in template.c
+		    for(int x = new_stack_base; x < curr_stack_base; x++){
+			    unsigned int frame = find_frame(track_global, frame_count);
+			    if(frame == ERROR){
+				    TracePrintf(0, "MemoryTrap: Error with finding a frame!\n");
+				    return;
+			    }			
+			    TracePrintf(0, "MemoryTrap: This is the frame allocated for stack resize -> %d\n", frame);
+			    reg1_pt[x].pfn = frame;
+			    reg1_pt[x].valid = 1;
+			    reg1_pt[x].prot = (PROT_READ | PROT_WRITE);
+		    }
+
+		    //Update the stack base for the proc
+		    TracePrintf(0, "MemoryTrap: Success! I will now return and stack has growed!\n");
+		    current_process->user_stack_ptr = CurrUC->addr;
+		    *CurrUC = current_process->curr_uc;
+		    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+		    return;
+	 
+    	}
+    }
+
+    //In we cant grow the stack then we should abort
+    TracePrintf(0, "MemoryTrap: Error! I will now abort\n");
+    abort();
 }
 
 void HandleMathTrap(UserContext *CurrUC) {

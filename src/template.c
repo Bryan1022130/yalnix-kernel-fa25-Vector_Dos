@@ -374,6 +374,17 @@ LoadProgram(char *name, char *args[], PCB *proc)
    * ==>> proc->uc.pc = (caddr_t) li.entry;
    */
   proc->curr_uc.pc = (caddr_t)li.entry;
+  
+  //Set up its user stack and heap point
+  unsigned int data_end_ = data_pg1 + data_npg;
+  proc->user_heap_brk = (void *)(data_end << PAGESHIFT);
+  TracePrintf(0, "This is the data_end_ withouth the pageshift -> %ld\n", data_end_); 
+  TracePrintf(0, "This is the user stack pointer memory address -> %p\n", proc->user_heap_brk);
+
+  unsigned int stack_base = MAX_PT_LEN - stack_npg;
+  proc->user_stack_ptr = (void *)(stack_base << PAGESHIFT);
+  TracePrintf(0, "This is the stack_base withouth the pageshift -> %ld\n", stack_base); 
+  TracePrintf(0, "This is the user stack pointer memory address -> %p\n", proc->user_stack_ptr);
 
   /*
    * Now, finally, build the argument list on the new stack.

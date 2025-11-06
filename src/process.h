@@ -28,13 +28,13 @@ struct pcb{
 	
 	//Process information
         int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
-	int exitstatus; // When a process is going to exit
+	int exit_status; // When a process is going to exit
 
         ProcessState currState; //Enum states for process
         void *AddressSpace; // to keep track of where it is currently in its address space for region 1 {Page Table}
 				
-	unsigned int user_heap_end; //The top of heap
-	unsigned int user_stack_end; //Lowest stack address
+	void *user_heap_brk; //The top of heap
+	void *user_stack_ptr; //Lowest stack address
 	
 	//For Process tracking, for sys calls such as wait() and exit()
 	//Works as a stack and tree

@@ -159,7 +159,7 @@ void Exit(int status) {
 
     TracePrintf(1, "Process %d exiting with status %d\n", current_process->pid, status);
     TracePrintf(1, "This is exit syscall\n");
-    current_process->exitstatus = status;
+    current_process->exit_status = status;
     current_process->currState = ZOMBIE;
 
     // wake waiting parent if any
@@ -200,7 +200,7 @@ int Wait(int *status_ptr) {
     // look for zombie children
     while (child != NULL) {
         if (child->currState == ZOMBIE) {
-            if (status_ptr != NULL) *status_ptr = child->exitstatus;
+            if (status_ptr != NULL) *status_ptr = child->exit_status;
             int pid = child->pid;
             //proc_free(child);
             return pid;
@@ -234,7 +234,7 @@ int Brk(void *addr) {
     if (addr == NULL) return ERROR;
 
     // For now, pretend success and record where the heap ends
-    proc->user_heap_end = (unsigned int)addr;
+    proc->user_heap_brk = (unsigned int)addr;
 
     // later (CP4) you’ll map/unmap frames here
     return 0;
