@@ -14,10 +14,6 @@ extern unsigned char *track_global;
 extern unsigned long frame_count;
 extern Queue *readyQueue;
 extern PCB *idle_process;
-extern PCB *proc_alloc(void);
-extern void proc_free(PCB *p);
-extern int LoadProgram(char *name, char **argv, PCB *proc);
-extern KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used);
 
 int GetPid(void) {
     if (current_process == NULL) {
@@ -350,4 +346,36 @@ int PipeRead(int pipe_id, void *buf, int len) {
 int PipeWrite(int pipe_id, void *buf, int len) {
     TracePrintf(0, "PipeWrite()\n");
     return ERROR;
+}
+
+int LockInit(int *lock_idp) {
+    return 0;
+}
+
+int Acquire(int lock_id) {
+    return 0;
+}
+
+int Release(int lock_id) {
+    return 0;
+}
+
+int CvarInit(int *cvar_idp) {
+    return 0;
+}
+
+int CvarSignal(int cvar_id) {
+    return 0;
+}
+
+int CvarBroadcast(int cvar_id) {
+    return 0;
+}
+
+int CvarWait(int cvar_id, int lock_id) {
+    return 0;
+}
+
+int Reclaim(int lock_id) {
+    return 0;
 }

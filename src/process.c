@@ -36,11 +36,6 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
         next = idle_process;
     }
 
-    if (curr == NULL) {
-        TracePrintf(0, "KCSwitch: curr NULL, using current_process\n");
-        curr = current_process;
-    }
-
     if (curr == next) {
         TracePrintf(1, "KCSwitch: same process, skipping\n");
         return kc_in;
@@ -135,34 +130,41 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 	return kc_in;
 }
 
-
-//Process Spawning Logic 
-PCB* spawn_proc(pte_t *user_page_table){
-	//Make and clear new proc
+// ======================================================================================> Process Spawning Logic 
+PCB* spawn_proc(void){
 	PCB *proc = (PCB *)malloc(sizeof(PCB));
+	pte_t *reg1_proc = malloc(MAX_PT_LEN * sizeof(pte_t));
+
 	if(proc == NULL){
 		TracePrintf(0, "Error with creating process! Returning NULL\n");
 		return NULL;
+	}else if(reg1_proc == NULL){
+		TracePrintf(0, "Error with creating region 1 space! Returning NULL\n");
+		free(proc);
+		return NULL;
 	}
-
+	//Clear malloced space
 	memset(proc, 0, sizeof(PCB));
+	memset(reg1_proc, 0, (MAX_PT_LEN * sizeof(pte_t)));
 
-	//Set it properties
-	memcpy(&proc->curr_uc, KernelUC, sizeof(UserContext));
-	proc->AddressSpace = user_page_table;
-	proc->pid = helper_new_pid(user_page_table);
+	//Setup new process properties
+	proc->AddressSpace = reg1_proc;
+	proc->curr_uc = *KernelUC; //Copy in the User Context
+	proc->pid = helper_new_pid(reg1_proc);
 	proc->wake_tick = 0;
-	
+
 	//Create its stack frames
 	if(create_sframes(proc, track_global, frame_count) == ERROR){
 		TracePrintf(0, "Error with creating stack frames for proc -> %d\n", proc->pid);
 		free(proc);
+		free(reg1_proc);
 		return NULL;
 	}
-
+	TracePrintf(0, "============================================ Debug Info =========================================================");
 	TracePrintf(0, "Process with PID: %d was created\n", proc->pid);
 	TracePrintf(0, "There are its stack frames pfns -> %d and -> %d\n", proc->kernel_stack_frames[0], proc->kernel_stack_frames[1]);
 	TracePrintf(0, "We are now going to exit the spawn_process function!\n");
+	TracePrintf(0, "============================================ Debug Info End =====================================================");
 }
 
 void free_proc(PCB *proc){
@@ -171,10 +173,29 @@ void free_proc(PCB *proc){
 	}
 
 	TracePrintf(0, "We are going to free the process with a pid of --> %d\n", proc->pid);
+
+	//free it kernelstack frames
+	free_sframes(proc, track, frame_count);
+
+	//free it malloc space
+	free(proc->AdressSpace);
 	memset(proc, 0, sizeof(PCB));
 	free(proc);
 
-	//Have some logic for taking off Queue or if we make a PCB proc table	
 	TracePrintf(0, "Everything went well! We are leaving the free_proc() process!\n");
 	return;
 }
+
+// ======================================================================================> Process Queue Logic 
+PCB *get_next_ready_process(void){
+	if(!isEmpty(readyQueue)){
+		PCB *ready_proc = Dequeue(readyQueue);
+		TracePrintf(0, "The process at the start of the readyQueue is -> %d\n", ready_proc->pid);
+		return ready_proc;
+	}
+	TracePrintf(0, "The readyQueue is empty. Returing NULL!");
+}
+
+
+
+

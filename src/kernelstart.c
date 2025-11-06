@@ -68,11 +68,24 @@ static unsigned int terminal_array[NUM_TERMINALS];
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
 
 /* ==================================================================================================================
+ * Kernel Stack free function 
+ * ==================================================================================================================
+ */
+void free_sframes(PCB *free_proc, unsigned char *track, int track_size){
+        TracePrintf(0, "Freeing the Kernel Stack for the process, this many --> %d\n", KERNEL_STACK_PAGES);
+        for(int i = 0; i < KERNEL_STACK_PAGES; i++){
+		int kernels_pfn = free_proc->kernel_stack_frames[i];
+		TracePrintf(0, "We are freeing this physical frame -> %d");
+		frame_free(track, kernels_pfn);
+        }
+}
+
+/* ==================================================================================================================
  * Kernel Stack Allocation function 
  * ==================================================================================================================
  */
 int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
-        TracePrintf(0, "Creating the Kernel Stack for the Process this many --> %d\n", KERNEL_STACK_PAGES);
+        TracePrintf(0, "Creating the Kernel Stack for the process, this many --> %d\n", KERNEL_STACK_PAGES);
         for(int i = 0; i < KERNEL_STACK_PAGES; i++){
                 //Allocate a physical frame for kernel stack
 		int pfn = find_frame(track, track_size);

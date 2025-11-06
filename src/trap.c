@@ -21,50 +21,6 @@ extern PCB *current_process;
 extern PCB *idle_process;
 extern PCB *process_free_head;
 
-/* ===============================================================================================================
- * pcb_alloc()
- * Returns a pointer to the first FREE PCB in the table.
- * Sets the state to READY and assigns its PID.
- * ===============================================================================================================
- */
-PCB *proc_alloc(void) {
-	//This is wrong
-    static int next_pid = 1;  // simple incremental pid generator
-
-    if (process_free_head == NULL) return NULL;
-    PCB *p = process_free_head;
-    process_free_head = p->next;
-    memset(p, 0, sizeof(PCB));
-    p->currState = READY;
-    p->pid = next_pid++;  // assign pid here
-
-    return p;
-}
-
-/* ===============================================================================================================
- * pcb_free(pid)
- * Frees all resources associated with a process:
- *  - Unmaps Region 1 frames
- *  - Frees its kernel stack frames
- *  - Resets PCB state to FREE
- * ===============================================================================================================
- */
-
-void proc_free(PCB *p) {
-    if (!p) return;
-    p->currState = FREE;
-    p->next = process_free_head;
-    process_free_head = p;
-}
-
-// ----------------- Context Switching -----------------------------
-PCB *get_next_ready_process(void) {
-    if (isEmpty(readyQueue)) {
-        return idle_process;
-    }
-    return Dequeue(readyQueue);
-}
-
 //declaration of the default place holder function
 void HandleTrap(UserContext *CurrUC){
 	int s = 0;
@@ -75,8 +31,27 @@ void HandleTrap(UserContext *CurrUC){
 	return;
 }
 
+//Abort function
+void abort(void){
+	TracePrintf(0, "We are aborting the current process!");
+	
+	//Get the next process that can run 
+	PCB *next = get_next_ready_process();
+
+	free_proc(current_process);
+
+	//Context Switch
+	if(KernelContextSwitch(KCSwitch, NULL, next) < 0){
+		TracePrintf(0, "There was an error with KCS Switch!\n");
+		return;
+	}
+
+	return;
+}
+
 /* <<<---------------------------------
  * General Flow
+ * #include <yalnix.h>
  *  -> Index in CurrUC->code;
  *  -> exec syscall 
  *  -> regs[] contains args to syscall
@@ -85,7 +60,7 @@ void HandleTrap(UserContext *CurrUC){
  */
 
 void HandleKernelTrap(UserContext *CurrUC){
-	TracePrintf(0, "In HandleKernelTrap Function\n");
+	TracePrintf(0, "In HandleKernelTrap Function ===========================================================\n");
 	
 	//Set up the variable that will be the return value 
 	int sys_return = 0;
@@ -150,15 +125,47 @@ void HandleKernelTrap(UserContext *CurrUC){
 			sys_return = PipeWrite((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]); 
 			break;
 
+		case YALNIX_LOCK_INIT:
+			sys_return = LockInit((int *)CurrUC->regs[0]); 
+			break;
+
+		case YALNIX_LOCK_ACQUIRE:
+			sys_return = Acquire((int)CurrUC->regs[0]); 
+			break;
+
+		case YALNIX_LOCK_RELEASE:
+			sys_return = Release((int)CurrUC->regs[0]); 
+			break;
+
+		case YALNIX_CVAR_INIT:
+			sys_return = CvarInit((int *)CurrUC->regs[0]); 
+			break;
+
+		case YALNIX_CVAR_SIGNAL:
+			sys_return = CvarSignal((int)CurrUC->regs[0]); 
+			break;
+
+		case YALNIX_CVAR_BROADCAST:
+			sys_return = CvarBroadcast((int)CurrUC->regs[0]); 
+			break;
+
+		case YALNIX_CVAR_WAIT:
+			sys_return = CvarWait((int)CurrUC->regs[0], (int)CurrUC->regs[1]); 
+			break;
+
+		case YALNIX_RECLAIM:
+			sys_return = Reclaim((int)CurrUC->regs[0]); 
+			break;
+
+
 		default:
 			TracePrintf(0,"ERROR! The current code did not match any syscall\n");
 			break;
 	}
+
 	//Store the value that we get from the syscall into the regs[0];
 	CurrUC->regs[0] = sys_return;
-
-	TracePrintf(0, "Leaving HandleKernelTrap\n");
-
+	TracePrintf(0, "Leaving HandleKernelTrap =====================================================================\n");
 	return;
 }
 
@@ -216,8 +223,9 @@ void HandleClockTrap(UserContext *CurrUC){
 }
 
 void HandleIllegalTrap(UserContext *CurrUC) {
-    TracePrintf(0, "TRAP: Illegal instruction! Halting.\n");
-    Halt();
+	TracePrintf(0, "IllegalTrap: You have invoked an Illegal Trap!" 
+			"I will now abort this current Process.\n");
+	abort();
 }
 
 void HandleMemoryTrap(UserContext *CurrUC) {
