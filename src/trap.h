@@ -17,3 +17,4 @@ void HandleReceiveTrap(UserContext *CurrUC);
 
 //Temporary function for filling in the table
 void HandleTrap(UserContext *CurrUC);
+void abort(void);

@@ -23,33 +23,6 @@ extern PCB *process_free_head;
 extern unsigned char *track_global;
 extern unsigned long int frame_count;
 
-//declaration of the default place holder function
-void HandleTrap(UserContext *CurrUC){
-	int s = 0;
-	while(s < 10){
-		s++;
-		TracePrintf(0, "You are currently in the place holder function for trap handler!\n");
-	}
-	return;
-}
-
-//Abort function
-void abort(void){
-	TracePrintf(0, "We are aborting the current process!");
-	
-	//Get the next process that can run 
-	PCB *next = get_next_ready_process();
-
-	free_proc(current_process);
-
-	//Context Switch
-	if(KernelContextSwitch(KCSwitch, NULL, next) < 0){
-		TracePrintf(0, "There was an error with KCS Switch!\n");
-		return;
-	}
-
-	return;
-}
 //On the way into a trap, your kernel should copy the incoming user context at that address to the PCB of the current process.
 //On the way out of a trap, your kernel should copy user context in the PCB of the current process (which may have changed) to that address.
 
@@ -307,17 +280,52 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 
 void HandleMathTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
+
     TracePrintf(0, "MathTrap: Hello and Welcome to Math Trap!\n");
     TracePrintf(0, "I will call abort(). Please hold\n");
     abort();
+
     *CurrUC = current_process->curr_uc;
 }
 
+/* =========================================
+ * General Flow:
+ * -> Index into CurrUC->code
+ * -> Read the input from terminal with TtyRecieve
+ * ---> Buffer if neccessary
+ * -> This will get read later on by Ttyread
+ * =========================================
+ */
+
 void HandleReceiveTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
-    TracePrintf(0, "TRAP: TTY Receive called.\n");
+
+    TracePrintf(0, "Hello this is ReceiveTrap handler!\n");
+    TracePrintf(0, "I will now read input!\n");
+
+    //new line of input is available from the terminal indicated by the code field in the UserContext
+    int terminal = CurrUC->code;
+    char buffer[1000];
+    int len =0;
+
+    //read the input from the terminal using a TtyReceive 
+    int length = TtyReceive(terminal, buffer, len);
+    if(length == ERROR){
+	    TracePrintf(0, "There was an error inside of TTYReceive!\n");
+	    return;
+    }
+
     *CurrUC = current_process->curr_uc;
 }
+
+/* =========================================
+ * General Flow:
+ * -> Index into CurrUC->code
+ * -> Read the input from terminal with TtyRecieve
+ * ---> Buffer if neccessary
+ * -> This will get read later on by Ttyread
+ * =========================================
+ */
 
 void HandleTransmitTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
@@ -325,10 +333,17 @@ void HandleTransmitTrap(UserContext *CurrUC) {
     *CurrUC = current_process->curr_uc;
 }
 
+
+
 void HandleDiskTrap(UserContext *CurrUC) {
+    current_process->curr_uc = *CurrUC;
+
     TracePrintf(0, "TRAP: Disk called.\n");
+    TracePrintf(0, "We are not handling this!");
+
     *CurrUC = current_process->curr_uc;
 }
+
 
 /* <<<----------------------------------------------
  *  Function to create the Interrupt Vector Table
@@ -358,4 +373,30 @@ void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]){
 	TracePrintf(0,"We just finshed writing the Interrupt Vector Table\n");
 }
 
+//declaration of the default place holder function
+void HandleTrap(UserContext *CurrUC){
+	int s = 0;
+	while(s < 10){
+		s++;
+		TracePrintf(0, "You are currently in the place holder function for trap handler!\n");
+	}
+	return;
+}
 
+//Abort function
+void abort(void){
+	TracePrintf(0, "We are aborting the current process!");
+	
+	//Get the next process that can run 
+	PCB *next = get_next_ready_process();
+
+	free_proc(current_process);
+
+	//Context Switch
+	if(KernelContextSwitch(KCSwitch, NULL, next) < 0){
+		TracePrintf(0, "There was an error with KCS Switch!\n");
+		return;
+	}
+
+	return;
+}

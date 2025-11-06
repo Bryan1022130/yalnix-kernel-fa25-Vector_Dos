@@ -270,42 +270,6 @@ int Delay(int clock_ticks) {
 
     return 0;
 }
-/*
-int Fork(void) {
-    TracePrintf(0, "Fork()\n");
-    return ERROR;
-}
-
-int Exec(char *filename, char **argv) {
-    TracePrintf(0, "Exec()\n");
-    return ERROR;
-}
-
-void Exit(int status) {
-    TracePrintf(0, "Exit()\n");
-    Halt();
-}
-
-int Wait(int *status_ptr) {
-    TracePrintf(0, "Wait()\n");
-    return ERROR;
-}
-/*
-int GetPid(void) {
-    TracePrintf(0, "GetPid()\n");
-    return ERROR;
-}
-
-int Brk(void *addr) {
-    TracePrintf(0, "Brk()\n");
-    return ERROR;
-}
-
-int Delay(int clock_ticks) {
-    TracePrintf(0, "Delay()\n");
-    return ERROR;
-}
-*/
 
 int TtyRead(int tty_id, void *buf, int len) {
     TracePrintf(0, "TtyRead()\n");
