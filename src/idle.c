@@ -75,7 +75,6 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
         idle_pt[stack_page_index].valid = TRUE;
         idle_pt[stack_page_index].prot = PROT_READ | PROT_WRITE;
         idle_pt[stack_page_index].pfn = pfn;
-	
 
         /* =======================
          * idle_process field setup

@@ -1,17 +1,17 @@
 #
-#	Sample Makefile for Yalnix kernel and user programs.
-#	
-#	Prepared by Sean Smith and Adam Salem and various Yalnix developers
-#	of years past...
+#       Sample Makefile for Yalnix kernel and user programs.
 #
-#	Nov 30, 2022
+#       Prepared by Sean Smith and Adam Salem and various Yalnix developers
+#       of years past...
+#
+#       Nov 30, 2022
 
 
 
 # Where's your kernel source?
 K_SRC_DIR = .
 
-# What are the kernel c and include files? 
+# What are the kernel c and include files?
 K_SRCS = kernelstart.c memory.c process.c Queue.c syscalls.c trap.c idle.c re1sp.c re0sp.c kernelbrk.c template.c init.c terminal.c
 K_INCS = memory.h process.h Queue.h syscalls.h trap.h idle.h init.h terminal.h
 
@@ -20,7 +20,7 @@ U_SRC_DIR = ../user/
 
 # What are the user c and include files?
 U_SRCS = init.c syscall_test.c
-U_INCS =  
+U_INCS =
 
 
 #==========================================================
@@ -34,15 +34,15 @@ KERNEL_ALL = yalnix
 
 # Automatically generate the list of sources, objects, and includes for the kernek
 KERNEL_SRCS = $(K_SRCS:%=$(K_SRC_DIR)/%)
-KERNEL_OBJS = $(KERNEL_SRCS:%.c=%.o) 
-KERNEL_INCS = $(K_INCS:%=$(K_SRC_DIR)/%) 
+KERNEL_OBJS = $(KERNEL_SRCS:%.c=%.o)
+KERNEL_INCS = $(K_INCS:%=$(K_SRC_DIR)/%)
 
 
 # Automatically generate the list of apps, sources, objects, and includes for your userland coden
 USER_SRCS = $(U_SRCS:%=$(U_SRC_DIR)/%)
 USER_OBJS = $(USER_SRCS:%.c=%.o)
 USER_APPS = $(USER_SRCS:%.c=%)
-USER_INCS = $(U_INCS:%=$(U_SRC_DIR)/%) 
+USER_INCS = $(U_INCS:%=$(U_SRC_DIR)/%)
 
 #write to output program yalnix
 YALNIX_OUTPUT = yalnix
@@ -58,12 +58,12 @@ INCDIR = $(DDIR58)/include
 ETCDIR = $(DDIR58)/etc
 
 # any extra loading flags...
-LD_EXTRA = 
+LD_EXTRA =
 
 KERNEL_LIBS = $(LIBDIR)/libkernel.a $(LIBDIR)/libhardware.so
 
 # the "kernel.x" argument tells the loader to use the memory layout in the kernel.x file..
-KERNEL_LDFLAGS = $(LD_EXTRA) -L$(LIBDIR) -lkernel -lelf  -Wl,-T,$(ETCDIR)/kernel.x  -Wl,-R$(LIBDIR)  -lhardware 
+KERNEL_LDFLAGS = $(LD_EXTRA) -L$(LIBDIR) -lkernel -lelf  -Wl,-T,$(ETCDIR)/kernel.x  -Wl,-R$(LIBDIR)  -lhardware
 LINK_KERNEL = $(LINK.c)
 
 #  "user.x" respectively.
@@ -76,9 +76,9 @@ USER_LIBS = $(LIBDIR)/libyuser.a
 LINK_USER = $(LINK.c) $(USER_CFLAGS) $(USER_LINK_FLAGS)
 
 #
-#	These definitions affect how your Yalnix user programs are
-#	compiled and linked.  Use these flags *only* when linking a
-#	Yalnix user program.
+#       These definitions affect how your Yalnix user programs are
+#       compiled and linked.  Use these flags *only* when linking a
+#       Yalnix user program.
 #
 
 USER_LIBS = $(LIBDIR)/libyuser.a
@@ -98,7 +98,7 @@ CPPFLAGS=  -D_FILE_OFFSET_BITS=64 -m32 -fno-builtin -I. -I$(INCDIR) -g -DLINUX -
 # %.o: %.c: rules for setting up dependencies.  Don't use this directly
 # %: %.o: rules for setting up dependencies.  Don't use this directly
 
-all: $(ALL)	
+all: $(ALL)
 
 clean:
 	rm -f *.o *~ TTYLOG* TRACE $(YALNIX_OUTPUT) $(USER_APPS) $(KERNEL_OBJS) $(USER_OBJS) core.* ~/core

@@ -12,6 +12,7 @@
 #include "Queue.h"     
 #include "process.h"   
 #include "trap.h" 
+#include "terminal.h"
 
 //Extern Variables
 extern unsigned long current_tick;
@@ -22,6 +23,8 @@ extern PCB *idle_process;
 extern PCB *process_free_head;
 extern unsigned char *track_global;
 extern unsigned long int frame_count;
+extern Terminal t_array[NUM_TERMINALS];
+extern char *input_buffer;
 
 //On the way into a trap, your kernel should copy the incoming user context at that address to the PCB of the current process.
 //On the way out of a trap, your kernel should copy user context in the PCB of the current process (which may have changed) to that address.
@@ -307,21 +310,41 @@ void HandleReceiveTrap(UserContext *CurrUC) {
     //The max size a message can be is -> TERMINAL_MAX_LINE
     //If user input is greater we have to split it up into these chunks
     int terminal = CurrUC->code;
+
+    //turn this in to global buffer
     void *buffer;
 
     //Note: This should stay constant, since if the message < TERMINAL_MAX_LINE, we should buffer
     //read the input from the terminal using a TtyReceive 
-    int length = TtyReceive(terminal, buffer, TERMINAL_MAX_LEN);
-    if(length == ERROR){
-	    TracePrintf(0, "There was an error inside of TTYReceive!\n");
-	    return;
+    //Check in a loop until length < TERMINAL_MAX_LINE
+    int length;
+    int message_index = 0;
+    input_buffer[TERMINAL_MAX_LINE - 1] = '\0'; //Null terminate the buffer
+    while(length = TtyReceive(terminal, (void *)input_buffer, TERMINAL_MAX_LINE - 1) > 0){
+	    if(length < TERMINAL_MAX_LINE){
+		    TracePrintf(0, "We have a buffer of text that is less then TERMINAL_MAX_LEN!\n");
+		    TracePrintf(0, "We are going to fill up the buffer!\n");
+
+		    for(int x = length; x < TERMINAL_MAX_LINE; x++){
+			    input_buffer[x] = 0;
+		    }
+
+	    } else{
+	    TracePrintf(0, "This is the the length of the input line --> %d", length);
+	    Terminal *current_term = &t_array[terminal];
+
+	    }
+
+	    message_index++;
+
+	    if(length == ERROR){
+		    TracePrintf(0, "There was an error inside of TTYReceive!\n");
+		    return;
+	    }
     }
 
     //At this point we should have the data in our buffer
     //The total length of the input is in length
-
-
-
 
     *CurrUC = current_process->curr_uc;
 }

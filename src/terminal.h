@@ -1,4 +1,4 @@
- typdef struct termial{
+ typedef struct termial{
 	 //Terminal Tracking
 	 char is_busy;
 	 int terminal_num;
@@ -7,6 +7,10 @@
 	 PCB *waiting_process;
 	 void *waiting_buffer;
 	 int message_line_len;
+
+	 //Store messages
+	 char *messages[100];
+
 
  }Terminal;
 

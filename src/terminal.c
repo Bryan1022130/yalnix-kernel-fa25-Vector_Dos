@@ -15,25 +15,25 @@
 #include "init.h"
 #include "terminal.h"
 
-extern Terminal t+array[NUM_TERMINALS];
+extern Terminal t_array[NUM_TERMINALS];
 
 void TerminalSetup(){
 	TracePrintf(0, "We are setting up the Terminal array!\n");
 	
 	//Clear out and populate the struct
-	memset(t+array, 0, NUM_TERMINAL * sizeof(Terminal);
+	memset(t_array, 0, NUM_TERMINALS * sizeof(Terminal));
 	for(int x = 0; x < NUM_TERMINALS; x++){
-		t+array[x].is_busy = 0;
-		t+array[x].terminal_num = x;
-		t+array[x].waiting_process = NULL;
-		t+array[x].waiting_buffer = 0;
-		t+array[x].message_line_len = 0;
-
+		t_array[x].is_busy = 0;
+		t_array[x].terminal_num = x;
+		t_array[x].waiting_process = NULL;
+		t_array[x].waiting_buffer = 0;
+		t_array[x].message_line_len = 0;
+		memset(t_array[x].messages, 0, (sizeof(char *) * 100));
 	}
 }
 
 void TerminalFree(int tnum){
 	TracePrintf(0, "We are freeing Terminal %d\n", tnum);
-	memset(&t+array[tnum], 0, sizeof(Terminal));
+	memset(&t_array[tnum], 0, sizeof(Terminal));
 	TracePrintf(0, "Done! Leaving now!\n");
 }

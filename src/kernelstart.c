@@ -62,7 +62,8 @@ unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
 pte_t *kernel_page_table;
 
 //Functions for terminal {TTY_TRANSMIT && TTY_RECEIVE}
-Terminal t+array[NUM_TERMINALS];
+Terminal t_array[NUM_TERMINALS];
+char *input_buffer;
 
 //Global array for the Interrupt Vector Table
 HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
@@ -125,6 +126,8 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Setup Terminal
 	TerminalSetup();
+	//The buffer should be maximum line  + 1 {For null terminator}
+	input_buffer = (char *)malloc(TERMINAL_MAX_LINE * sizeof(char));
 
 	//initialize process queues
 	readyQueue = initializeQueue();
