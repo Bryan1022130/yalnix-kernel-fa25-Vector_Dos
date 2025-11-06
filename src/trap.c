@@ -48,6 +48,8 @@ void abort(void){
 
 	return;
 }
+//On the way into a trap, your kernel should copy the incoming user context at that address to the PCB of the current process.
+//On the way out of a trap, your kernel should copy user context in the PCB of the current process (which may have changed) to that address.
 
 /* <<<---------------------------------
  * General Flow
@@ -61,6 +63,7 @@ void abort(void){
 
 void HandleKernelTrap(UserContext *CurrUC){
 	TracePrintf(0, "In HandleKernelTrap Function ===========================================================\n");
+	current_process->curr_uc = *CurrUC;
 	
 	//Set up the variable that will be the return value 
 	int sys_return = 0;
@@ -165,6 +168,7 @@ void HandleKernelTrap(UserContext *CurrUC){
 
 	//Store the value that we get from the syscall into the regs[0];
 	CurrUC->regs[0] = sys_return;
+	*CurrUC = current_process->curr_uc;
 	TracePrintf(0, "Leaving HandleKernelTrap =====================================================================\n");
 	return;
 }
@@ -177,6 +181,7 @@ void HandleKernelTrap(UserContext *CurrUC){
  */
 
 void HandleClockTrap(UserContext *CurrUC){
+    current_process->curr_uc = *CurrUC;
     TracePrintf(0, "\n\n");
 
     //Increment how many ticks
@@ -218,36 +223,52 @@ void HandleClockTrap(UserContext *CurrUC){
         
     // Load new process's user context
     memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
+    *CurrUC = current_process->curr_uc;
     TracePrintf(0, "Leaving HandleClockTrap ============================================================================\n\n\n\n");
     return;
 }
 
 void HandleIllegalTrap(UserContext *CurrUC) {
+	current_process->curr_uc = *CurrUC;
+
 	TracePrintf(0, "IllegalTrap: You have invoked an Illegal Trap!" 
-			"I will now abort this current Process.\n");
+			"I will now abort this current process.\n");
 	abort();
+
+	*CurrUC = current_process->curr_uc;
 }
 
 void HandleMemoryTrap(UserContext *CurrUC) {
-    TracePrintf(0, "TRAP: Memory error! Halting.\n");
-    Halt();
+    current_process->curr_uc = *CurrUC;
+
+    TracePrintf(0, "MemoryTrap: You have invoked a Memory Trap!\n");
+
+    Halt();	
+    *CurrUC = current_process->curr_uc;
 }
 
 void HandleMathTrap(UserContext *CurrUC) {
+    current_process->curr_uc = *CurrUC;
     TracePrintf(0, "TRAP: Math error! Halting.\n");
     Halt();
+    *CurrUC = current_process->curr_uc;
 }
 
 void HandleReceiveTrap(UserContext *CurrUC) {
+    current_process->curr_uc = *CurrUC;
     TracePrintf(0, "TRAP: TTY Receive called.\n");
+    *CurrUC = current_process->curr_uc;
 }
 
 void HandleTransmitTrap(UserContext *CurrUC) {
-    TracePrintf(0, "TRAP: TTY Transmit called.\n");
+    current_process->curr_uc = *CurrUC;
+    TracePrintf(0, "TRAP: TTY Transmit called.\n");	
+    *CurrUC = current_process->curr_uc;
 }
 
 void HandleDiskTrap(UserContext *CurrUC) {
     TracePrintf(0, "TRAP: Disk called.\n");
+    *CurrUC = current_process->curr_uc;
 }
 
 /* <<<----------------------------------------------
