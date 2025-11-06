@@ -321,6 +321,7 @@ void HandleReceiveTrap(UserContext *CurrUC) {
     int message_index = 0;
     input_buffer[TERMINAL_MAX_LINE - 1] = '\0'; //Null terminate the buffer
     while(length = TtyReceive(terminal, (void *)input_buffer, TERMINAL_MAX_LINE - 1) > 0){
+
 	    if(length < TERMINAL_MAX_LINE){
 		    TracePrintf(0, "We have a buffer of text that is less then TERMINAL_MAX_LEN!\n");
 		    TracePrintf(0, "We are going to fill up the buffer!\n");
@@ -335,16 +336,14 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 
 	    }
 
+	    //Update index for storing buffer in terminal
 	    message_index++;
-
-	    if(length == ERROR){
-		    TracePrintf(0, "There was an error inside of TTYReceive!\n");
-		    return;
-	    }
     }
 
-    //At this point we should have the data in our buffer
-    //The total length of the input is in length
+    if(length == ERROR){
+	    TracePrintf(0, "There was an error inside of TTYReceive!\n");
+	    return;
+    }
 
     *CurrUC = current_process->curr_uc;
 }

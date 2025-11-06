@@ -182,6 +182,9 @@ void free_proc(PCB *proc){
 	memset(proc, 0, sizeof(PCB));
 	free(proc);
 
+	//free pid
+	helper_retire_pid(proc->pid);
+	
 	TracePrintf(0, "Everything went well! We are leaving the free_proc() process!\n");
 	return;
 }
