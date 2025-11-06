@@ -175,10 +175,10 @@ void free_proc(PCB *proc){
 	TracePrintf(0, "We are going to free the process with a pid of --> %d\n", proc->pid);
 
 	//free it kernelstack frames
-	free_sframes(proc, track, frame_count);
+	free_sframes(proc, track_global, frame_count);
 
 	//free it malloc space
-	free(proc->AdressSpace);
+	free(proc->AddressSpace);
 	memset(proc, 0, sizeof(PCB));
 	free(proc);
 
