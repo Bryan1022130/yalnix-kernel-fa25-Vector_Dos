@@ -4,8 +4,6 @@
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
 #include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
-#include <ylib.h> // Function declarations for many libc functions, Macro for NULL
-#include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 
 //Our header files
@@ -13,6 +11,7 @@
 #include "process.h"   
 #include "trap.h" 
 #include "terminal.h"
+#include "syscalls.h"
 
 //Extern Variables
 extern unsigned long current_tick;
@@ -38,7 +37,6 @@ extern char *input_buffer;
  *  -> return value is stored in reg[0]
  * --------------------------------->>>
  */
-
 void HandleKernelTrap(UserContext *CurrUC){
 	TracePrintf(0, "In HandleKernelTrap Function ===========================================================\n");
 	current_process->curr_uc = *CurrUC;
@@ -50,92 +48,92 @@ void HandleKernelTrap(UserContext *CurrUC){
 	//Find what Syscall the code points to 
 	switch(extract_code){
 		case YALNIX_FORK:
-			sys_return = Fork();
+			sys_return = KernelFork();
 			break;
 
 		case YALNIX_EXEC:
-			sys_return = Exec((char *)CurrUC->regs[0], (char **)CurrUC->regs[1]);
+			sys_return = KernelExec((char *)CurrUC->regs[0], (char **)CurrUC->regs[1]);
 			break;
 		
 		case YALNIX_EXIT:
 			TracePrintf(0, "This is HandleKernelTrap and we are calling Exit()\n");
-			Exit((int)CurrUC->regs[0]);
+			KernelExit((int)CurrUC->regs[0]);
 			break;
 
 		case YALNIX_WAIT:
-			sys_return = Wait((int *)CurrUC->regs[0]);
+			sys_return = KernelWait((int *)CurrUC->regs[0]);
 			break;
 
 		case YALNIX_GETPID:
-			sys_return = GetPid();
+			sys_return = KernelGetPid();
 			break;
 
 		case YALNIX_BRK:
-			sys_return = Brk((void *)CurrUC->regs[0]);
+			sys_return = KernelBrk((void *)CurrUC->regs[0]);
 			break;
 
 		case YALNIX_DELAY:
-			sys_return = Delay((int)CurrUC->regs[0]);
+			sys_return = KernelDelay((int)CurrUC->regs[0]);
 			break;
 		
 		case YALNIX_TTY_READ:
-			sys_return = TtyRead((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]);
+			sys_return = KernelTtyRead((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]);
 			break;
 
 		case YALNIX_TTY_WRITE:
-			sys_return = TtyWrite((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]);
+			sys_return = KernelTtyWrite((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]);
 			break;
 
 		case YALNIX_READ_SECTOR:
-			sys_return = ReadSector((int)CurrUC->regs[0], (void *)CurrUC->regs[1]);
+			sys_return = KernelReadSector((int)CurrUC->regs[0], (void *)CurrUC->regs[1]);
 			break;
 
 		case YALNIX_WRITE_SECTOR:
-			sys_return = WriteSector((int)CurrUC->regs[0], (void *)CurrUC->regs[1]);
+			sys_return = KernelWriteSector((int)CurrUC->regs[0], (void *)CurrUC->regs[1]);
 			break;
 
 		case YALNIX_PIPE_INIT:
-			sys_return = PipeInit((int *)CurrUC->regs[0]);
+			sys_return = KernelPipeInit((int *)CurrUC->regs[0]);
 			break;
 
 		case YALNIX_PIPE_READ:
-			sys_return = PipeRead((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]); 
+			sys_return = KernelPipeRead((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]); 
 			break;
 
 		case YALNIX_PIPE_WRITE:
-			sys_return = PipeWrite((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]); 
+			sys_return = KernelPipeWrite((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]); 
 			break;
 
 		case YALNIX_LOCK_INIT:
-			sys_return = LockInit((int *)CurrUC->regs[0]); 
+			sys_return = KernelLockInit((int *)CurrUC->regs[0]); 
 			break;
 
 		case YALNIX_LOCK_ACQUIRE:
-			sys_return = Acquire((int)CurrUC->regs[0]); 
+			sys_return = KernelAcquire((int)CurrUC->regs[0]); 
 			break;
 
 		case YALNIX_LOCK_RELEASE:
-			sys_return = Release((int)CurrUC->regs[0]); 
+			sys_return = KernelRelease((int)CurrUC->regs[0]); 
 			break;
 
 		case YALNIX_CVAR_INIT:
-			sys_return = CvarInit((int *)CurrUC->regs[0]); 
+			sys_return = KernelCvarInit((int *)CurrUC->regs[0]); 
 			break;
 
 		case YALNIX_CVAR_SIGNAL:
-			sys_return = CvarSignal((int)CurrUC->regs[0]); 
+			sys_return = KernelCvarSignal((int)CurrUC->regs[0]); 
 			break;
 
 		case YALNIX_CVAR_BROADCAST:
-			sys_return = CvarBroadcast((int)CurrUC->regs[0]); 
+			sys_return = KernelCvarBroadcast((int)CurrUC->regs[0]); 
 			break;
 
 		case YALNIX_CVAR_WAIT:
-			sys_return = CvarWait((int)CurrUC->regs[0], (int)CurrUC->regs[1]); 
+			sys_return = KernelCvarWait((int)CurrUC->regs[0], (int)CurrUC->regs[1]); 
 			break;
 
 		case YALNIX_RECLAIM:
-			sys_return = Reclaim((int)CurrUC->regs[0]); 
+			sys_return = KernelReclaim((int)CurrUC->regs[0]); 
 			break;
 
 
@@ -206,7 +204,7 @@ void HandleClockTrap(UserContext *CurrUC){
     return;
 }
 
-void HandleIllegalTrap(UserContext *CurrUC) {
+void HandleIllegalTrap(UserContext *CurrUC){
 	current_process->curr_uc = *CurrUC;
 
 	TracePrintf(0, "IllegalTrap: You have invoked an Illegal Trap!" 
@@ -226,7 +224,7 @@ void HandleIllegalTrap(UserContext *CurrUC) {
  * =========================================
  */
 
-void HandleMemoryTrap(UserContext *CurrUC) {
+void HandleMemoryTrap(UserContext *CurrUC){
     current_process->curr_uc = *CurrUC;
 
     TracePrintf(0, "MemoryTrap: You have invoked a Memory Trap!\n");
@@ -286,6 +284,7 @@ void HandleMathTrap(UserContext *CurrUC) {
 
     TracePrintf(0, "MathTrap: Hello and Welcome to Math Trap!\n");
     TracePrintf(0, "I will call abort(). Please hold\n");
+
     abort();
 
     *CurrUC = current_process->curr_uc;
@@ -296,6 +295,7 @@ void HandleMathTrap(UserContext *CurrUC) {
  * -> Index into CurrUC->code
  * -> Read the input from terminal with TtyRecieve
  * ---> Buffer if neccessary
+ * -> Store in our terminal struct
  * -> This will get read later on by Ttyread
  * =========================================
  */
@@ -306,35 +306,38 @@ void HandleReceiveTrap(UserContext *CurrUC) {
     TracePrintf(0, "Hello this is ReceiveTrap handler!\n");
     TracePrintf(0, "I will now read input!\n");
 
-    //new line of input is available from the terminal indicated by the code field in the UserContext
-    //The max size a message can be is -> TERMINAL_MAX_LINE
-    //If user input is greater we have to split it up into these chunks
+    //extract the terminal number for US->code
     int terminal = CurrUC->code;
 
-    //turn this in to global buffer
-    void *buffer;
-
-    //Note: This should stay constant, since if the message < TERMINAL_MAX_LINE, we should buffer
-    //read the input from the terminal using a TtyReceive 
-    //Check in a loop until length < TERMINAL_MAX_LINE
+    //Read the input in a loop until length < 0
     int length;
     int message_index = 0;
     input_buffer[TERMINAL_MAX_LINE - 1] = '\0'; //Null terminate the buffer
     while(length = TtyReceive(terminal, (void *)input_buffer, TERMINAL_MAX_LINE - 1) > 0){
+	    //Clear out the temp buffer (just in case there is garbage)
+	    memset(input_buffer, 0, (TERMINAL_MAX_LINE * sizeof(char)));
 
+	    //If we have input < TERMINAL_MAX_LINE then we need to buffer
 	    if(length < TERMINAL_MAX_LINE){
 		    TracePrintf(0, "We have a buffer of text that is less then TERMINAL_MAX_LEN!\n");
 		    TracePrintf(0, "We are going to fill up the buffer!\n");
-
 		    for(int x = length; x < TERMINAL_MAX_LINE; x++){
 			    input_buffer[x] = 0;
-		    }
-
-	    } else{
-	    TracePrintf(0, "This is the the length of the input line --> %d", length);
-	    Terminal *current_term = &t_array[terminal];
-
+		    } 
 	    }
+
+	    //Malloc space for the char *
+	    t_array[terminal].messages[message_index] = (char *)malloc(TERMINAL_MAX_LINE * sizeof(char));
+	    if(t_array[terminal].messages[message_index] == NULL){
+		    TracePrintf(0, "Error with malloc for HandleReceiveTrap");
+		    return;
+	    }
+
+	    //clear
+	    memset(t_array[terminal].messages[message_index], 0, (TERMINAL_MAX_LINE * sizeof(char)));
+
+	    //Copy over the buffer into char * array
+	    memcpy(t_array[terminal].messages[message_index], input_buffer, sizeof(char) * length);
 
 	    //Update index for storing buffer in terminal
 	    message_index++;
@@ -344,7 +347,9 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 	    TracePrintf(0, "There was an error inside of TTYReceive!\n");
 	    return;
     }
-
+    
+    //Set terminal as not busy anymore
+    t_array[terminal].is_busy = 0;
     *CurrUC = current_process->curr_uc;
 }
 
@@ -356,15 +361,38 @@ void HandleReceiveTrap(UserContext *CurrUC) {
  * =========================================
  */
 
+
+//when the hardware throws the TRAP TTY TRANSMIT to indicate this transmit is complete, the kernel moves
+//the caller back to the ready queue. When the caller gets dispatched next, the userland process will return from
+//TtyWrite.
+
 void HandleTransmitTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
 
     TracePrintf(0, "TransmitTrap: Hello we are in the TransmitTrap handler!\n");
-    TracePrintf(0,"We will check for blocked processes and any other terminal output\n");
+    TracePrintf(0,"This means that all your data from TTyTransmit has been written out!\n");
 
     int terminal = CurrUC->code;
+    //clear out the input_bufffer
+    memset(input_buffer, 0, sizeof(TERMINAL_MAX_LINE * sizeof(char)));
 
+    //Check if there is a blocked process
+    if(t_array[terminal].waiting_process != NULL){
+	    TracePrintf(0, "There is a process waiting and this is the pid -> %d\n", t_array[terminal].waiting_process->pid);
+	    TracePrintf(0, "This is the size of the waiting buffer is -> %ld", t_array[terminal].message_line_len);
+	    unsigned long int mes_len =  t_array[terminal].message_line_len;
+	    while(mes_len < 0){
+		    //We made need to buffer to be able to call TTytransit here
+		    //Essentially we are going to call it multiple times until we went through the message
+	    }
+    }
 
+    TracePrintf(0, "I guess there was no process waiting!\n");
+
+    //Free the process from waiting 
+    t_array[terminal].waiting_process = NULL;
+    t_array[terminal].waiting_buffer = NULL;
+    t_array[terminal].message_line_len = 0;
 
     *CurrUC = current_process->curr_uc;
 }
@@ -377,7 +405,6 @@ void HandleDiskTrap(UserContext *CurrUC) {
 
     *CurrUC = current_process->curr_uc;
 }
-
 
 /* <<<----------------------------------------------
  *  Function to create the Interrupt Vector Table

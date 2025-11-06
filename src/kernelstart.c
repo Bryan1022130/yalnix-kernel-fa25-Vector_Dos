@@ -126,8 +126,16 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Setup Terminal
 	TerminalSetup();
-	//The buffer should be maximum line  + 1 {For null terminator}
+
+	//Malloc and clear input_buffer that will hold user input
 	input_buffer = (char *)malloc(TERMINAL_MAX_LINE * sizeof(char));
+	if(input_buffer == NULL){
+	TracePrintf(0, "Error with malloc for input_buffer\n");
+		return;
+	}
+
+	//clear
+	memset(input_buffer, 0, (TERMINAL_MAX_LINE * sizeof(char)));
 
 	//initialize process queues
 	readyQueue = initializeQueue();

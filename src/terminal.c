@@ -17,7 +17,7 @@
 
 extern Terminal t_array[NUM_TERMINALS];
 
-void TerminalSetup(){
+void TerminalSetup(void){
 	TracePrintf(0, "We are setting up the Terminal array!\n");
 	
 	//Clear out and populate the struct
@@ -30,8 +30,11 @@ void TerminalSetup(){
 		t_array[x].message_line_len = 0;
 		memset(t_array[x].messages, 0, (sizeof(char *) * 100));
 	}
+
+	TracePrintf(0, "I am done setting up the terminals!\n");
 }
 
+//Add more logic here
 void TerminalFree(int tnum){
 	TracePrintf(0, "We are freeing Terminal %d\n", tnum);
 	memset(&t_array[tnum], 0, sizeof(Terminal));

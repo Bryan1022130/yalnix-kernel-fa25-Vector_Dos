@@ -4,21 +4,27 @@
 
 /*
  * System Call Interface
-
- * Each user-level system call (like Fork, Exec, Exit, Wait) eventually
- * triggers a TRAP_KERNEL interrupt that is handled here.
- 
- * These functions are invoked from the trap handler.
- * They manipulate PCBs, memory, and the scheduler to perform the
- * requested kernel services.
  */
 
-// Process-related syscalls
-int sys_fork(void);
-int sys_exec(char *filename, char *argv[]);
-void sys_exit(int status);
-int sys_wait(int *status_ptr);
-
-// Memory-related syscalls
-int sys_brk(void *addr);
-
+int KernelGetPid(void);
+int KernelFork(void);
+int KernelExec(char *filename, char *argv[]);
+void KernelExit(int status);
+int KernelWait(int *status_ptr);
+int KernelBrk(void *addr);
+int KernelDelay(int clock_ticks);
+int KernelTtyRead(int tty_id, void *buf, int len);
+int KernelTtyWrite(int tty_id, void *buf, int len);
+int KernelReadSector(int sector, void *buf);
+int KernelWriteSector(int sector, void *buf);
+int KernelPipeInit(int *pipe_id_ptr);
+int KernelPipeRead(int pipe_id, void *buf, int len);
+int KernelPipeWrite(int pipe_id, void *buf, int len);
+int KernelLockInit(int *lock_idp);
+int KernelAcquire(int lock_id);
+int KernelRelease(int lock_id);
+int KernelCvarInit(int *cvar_idp);
+int KernelCvarSignal(int cvar_id);
+int KernelCvarBroadcast(int cvar_id);
+int KernelCvarWait(int cvar_id, int lock_id);
+int KernelReclaim(int lock_id);

@@ -15,7 +15,7 @@ extern unsigned long frame_count;
 extern Queue *readyQueue;
 extern PCB *idle_process;
 
-int GetPid(void) {
+int KernelGetPid(void) {
     if (current_process == NULL) {
         TracePrintf(0, "GetPid called but current_process NULL\n");
         return ERROR;
@@ -23,7 +23,7 @@ int GetPid(void) {
     return current_process->pid;
 }
 
-int Fork(void) {
+int KernelFork(void) {
     /*
      * GOAL:
      *  Create a new process that is a copy of the current one.
@@ -116,7 +116,7 @@ int Fork(void) {
     return child->pid;
 }
 
-int Exec(char *filename, char *argv[]) {
+int KernelExec(char *filename, char *argv[]) {
     /*
      * GOAL:
      *  Replace current process’s memory image with a new program.
@@ -146,7 +146,7 @@ int Exec(char *filename, char *argv[]) {
     return 0;
 }
 
-void Exit(int status) {
+void KernelExit(int status) {
     /*
      * GOAL:
      *  Terminate the current process and notify parent.
@@ -178,7 +178,7 @@ void Exit(int status) {
     KernelContextSwitch(KCSwitch, current_process, next);
 }
 
-int Wait(int *status_ptr) {
+int KernelWait(int *status_ptr) {
     /*
      * GOAL:
      *  Wait for a child process to exit and collect its status.
@@ -215,7 +215,7 @@ int Wait(int *status_ptr) {
     return 0;
 }
 
-int Brk(void *addr) {
+int KernelBrk(void *addr) {
     /*
      * GOAL:
      *  Adjust end of data segment for the calling process.
@@ -240,7 +240,7 @@ int Brk(void *addr) {
     return 0;
 }
 
-int Delay(int clock_ticks) {
+int KernelDelay(int clock_ticks) {
     if (clock_ticks <= 0) return 0;
 
     current_process->wake_tick = current_tick + clock_ticks;
@@ -252,7 +252,6 @@ int Delay(int clock_ticks) {
     // Get next ready process
     PCB *next = get_next_ready_process();
 
-    // ✅ DON'T SWITCH TO IDLE IF IT'S NEVER RUN BEFORE
     if (next != NULL && next != current_process) {
         // Check if next is idle and has never run
         if (next == idle_process && next->curr_kc.lc.uc_mcontext.gregs[REG_ESP] == 0) {
@@ -271,12 +270,12 @@ int Delay(int clock_ticks) {
     return 0;
 }
 
-int TtyRead(int tty_id, void *buf, int len) {
+int KernelTtyRead(int tty_id, void *buf, int len) {
     TracePrintf(0, "TtyRead()\n");
     return ERROR;
 }
 
-int TtyWrite(int tty_id, void *buf, int len) {
+int KernelTtyWrite(int tty_id, void *buf, int len) {
     if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len <= 0)
         return ERROR;
 
@@ -287,59 +286,59 @@ int TtyWrite(int tty_id, void *buf, int len) {
     return len;
 }
 
-int ReadSector(int sector, void *buf) {
+int KernelReadSector(int sector, void *buf) {
     TracePrintf(0, "ReadSector()\n");
     return ERROR;
 }
 
-int WriteSector(int sector, void *buf) {
+int KernelWriteSector(int sector, void *buf) {
     TracePrintf(0, "WriteSector()\n");
     return ERROR;
 }
 
-int PipeInit(int *pipe_id_ptr) {
+int KernelPipeInit(int *pipe_id_ptr) {
     TracePrintf(0, "PipeInit()\n");
     return ERROR;
 }
 
-int PipeRead(int pipe_id, void *buf, int len) {
+int KernelPipeRead(int pipe_id, void *buf, int len) {
     TracePrintf(0, "PipeRead()\n");
     return ERROR;
 }
 
-int PipeWrite(int pipe_id, void *buf, int len) {
+int KernelPipeWrite(int pipe_id, void *buf, int len) {
     TracePrintf(0, "PipeWrite()\n");
     return ERROR;
 }
 
-int LockInit(int *lock_idp) {
+int KernelLockInit(int *lock_idp) {
     return 0;
 }
 
-int Acquire(int lock_id) {
+int KernelAcquire(int lock_id) {
     return 0;
 }
 
-int Release(int lock_id) {
+int KernelRelease(int lock_id) {
     return 0;
 }
 
-int CvarInit(int *cvar_idp) {
+int KernelCvarInit(int *cvar_idp) {
     return 0;
 }
 
-int CvarSignal(int cvar_id) {
+int KernelCvarSignal(int cvar_id) {
     return 0;
 }
 
-int CvarBroadcast(int cvar_id) {
+int KernelCvarBroadcast(int cvar_id) {
     return 0;
 }
 
-int CvarWait(int cvar_id, int lock_id) {
+int KernelCvarWait(int cvar_id, int lock_id) {
     return 0;
 }
 
-int Reclaim(int lock_id) {
+int KernelReclaim(int lock_id) {
     return 0;
 }

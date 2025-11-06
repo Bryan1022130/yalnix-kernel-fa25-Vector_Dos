@@ -11,8 +11,7 @@
 	 //Store messages
 	 char *messages[100];
 
-
- }Terminal;
+}Terminal;
 
 
 void TerminalSetup(void);
