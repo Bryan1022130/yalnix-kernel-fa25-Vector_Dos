@@ -304,9 +304,13 @@ void HandleReceiveTrap(UserContext *CurrUC) {
     TracePrintf(0, "I will now read input!\n");
 
     //new line of input is available from the terminal indicated by the code field in the UserContext
+    //The max size a message can be is -> TERMINAL_MAX_LINE
+    //If user input is greater we have to split it up into these chunks
     int terminal = CurrUC->code;
-    char buffer[1000];
-    int len =0;
+    char buffer[TERMINAL_MAX_LINE];
+
+    //Note: This should stay constant, since if the message < TERMINAL_MAX_LINE, we should buffer
+    int len = TERMINAL_MAX_LINE;
 
     //read the input from the terminal using a TtyReceive 
     int length = TtyReceive(terminal, buffer, len);
