@@ -239,10 +239,14 @@ void HandleIllegalTrap(UserContext *CurrUC) {
 
 	*CurrUC = current_process->curr_uc;
 }
+
 /* =========================================
  * General Flow:
  * -> check if its in region 1
- * -> check if it is not going into heap memory (proc->current_user_brk)
+ * -> check if it's not going into heap memory (proc->current_user_brk)
+ * -> grow the current user stack
+ * -> update proc
+ * -> flush && return
  * =========================================
  */
 
@@ -290,12 +294,22 @@ void HandleMemoryTrap(UserContext *CurrUC) {
     //In we cant grow the stack then we should abort
     TracePrintf(0, "MemoryTrap: Error! I will now abort\n");
     abort();
+    *CurrUC = current_process->curr_uc;
+
 }
+
+
+/* =========================================
+ * General Flow:
+ * -> Abort()
+ * =========================================
+ */
 
 void HandleMathTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
-    TracePrintf(0, "TRAP: Math error! Halting.\n");
-    Halt();
+    TracePrintf(0, "MathTrap: Hello and Welcome to Math Trap!\n");
+    TracePrintf(0, "I will call abort(). Please hold\n");
+    abort();
     *CurrUC = current_process->curr_uc;
 }
 
