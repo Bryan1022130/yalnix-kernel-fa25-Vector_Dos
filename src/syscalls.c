@@ -1,6 +1,7 @@
 #include "syscalls.h"
 #include "process.h"
 #include "Queue.h"
+#include "terminal.h"
 #include <yalnix.h>
 #include <hardware.h>
 #include <ykernel.h>
@@ -14,6 +15,7 @@ extern unsigned char *track_global;
 extern unsigned long frame_count;
 extern Queue *readyQueue;
 extern PCB *idle_process;
+extern Terminal t_array[NUM_TERMINALS];
 
 int KernelGetPid(void) {
     if (current_process == NULL) {
@@ -234,7 +236,7 @@ int KernelBrk(void *addr) {
     if (addr == NULL) return ERROR;
 
     // For now, pretend success and record where the heap ends
-    proc->user_heap_brk = (unsigned int)addr;
+    proc->user_heap_brk = (void *)addr;
 
     // later (CP4) you’ll map/unmap frames here
     return 0;
@@ -269,22 +271,90 @@ int KernelDelay(int clock_ticks) {
 
     return 0;
 }
+/* ============================
+ * I/O Syscalls
+ * ============================
+ */
 
-int KernelTtyRead(int tty_id, void *buf, int len) {
-    TracePrintf(0, "TtyRead()\n");
-    return ERROR;
+int KernelTtyRead(int tty_id, void *buf, int len){
+	if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len <= 0){
+		TracePrintf(0, "One of your arguments was invalid!\n");
+		return ERROR;
+	}
+
+	//Call TtyReceive
+	int length = TtyReceive(tty_id, buf, len);
+
+	return length;
 }
 
-int KernelTtyWrite(int tty_id, void *buf, int len) {
-    if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len <= 0)
-        return ERROR;
 
-    char *msg = (char *)buf;
-    
-    TtyTransmit(tty_id, buf, len);
+int KernelTtyWrite(int tty_id, void *buf, int len){
+	if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len <= 0){
+		TracePrintf(0, "One of your arguments was invalid!\n");
+		return ERROR;
+	}
 
-    return len;
+	if(t_array[tty_id].waiting_process == current_process){
+		TracePrintf(0, "Sorry but you are waiting for transit to finish! PLEASE WAIT!\n");
+		return ERROR;
+	}
+
+	//The current process is waiting until a the Transmit Trap to be free
+	t_array[tty_id].waiting_process = current_process;
+
+	//If len is under TERMINAL_MAX_LINE or equal
+	if(len <= TERMINAL_MAX_LINE){
+		TracePrintf(0, "We can transmit your message with one call!\n");
+		TtyTransmit(tty_id, buf, len);
+		TracePrintf(0, "Transmit was done and returing to you this much -> %d", len);
+		return len;
+	}
+
+	TracePrintf(0, "Looks like we are going to transmit your message with many cycles!\n");
+	TracePrintf(0, "For debug purposes this is the amount that len is -> %ld\n");
+
+	char *temp_buf = malloc(TERMINAL_MAX_LINE * sizeof(char));
+	if(temp_buf == NULL){
+		TracePrintf(0, "There was an error with malloc in KernelTtyWrite()");
+		return ERROR;
+	}
+
+	//clear malloced space
+	memset(temp_buf, 0, sizeof(TERMINAL_MAX_LINE * sizeof(char)));
+
+	//--------------------------------------------------- Support logic for when len > TERMINAL_MAX_LINE
+	
+	unsigned long int bytes_left = len;
+	char *buffer_start = (char *)buf;
+	int copy_amount = TERMINAL_MAX_LINE;
+
+	while(bytes_left > 0){
+		TracePrintf(0, "INFO: This is the amount of bytes left -->%ld", bytes_left);
+		copy_amount = (bytes_left > TERMINAL_MAX_LINE) ? TERMINAL_MAX_LINE : bytes_left;
+		TracePrintf(0, "INFO: This is the amount of bytes that will be copied -->%ld", copy_amount);
+
+		//Copy from the current start of buffer into the temporary buffer
+		memcpy((void *)temp_buf, (void *)buffer_start, copy_amount);
+
+		//Call Transmit hardware function
+		TtyTransmit(tty_id, temp_buf, copy_amount);
+
+		//Move the buffer pointer to next place to copy
+		buffer_start += copy_amount;
+		bytes_left -= copy_amount;
+	}
+
+	//free the temp buf
+	free(temp_buf);
+	TracePrintf(0, "Great we are done with the KernelTtyWrite syscall! Bye!\n");
+	return len;
 }
+
+/* ============================
+ * Other Syscalls?
+ * ============================
+ */
 
 int KernelReadSector(int sector, void *buf) {
     TracePrintf(0, "ReadSector()\n");
@@ -295,6 +365,11 @@ int KernelWriteSector(int sector, void *buf) {
     TracePrintf(0, "WriteSector()\n");
     return ERROR;
 }
+
+/* ============================
+ * IPC Syscalls
+ * ============================
+ */
 
 int KernelPipeInit(int *pipe_id_ptr) {
     TracePrintf(0, "PipeInit()\n");
@@ -310,6 +385,11 @@ int KernelPipeWrite(int pipe_id, void *buf, int len) {
     TracePrintf(0, "PipeWrite()\n");
     return ERROR;
 }
+
+/* ============================
+ * Synchronization Syscalls
+ * ============================
+ */
 
 int KernelLockInit(int *lock_idp) {
     return 0;
