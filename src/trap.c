@@ -143,7 +143,11 @@ void HandleKernelTrap(UserContext *CurrUC){
 	}
 
 	//Store the value that we get from the syscall into the regs[0];
-	CurrUC->regs[0] = sys_return;
+	//CurrUC->regs[0] = sys_return;
+
+	current_process->curr_uc = *CurrUC; // keep updated registers
+	current_process->curr_uc.regs[0] = sys_return; // sets return value register
+
 	*CurrUC = current_process->curr_uc;
 	TracePrintf(0, "Leaving HandleKernelTrap =====================================================================\n");
 	return;
@@ -167,14 +171,48 @@ void HandleClockTrap(UserContext *CurrUC){
     PCB *old_proc = current_process;
     memcpy(&old_proc->curr_uc, CurrUC, sizeof(UserContext));
 
+	
+    // wake up sleeping process when its time
+    QueueNode *node = sleepQueue->head;
+    QueueNode *prev = NULL;
+
+    while (node != NULL) {
+	PCB *p = (PCB *)node->data;
+	QueueNode *next = node->next;
+
+	// ckeck if its time to wake sleeping process
+	if (p->wake_tick <= current_tick) {
+	    TracePrintf(1, "ClockTrap: waking PID %d at tick %lu\n",
+		    p->pid, current_tick);
+
+	    // remove from SleepQueue
+	    if (prev == NULL)
+		sleepQueue->head = next;
+	    else
+		prev->next = next;
+	    if(next == NULL)
+		sleepQueue->tail = prev;
+
+	    sleepQueue->size--;
+
+	    //mark proc ready and move to ready
+	    p->currState = READY;
+	    Enqueue(readyQueue, p);
+	}else {
+	    prev = node;
+	}
+	node = next;
+    }
+
+
     if(idle_process == current_process && current_process->currState == READY){
 	    Enqueue(readyQueue, current_process);
     } 
 
     //Check if there is node
-    QueueNode *node = peek(readyQueue);
-    TracePrintf(0, "Dequeued node: %p\n", node);
-    if(node == NULL && current_process->currState == RUNNING){
+    QueueNode *rnode = peek(readyQueue);
+    TracePrintf(0, "Dequeued node: %p\n", rnode);
+    if(rnode == NULL && current_process->currState == RUNNING){
 	    TracePrintf(0,"There is no new process that is ready!");
 	    return;
     }

@@ -218,57 +218,150 @@ int KernelWait(int *status_ptr) {
 }
 
 int KernelBrk(void *addr) {
-    /*
-     * GOAL:
-     *  Adjust end of data segment for the calling process.
-     *
-     *  1. Call SetKernelBrk(addr) if in kernel.
-     *  2. Or adjust process heap in Region 1 via vm subsystem.
-     *  3. Return 0 on success, ERROR otherwise.
-     */
-     TracePrintf(1, "sys_brk called: %p\n", addr);
+
+     TracePrintf(1, "KernelBrk: requested addr=%p\n", addr);
 
     // get current process
     PCB *proc = current_process;
-    if (proc == NULL) return ERROR;
+
+    if (!proc) return ERROR;
 
     // check address sanity
-    if (addr == NULL) return ERROR;
+    if (!addr) return ERROR;
 
     // For now, pretend success and record where the heap ends
-    proc->user_heap_brk = (void *)addr;
+    //proc->user_heap_brk = (void *)addr;
+
+    // Converting to integers
+    uintptr_t new_brk_req = (uintptr_t)addr; // requested break
+    uintptr_t old_brk = (uintptr_t)proc->user_heap_brk; //currrent brk
+
+    // page rounding 
+    uintptr_t new_brk = (new_brk_req + (PAGESIZE - 1)) & ~(uintptr_t)(PAGESIZE - 1);
+
+    // Pointers 
+    pte_t *pt = (pte_t *)proc->AddressSpace;
+
+    // computing stack boundary
+    uintptr_t stack_base_vpn = ((uintptr_t)proc->user_stack_ptr) >> PAGESHIFT;
+
+    // check is brk makes sense 
+    // is the brk above or below the current brk and or base?
+    if (new_brk < (uintptr_t)VMEM_1_BASE) return ERROR; // cannot be bellow region 1
+    if (old_brk < (uintptr_t)VMEM_1_BASE) old_brk = (uintptr_t)VMEM_1_BASE;
+
+    int old_vpn = (int)((old_brk - VMEM_1_BASE) >> PAGESHIFT);
+    int new_vpn = (int)((new_brk - VMEM_1_BASE) >> PAGESHIFT);
+
+    // leaving one page  between heap and stack 
+    // Cannot grow to or past (stack_base_vpn -1)
+    if (new_vpn >= (int)stack_base_vpn - 1) {
+	TracePrintf(0, "KernelBrk: would collide with stack (new_vpn=%d, stack_base_vpn=%lu)\n",
+	new_vpn, (unsigned long)stack_base_vpn);
+	return ERROR;
+    }
+
+    if (new_brk == old_brk) return 0;
+
+    // Growing and shinking heap
+    if (new_brk > old_brk){
+    // grow heap
+	int start_vpn = old_vpn; 
+	int end_vpn = new_vpn - 1;
+
+	TracePrintf(1, "KernelBrk: grow heap from vpn %d to %d\n", start_vpn, end_vpn);
+
+	for (int vpn = start_vpn; vpn<= end_vpn; vpn++){
+		// we skip pages already valid
+		if (pt[vpn].valid) continue;
+
+		int pfn = find_frame(track_global, frame_count);
+		if (pfn == ERROR){
+			TracePrintf(0, "KernelBrk: OOM while growing at vpn=%d\n", vpn);
+			// roll page pages we just mapped
+			for (int r = start_vpn; r < vpn; r++){
+				if (pt[r].valid){
+					frame_free(track_global, pt[r].pfn);
+					pt[r].pfn = 0;
+					pt[r].valid = 0;
+					pt[r].prot = 0;
+				}
+			}
+			return ERROR;
+		}
+		// mapping read and write for user heap
+		pt[vpn].pfn = pfn;
+		pt[vpn].valid = 1;
+		pt[vpn].prot = (PROT_READ | PROT_WRITE);
+	}
+	// shrinking heap
+	}else {
+
+	int start_vpn = new_vpn; //first page to free
+	int end_vpn = old_vpn -1; // last page to free
+
+	TracePrintf(1, "KernelBrk: shrinking heap from vpn %d down to %d\n", end_vpn, start_vpn);
+
+	for(int vpn = start_vpn; vpn <= end_vpn; vpn++){
+		if (!pt[vpn].valid)continue; //nothing to free if invalid 
+
+		// freeing physical frame and clear PTE
+		frame_free(track_global, pt[vpn].pfn);
+		pt[vpn].pfn = 0;
+		pt[vpn].valid = 0;
+		pt[vpn].prot = 0;
+	}
+    }
+    // flush
+    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+    proc->user_heap_brk = (void *)new_brk;
+    TracePrintf(1, "KernelBrk: success, new brk=%p\n", proc->user_heap_brk);
 
     // later (CP4) you’ll map/unmap frames here
     return 0;
 }
 
 int KernelDelay(int clock_ticks) {
-    if (clock_ticks <= 0) return 0;
 
-    current_process->wake_tick = current_tick + clock_ticks;
-    current_process->currState = BLOCKED;
+    TracePrintf(1, "KernelDelay: called by PID %d with %d ticks\n",
+	current_process->pid, clock_ticks);
 
-    // put it on a "sleep queue"
-    Enqueue(sleepQueue, current_process);
-
-    // Get next ready process
-    PCB *next = get_next_ready_process();
-
-    if (next != NULL && next != current_process) {
-        // Check if next is idle and has never run
-        if (next == idle_process && next->curr_kc.lc.uc_mcontext.gregs[REG_ESP] == 0) {
-            TracePrintf(0, "Delay: Can't switch to idle - it's never run! Continuing with current.\n");
-            current_process->currState = READY;  // Unblock ourselves
-            Dequeue(sleepQueue);  // Remove from sleep queue
-        } else {
-            KernelContextSwitch(KCSwitch, current_process, next);
-        }
-    } else {
-        TracePrintf(0, "Delay: no other process ready, continuing with current\n");
-        current_process->currState = READY;
-        Dequeue(sleepQueue);
+    // check if tick makes sense
+    // tick cannot be less than 0
+    if (clock_ticks < 0) {
+	TracePrintf(0, "KernelDelay: invalid tick count (<0)\n");
+	return ERROR;
     }
 
+    // if 0 clock has not started
+    if( clock_ticks == 0) {
+	TracePrintf(1, "KernelDelay: tick count = 0, returning\n");
+	return 0;
+    }
+
+    // Records wake up time
+    // clock trap increments current_tick very tick
+    // ordered by wake tick in sleep queue moved to ready queue when ready
+    current_process->wake_tick = current_tick + clock_ticks;
+
+    // block current proccess and put it in sleep queue
+    current_process->currState = BLOCKED;
+    Enqueue(sleepQueue, current_process); // add proc to sleep queue
+    TracePrintf(1, "KernelDelay: PID %d sleeping unitil tick %lu\n",
+	current_process->pid, current_process->wake_tick);
+
+    // Get next ready process
+    // Context switch, picks next ready process, idle if none
+    PCB *next = get_next_ready_process();
+
+    if (next == NULL){
+	TracePrintf(0, "KernelDelay: no other ready process, continuing with idle\n");
+	next = idle_process;
+    }
+
+    KernelContextSwitch(KCSwitch, current_process, next);
+    TracePrintf(1, "KernelDelay: PID %d resumed after delay\n",
+		    current_process->pid);
     return 0;
 }
 /* ============================
