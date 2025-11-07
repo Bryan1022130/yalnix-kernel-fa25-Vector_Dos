@@ -347,6 +347,7 @@ int KernelDelay(int clock_ticks) {
     // block current proccess and put it in sleep queue
     current_process->currState = BLOCKED;
     Enqueue(sleepQueue, current_process); // add proc to sleep queue
+	//Enqueue(readyQueue, idle_process);
     TracePrintf(1, "KernelDelay: PID %d sleeping unitil tick %lu\n",
 	current_process->pid, current_process->wake_tick);
 

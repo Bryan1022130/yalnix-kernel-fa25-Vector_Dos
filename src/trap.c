@@ -176,6 +176,7 @@ void HandleClockTrap(UserContext *CurrUC){
     QueueNode *node = sleepQueue->head;
     QueueNode *prev = NULL;
 
+    
     while (node != NULL) {
 	PCB *p = (PCB *)node->data;
 	QueueNode *next = node->next;
@@ -203,6 +204,7 @@ void HandleClockTrap(UserContext *CurrUC){
 	}
 	node = next;
     }
+    
 
 
     if(idle_process == current_process && current_process->currState == READY){
@@ -227,7 +229,7 @@ void HandleClockTrap(UserContext *CurrUC){
 
     next->currState = RUNNING;
     if(next != old_proc){
-	TracePrintf(0, "Switching from PID %d to PID %d\n", old_proc->pid, next);
+	TracePrintf(0, "Switching from PID %d to PID %d\n", old_proc->pid, next->pid);
     	int kcs = KernelContextSwitch(KCSwitch, old_proc, next);
     	if(kcs == ERROR){
 	  	  TracePrintf(0, "There was an error with Kernel context switch!\n");

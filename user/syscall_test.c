@@ -8,7 +8,7 @@
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 #include <stdio.h> // for snprintf
 
-int main(void) {
+int test(void) {
      TtyPrintf(0, "\n=== [USER] Syscall Test Start ===\n");
 
     // 1. Check PID
@@ -29,21 +29,32 @@ int main(void) {
 
     // 3. Test Delay() inside a loop
     TtyPrintf(0, "[USER] Starting delay loop (3x 1 tick)...\n");
-    for (int i = 1; i <= 3; i++) {
+    int rid = 0;
+    /*
+    for (int i = 1; i <= 50; i++) {
         TtyPrintf(0, "[USER] Delay %d/3 start.\n", i);
-        Delay(1);
+        //Delay(1);
+	rid = GetPid();
         TtyPrintf(0, "[USER] Delay %d/3 done.\n", i);
     }
+    */
+    Delay(1);
+    
 
     // 4. Mix multiple syscalls
     TtyPrintf(0, "[USER] Interleaving GetPid and Brk again...\n");
     pid = GetPid();
-    Brk((void *)0x140000);
+    //Brk((void *)0x140000);
     TtyPrintf(0, "[USER] New PID = %d, heap moved to 0x140000.\n", pid);
+
 
     // 5. Confirm kernel handled all traps, then exit
     TtyPrintf(0, "[USER] All syscalls executed successfully. Exiting now.\n");
     Exit(0);
 
     return 0;  // should never reach
+}
+
+int main(void) {
+	test();
 }

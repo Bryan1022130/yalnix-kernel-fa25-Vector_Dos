@@ -183,6 +183,7 @@ void free_proc(PCB *proc){
 	free(proc);
 
 	//free pid
+	TracePrintf(0, "Illegal PID we're retiring : %d\n", proc->pid);
 	helper_retire_pid(proc->pid);
 	
 	TracePrintf(0, "Everything went well! We are leaving the free_proc() process!\n");
