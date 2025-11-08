@@ -1,5 +1,4 @@
 #pragma once
-
 #include <hardware.h>
 typedef struct pcb PCB;
 #include "memory.h"
@@ -27,6 +26,7 @@ struct pcb{
         UserContext curr_uc; //Hold the Current User Context { Not just the pointer}
 	
 	//Process information
+	int ppid;
         int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
 	int exit_status; // When a process is going to exit
 

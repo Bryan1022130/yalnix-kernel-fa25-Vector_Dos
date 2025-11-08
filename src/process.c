@@ -160,6 +160,7 @@ PCB* spawn_proc(void){
 		free(reg1_proc);
 		return NULL;
 	}
+
 	TracePrintf(0, "============================================ Debug Info =========================================================");
 	TracePrintf(0, "Process with PID: %d was created\n", proc->pid);
 	TracePrintf(0, "There are its stack frames pfns -> %d and -> %d\n", proc->kernel_stack_frames[0], proc->kernel_stack_frames[1]);
@@ -167,6 +168,7 @@ PCB* spawn_proc(void){
 	TracePrintf(0, "============================================ Debug Info End =====================================================");
 }
 
+//Need to add more to this
 void free_proc(PCB *proc){
 	if(proc == NULL){
 		TracePrintf(0, "ERROR! You are trying to free a NULL process!\n");

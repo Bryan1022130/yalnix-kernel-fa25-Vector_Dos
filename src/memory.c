@@ -5,6 +5,7 @@
 #include <hardware.h> 
 #include <ykernel.h> 
 
+#define TEMP_KSTACK 125
 #define V1_KSTACK 126
 #define V2_KSTACK 127
 #define IN_USE 1
@@ -23,6 +24,9 @@ void init_frames(unsigned char *track, int track_size){
 	for(int y = 0; y < _orig_kernel_brk_page; y++){
 		frame_alloc(track, y);
 	}
+	
+	//For when we need to access the kernel stack temporarily
+	frame_alloc(track, TEMP_KSTACK);
 	
 	//Alloc frames for the kernel stack
 	frame_alloc(track, V1_KSTACK);
@@ -49,5 +53,6 @@ void frame_alloc(unsigned char *track, int frame_number){
 }
 
 void frame_free(unsigned char *track, int frame_number){
+	TracePrintf(0, "Info --> This is the frame that is being freed -> %d", frame_number);
 	track[frame_number] = UNUSED;
 }

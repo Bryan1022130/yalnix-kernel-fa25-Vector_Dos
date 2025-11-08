@@ -77,7 +77,7 @@ void free_sframes(PCB *free_proc, unsigned char *track, int track_size){
         TracePrintf(0, "Freeing the Kernel Stack for the process, this many --> %d\n", KERNEL_STACK_PAGES);
         for(int i = 0; i < KERNEL_STACK_PAGES; i++){
 		int kernels_pfn = free_proc->kernel_stack_frames[i];
-		TracePrintf(0, "We are freeing this physical frame -> %d");
+		TracePrintf(0, "We are freeing this physical frame -> %d\n");
 		frame_free(track, kernels_pfn);
         }
 }

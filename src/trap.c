@@ -143,8 +143,8 @@ void HandleKernelTrap(UserContext *CurrUC){
 	}
 
 	//Store the value that we get from the syscall into the regs[0];
-	//CurrUC->regs[0] = sys_return;
-
+	CurrUC->regs[0] = sys_return;
+	TracePrintf(0, "This is the value of sys_return --> %d\n", sys_return);
 	current_process->curr_uc = *CurrUC; // keep updated registers
 	current_process->curr_uc.regs[0] = sys_return; // sets return value register
 
@@ -419,7 +419,7 @@ void HandleTransmitTrap(UserContext *CurrUC) {
     //Check if there is a blocked process
     if(t_array[terminal].waiting_process != NULL){
 	    TracePrintf(0, "There is a process waiting and this is the pid -> %d\n", t_array[terminal].waiting_process->pid);
-	    TracePrintf(0, "This is the size of the waiting buffer is -> %ld", t_array[terminal].message_line_len);
+	    TracePrintf(0, "This is the size of the waiting buffer is -> %ld\n", t_array[terminal].message_line_len);
 	    unsigned long int mes_len =  t_array[terminal].message_line_len;
 	    while(mes_len < 0){
 		    //We made need to buffer to be able to call TTytransit here
@@ -486,15 +486,19 @@ void HandleTrap(UserContext *CurrUC){
 
 //Abort function
 void abort(void){
-	TracePrintf(0, "We are aborting the current process!");
+	TracePrintf(0, "We are aborting the current process!\n");
 	
 	//Get the next process that can run 
 	PCB *next = get_next_ready_process();
+	if(next == NULL){
+		TracePrintf(0, "There is no ready process. ERROR idle should be in Queue!");
+		return;
+	}
 
 	free_proc(current_process);
 
 	//Context Switch
-	if(KernelContextSwitch(KCSwitch, NULL, next) < 0){
+	if(KernelContextSwitch(KCSwitch, current_process, next) < 0){
 		TracePrintf(0, "There was an error with KCS Switch!\n");
 		return;
 	}

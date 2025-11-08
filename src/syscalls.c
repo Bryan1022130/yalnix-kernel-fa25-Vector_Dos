@@ -18,105 +18,135 @@ extern PCB *idle_process;
 extern Terminal t_array[NUM_TERMINALS];
 extern PCB *init_process;
 
-int KernelGetPid(void) {
+
+void rollback_frames(int first_frame, int amount){
+	TracePrintf(0, "We are rolling back stack frames becauses there was an error!\n");
+	for(int x = first_frame; x < amount; x++){
+		frame_free(track_global, x);
+	}
+	TracePrintf(0, "We are done rolling back the stack frames. Leaving! Bye!\n");
+}
+
+int data_copy(void *parent_pte, int cpfn){
+	//This space is allocated in memory.c
+	int temp_vpn_kernel = 125;
+
+	void *kernel_ptr = (void *)(temp_vpn_kernel << PAGESHIFT);
+
+	//Store in kernel memory so that we can memcpy
+	kernel_page_table[temp_vpn_kernel].pfn = cpfn;
+	kernel_page_table[temp_vpn_kernel].valid = 1;
+	kernel_page_table[temp_vpn_kernel].prot = (PROT_READ | PROT_WRITE);
+
+	//Flush so that new table entry is recongnized
+	WriteRegister(REG_TLB_FLUSH, (unsigned int)kernel_ptr);
+
+	//Copy the data from parent in to kernel_ptr (our our child)
+	memcpy(kernel_ptr, parent_pte, PAGESIZE);
+
+	//Clear out the space
+	kernel_page_table[temp_vpn_kernel].pfn = 0;
+	kernel_page_table[temp_vpn_kernel].valid = 0;
+	kernel_page_table[temp_vpn_kernel].prot = 0;
+
+	WriteRegister(REG_TLB_FLUSH, (unsigned int)kernel_ptr);
+}
+
+int KernelGetPid(void){
     if (current_process == NULL) {
         TracePrintf(0, "GetPid called but current_process NULL\n");
         return ERROR;
     }
+    TracePrintf(0, "This is the current pid number -> %d\n", current_process->pid);
     return current_process->pid;
 }
 
 int KernelFork(void) {
-    /*
-     * GOAL:
-     *  Create a new process that is a copy of the current one.
-     *
-     * STEPS:
-     *  1. Allocate a new PCB.
-     *  2. Copy parent's address space and kernel/user contexts.
-     *  3. Set child->state = READY and add to scheduler queue.
-     *  4. Return child's PID to parent, and 0 to child.
-     *
-     */
+    TracePrintf(0, "==========================================================================================\n");
+    TracePrintf(0, "This is the KernelFork() function and this is the current pid -> %d\n", current_process->pid);
 
-    TracePrintf(1, "Fork called by pid %d\n", current_process->pid);
+    PCB *child = spawn_proc();
+    if(child == NULL){
+	    TracePrintf(0, "There was an error making a process in KernelFork()\n");
+	    return ERROR;
+    }
+    
+    //Set up info needed for fork
+    int child_pid = child->pid;
+    pte_t *child_reg1 = (pte_t *)child->AddressSpace;
+    pte_t *parent_reg1 = (pte_t *)current_process->AddressSpace;
 
-    PCB *child = (PCB *)malloc(sizeof(PCB));
-    if (!child) return ERROR;
+    int frames_used = 0;
+    int first_frame_used = 0;
+    int used = 0;
+    int return_value = 0;
 
-    // --- duplicate address space ---
-    pte_t *parent_pt = (pte_t *)current_process->AddressSpace;
+    //Loop through parent region 1 space and copying over to child
+    for (int vpn = 0; vpn < MAX_PT_LEN; vpn++){
+	    if (!parent_reg1[vpn].valid) continue;
 
-    // allocate page table frame for child
-    int child_pt_pfn = find_frame(track_global, frame_count);
-    if (child_pt_pfn == ERROR) return ERROR;
+	    int pfn = find_frame(track_global, frame_count);
+	    //If there is an error free allocated frames and free the proc
+	    if(pfn == ERROR){
+		    rollback_frames(first_frame_used, frames_used);
+		    free_proc(child);
+		    return ERROR;
+	    }else if(used == 0){
+		    first_frame_used = pfn;
+		    used = 1;
+	    }
 
-    // temporarily map it in kernel region 0
-    int free_vpn = (KERNEL_STACK_BASE >> PAGESHIFT) - 2;
-    kernel_page_table[free_vpn].pfn = child_pt_pfn;
-    kernel_page_table[free_vpn].valid = 1;
-    kernel_page_table[free_vpn].prot = PROT_READ | PROT_WRITE;
-    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-    pte_t *child_pt = (pte_t *)((free_vpn) << PAGESHIFT);
+	    frames_used++;
 
-    // clear entries
-    memset(child_pt, 0, MAX_PT_LEN * sizeof(pte_t));
+	    //We have the pfn, we need to cycle through each parents page table entry
+	    //Copy over page
+	    //Note:  This might have to be the macro for VMEM_1_BASE
+	    void *parent_pte_find = (void *)((vpn + ((unsigned int )current_process->AddressSpace >> PAGESHIFT)) << PAGESHIFT);
+	    if(data_copy(parent_pte_find, pfn)  == ERROR){
+		    TracePrintf(0, "Error with trying to copy parent data to child in KernelFork()\n");
+		    return ERROR;
+	    }
 
-    // copy valid parent pages
-    for (int vpn = 0; vpn < MAX_PT_LEN; vpn++) {
-        if (!parent_pt[vpn].valid) continue;
-        int pfn = find_frame(track_global, frame_count);
-        if (pfn == ERROR) return ERROR;
+	    //set up new page table entries for child region 1 page table
+	    child_reg1[vpn].pfn = pfn;
+	    child_reg1[vpn].prot = parent_reg1[vpn].prot;
+	    child_reg1[vpn].valid = 1;
 
-        // map parent + child pages temporarily
-        int tmp_parent = free_vpn - 1;
-        int tmp_child  = free_vpn - 3;
-        kernel_page_table[tmp_parent].pfn = parent_pt[vpn].pfn;
-        kernel_page_table[tmp_parent].valid = 1;
-        kernel_page_table[tmp_parent].prot = PROT_READ;
-
-        kernel_page_table[tmp_child].pfn = pfn;
-        kernel_page_table[tmp_child].valid = 1;
-        kernel_page_table[tmp_child].prot = PROT_READ | PROT_WRITE;
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-
-        memcpy((void *)(tmp_child << PAGESHIFT),
-               (void *)(tmp_parent << PAGESHIFT), PAGESIZE);
-
-        // unmap
-        kernel_page_table[tmp_parent].valid = 0;
-        kernel_page_table[tmp_child].valid = 0;
-
-        // fill child PT
-        child_pt[vpn].pfn = pfn;
-        child_pt[vpn].valid = 1;
-        child_pt[vpn].prot = parent_pt[vpn].prot;
     }
 
-    kernel_page_table[free_vpn].valid = 0;
-    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_ALL);
-
-    // record child address space
-    child->AddressSpace = child_pt;
-
-    // duplicate contexts
-    KCCopy(&current_process->curr_kc, child, NULL);
-    memcpy(&child->curr_uc, &current_process->curr_uc, sizeof(UserContext));
-    memcpy(&child->curr_kc, &current_process->curr_kc, sizeof(KernelContext));
-
-    child->curr_uc.regs[0] = 0;
-    current_process->curr_uc.regs[0] = child->pid;
-
-    // parent/child linkage
+    //Set up other information
+    child->ppid = current_process->pid;
     child->parent = current_process;
+    child->curr_uc = current_process->curr_uc;
+    child->user_heap_brk = current_process->user_heap_brk;
+    child->user_stack_ptr = current_process->user_stack_ptr;
+    child->exit_status = 0;
+
+    //Update fork children tracking information
     child->next_sibling = current_process->first_child;
     current_process->first_child = child;
+    child->first_child = NULL;
+    
+    //KCCopy to copy info from parent to child
+    int rc = KernelContextSwitch(KCCopy, child, NULL);
+    if(rc == ERROR){
+	    TracePrintf(0, "There was an error with KernelContextSwitch for child process on Fork()\n");
+	    return ERROR;
+    }
 
-    child->currState = READY;
-    Enqueue(readyQueue, child);
+    if(current_process->pid != child_pid){
+	    TracePrintf(0, "I am the parent process! Just to make sure here is my pid -> %d\n", current_process->pid);
+	    //The parent returns the child pid 
+	    return_value = child_pid;
 
-    TracePrintf(1, "Fork success, child pid %d\n", child->pid);
-    return child->pid;
+    }else{
+	    TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", current_process->pid);
+	    TracePrintf(0, "Okay great! I will add myself to the ready queue because I am not on it yet :(!\n");
+	    child->currState = READY;
+	    Enqueue(readyQueue, child);
+    }
+
+    return return_value;
 }
 
 int KernelExec(char *filename, char *argv[]) {
@@ -159,7 +189,7 @@ void KernelExit(int status) {
     // Mark proc as finished but not freed
     current_process->currState = ZOMBIE;
 
-    // making orphans (settting their parent to init PID 1
+    // making orphans (setting their parent to init PID 1
     PCB *child = current_process->first_child;
     while (child != NULL){
         child->parent = init_process;
@@ -241,6 +271,7 @@ int KernelWait(int *status_ptr) {
 }
 
 int KernelBrk(void *addr) {
+     TracePrintf(1, "THIS IS OUR KERNEL FUNCTION THAT WE CREATED\n");
 
      TracePrintf(1, "KernelBrk: requested addr=%p\n", addr);
 
@@ -270,7 +301,7 @@ int KernelBrk(void *addr) {
 
     // check is brk makes sense 
     // is the brk above or below the current brk and or base?
-    if (new_brk < (uintptr_t)VMEM_1_BASE) return ERROR; // cannot be bellow region 1
+    if (new_brk < (uintptr_t)VMEM_1_BASE) return ERROR; // cannot be below region 1
     if (old_brk < (uintptr_t)VMEM_1_BASE) old_brk = (uintptr_t)VMEM_1_BASE;
 
     int old_vpn = (int)((old_brk - VMEM_1_BASE) >> PAGESHIFT);
@@ -284,7 +315,10 @@ int KernelBrk(void *addr) {
 	return ERROR;
     }
 
-    if (new_brk == old_brk) return 0;
+    if (new_brk == old_brk){
+	    TracePrintf(0, "Your new brk address is the same as the current!\n");
+	    return 0;
+    }
 
     // Growing and shinking heap
     if (new_brk > old_brk){
@@ -341,7 +375,10 @@ int KernelBrk(void *addr) {
     TracePrintf(1, "KernelBrk: success, new brk=%p\n", proc->user_heap_brk);
 
     // later (CP4) you’ll map/unmap frames here
+
+    TracePrintf(1, "THIS IS THE END OF OUR KERNEL FUNCTION THAT WE CREATED\n");
     return 0;
+
 }
 
 int KernelDelay(int clock_ticks) {
