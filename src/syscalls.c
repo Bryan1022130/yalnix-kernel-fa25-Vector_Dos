@@ -16,6 +16,7 @@ extern unsigned long frame_count;
 extern Queue *readyQueue;
 extern PCB *idle_process;
 extern Terminal t_array[NUM_TERMINALS];
+extern PCB *init_process;
 
 int KernelGetPid(void) {
     if (current_process == NULL) {
@@ -149,72 +150,94 @@ int KernelExec(char *filename, char *argv[]) {
 }
 
 void KernelExit(int status) {
-    /*
-     * GOAL:
-     *  Terminate the current process and notify parent.
-     *
-     *  1. Set CurrentProcess->exit_status = status.
-     *  2. Change state to ZOMBIE.
-     *  3. Wake up any waiting parent process.
-     *  4. Call scheduler to switch to next runnable process.
-     */
 
     TracePrintf(1, "Process %d exiting with status %d\n", current_process->pid, status);
     TracePrintf(1, "This is exit syscall\n");
+
+    // save exit status
     current_process->exit_status = status;
+    // Mark proc as finished but not freed
     current_process->currState = ZOMBIE;
 
-    // wake waiting parent if any
-    if (current_process->parent && current_process->parent->currState == BLOCKED) {
-        Enqueue(readyQueue, current_process->parent);
-        current_process->parent->currState = READY;
+    // making orphans (settting their parent to init PID 1
+    PCB *child = current_process->first_child;
+    while (child != NULL){
+        child->parent = init_process;
+        child = child->next_sibling;
     }
 
-    PCB *next = get_next_ready_process();
-    
-    if (next == idle_process && next->curr_kc.lc.uc_mcontext.gregs[REG_ESP] == 0) {
-        TracePrintf(0, "Exit: Cannot switch to idle (never run). Halting system.\n");
-        Halt();  // No other process to run, system should halt
+    if (current_process->parent != NULL) {
+        PCB *parent = current_process->parent;
+
+        if (parent->currState == BLOCKED) {
+            TracePrintf(2, "KernelExit: waking parent PID %d\n", parent->pid);
+            parent->currState = READY;
+            Enqueue(readyQueue, parent);
+        }
     }
-    
-    KernelContextSwitch(KCSwitch, current_process, next);
+
+    // Pick next proc to run
+    PCB *next_proc = get_next_ready_process();
+
+    if(next_proc == NULL){
+        TracePrintf(0, "KernelExit: no more runnable process, halting system.\n");
+        Halt();
+        return;
+    }
+
+    // context switch from dying proc
+    TracePrintf(1, "KernelExit: switching from PID %d to PID %d\n", current_process->pid, next_proc->pid);
+    KernelContextSwitch(KCSwitch, current_process, next_proc);
+
+    TracePrintf(0, "ERROR: KernelExit returned unexpectedly for PID %d\n", current_process->pid);
 }
 
 int KernelWait(int *status_ptr) {
-    /*
-     * GOAL:
-     *  Wait for a child process to exit and collect its status.
-     *
-     *  1. If no children alive → return ERROR.
-     *  2. If child in ZOMBIE state:
-     *       - Copy child->exit_status into *status_ptr.
-     *       - Free child’s PCB via proc_free().
-     *       - Return child PID.
-     *  3. Else, block the calling process until child exits.
-     */
+
+    while (1){
     PCB *child = current_process->first_child;
 
+    // No children
     if (child == NULL) {
-        TracePrintf(0, "Wait(): no children\n");
+        TracePrintf(0, "KernelWait: no children for PID %d\n", current_process->pid);
         return ERROR;
     }
 
     // look for zombie children
     while (child != NULL) {
         if (child->currState == ZOMBIE) {
-            if (status_ptr != NULL) *status_ptr = child->exit_status;
+	    // found terminated child to reap
+	    TracePrintf(1, "KernelWait: found zombie child PID %d for parent %d\n",
+			child->pid, current_process->pid);
+
+	    // copy exit status into parent memory
+            if (status_ptr != NULL)
+		*status_ptr = child->exit_status;
+
             int pid = child->pid;
-            //proc_free(child);
+	    // free child's PCB and memory
+            free_proc(child);
+	    // returns child's PID to parent
             return pid;
         }
         child = child->next_sibling;
     }
 
+    // No zombie found
+    TracePrintf(1, "KernelWait: no zombie found, blocking PID %d until a child exits\n",
+                    current_process->pid);
+
     // if none are terminated, block until clock trap wakes us
     current_process->currState = BLOCKED;
-    Enqueue(sleepQueue, current_process);
-    KernelContextSwitch(KCSwitch, current_process, get_next_ready_process());
-    return 0;
+    Enqueue(sleepQueue, current_process); // adds to cleep queue to mark as inactive
+
+    PCB *next = get_next_ready_process();
+    if (next == NULL) next = idle_process;
+
+    KernelContextSwitch(KCSwitch, current_process, next);
+    TracePrintf(1, "KernelWait: PID %d awakened — rechecking children\n",
+                    current_process->pid);
+  }
 }
 
 int KernelBrk(void *addr) {

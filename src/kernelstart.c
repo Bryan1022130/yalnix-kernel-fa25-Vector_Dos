@@ -39,6 +39,7 @@ unsigned char *track_global;
 PCB *current_process = NULL; 
 PCB *idle_process = NULL;
 PCB *process_free_head = NULL;
+PCB *init_process = NULL;
 
 // global process queues
 Queue *readyQueue;    
@@ -212,6 +213,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS (INIT) -------------------------------------\n");
 
 		PCB *init_pcb = create_init_proc(track, frame_count);
+		init_process = init_pcb;
 		if(init_pcb == NULL){
 			TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
 			TracePrintf(0, "Returning to idle process\n");
