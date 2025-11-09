@@ -41,7 +41,10 @@ int test(void) {
     TtyPrintf(0, "[USER] New PID = %d, heap moved to 0x140000.\n", pid);
 
 
-    // 5. Confirm kernel handled all traps, then exit
+    // 5. Test Exec()
+    //TtyPrintf(0, "[USER] Calling Exec() to run progB...\n"
+
+    // 6. Confirm kernel handled all traps, then exit
     TtyPrintf(0, "[USER] All syscalls executed successfully. Exiting now.\n");
     Exit(0);
 

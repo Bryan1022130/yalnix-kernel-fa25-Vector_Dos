@@ -158,6 +158,9 @@ int KernelExec(char *filename, char *argv[]) {
 
     if (filename == NULL || argv == NULL) return ERROR;
 
+    if(argv ==NULL){
+	TracePrintf(1, "Exec: arg is NULL, nuntinouing no args\n");
+    }
     // free old region1 frames
     pte_t *pt = (pte_t *)current_process->AddressSpace;
     for (int i = 0; i < MAX_PT_LEN; i++) {
@@ -233,6 +236,9 @@ void KernelExit(int status) {
 }
 
 int KernelWait(int *status_ptr) {
+
+    TracePrintf(0, "=============================================================================>\n");
+    TracePrintf(1, "This is wait syscall\n");
     while (1){
     PCB *child = current_process->first_child;
 
@@ -276,11 +282,14 @@ int KernelWait(int *status_ptr) {
     KernelContextSwitch(KCSwitch, current_process, next);
     TracePrintf(1, "KernelWait: PID %d awakened — rechecking children\n",
                     current_process->pid);
-  }
+  
+    TracePrintf(0, "===========================================WAIT END==========================>\n");
     return SUCCESS;
+    }
 }
 
 int KernelBrk(void *addr) {
+    TracePrintf(0, "=============================================================================>\n");
      TracePrintf(1, "THIS IS OUR KERNEL FUNCTION THAT WE CREATED\n");
 
      TracePrintf(1, "KernelBrk: requested addr=%p\n", addr);
