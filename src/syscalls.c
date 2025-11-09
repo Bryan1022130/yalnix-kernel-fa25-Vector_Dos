@@ -177,10 +177,6 @@ void KernelExit(int status) {
     TracePrintf(0, "========================================EXIT START==================================================\n");
     TracePrintf(1, "Process %d exiting with status %d\n", current_process->pid, status);
     TracePrintf(1, "This is exit syscall\n");
-
-    if(current_process->pid == 1)
-	    Halt();
-
     TracePrintf(0,"I am going to start the exit logic!\n");
     
     PCB *child = current_process->first_child;	

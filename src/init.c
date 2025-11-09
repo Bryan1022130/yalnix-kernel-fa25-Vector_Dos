@@ -20,12 +20,14 @@
 #define TRUE 1
 
 //Extern 
-extern pte_t *kernel_page_table;
 extern PCB *current_process;
+extern PCB *idle_process;
+
+extern pte_t *kernel_page_table;
 extern UserContext *KernelUC;
+
 extern unsigned long int frame_count;
 extern Queue *readyQueue;
-extern PCB *idle_process;
 
 PCB *create_init_proc(unsigned char *track, int track_size){
         TracePrintf(0, "Start of the init process </> \n");
@@ -33,7 +35,6 @@ PCB *create_init_proc(unsigned char *track, int track_size){
         PCB *init_proc =(PCB *)malloc(sizeof(PCB));
         if(init_proc == NULL){
                 TracePrintf(0, "Malloc error for init_proc\n");
-		free(init_proc);
                 return NULL;
         }
 
@@ -55,9 +56,9 @@ PCB *create_init_proc(unsigned char *track, int track_size){
 		return NULL;
 	}
 
-	init_proc->pid = helper_new_pid(proc_space);
 	memset(proc_space, 0, sizeof(MAX_PT_LEN * sizeof(pte_t)));
 	init_proc->AddressSpace = proc_space;
+	init_proc->pid = helper_new_pid(proc_space);
 
 	//a UserContext (from the the uctxt argument to KernelStart
 	memcpy(&init_proc->curr_uc, KernelUC, sizeof(UserContext));

@@ -182,6 +182,7 @@ void free_proc(PCB *proc, int free_flip){
 	//Unmap its region 1 and free frames
 	pte_t *region1 = (pte_t *)proc->AddressSpace;
 	for(int x = 0; x < MAX_PT_LEN; x++){
+		if(!region1[x].valid) continue;
 		frame_free(track_global, region1[x].pfn);
 		region1[x].prot = 0;
 		region1[x].pfn = 0;

@@ -56,7 +56,6 @@ void HandleKernelTrap(UserContext *CurrUC){
 			break;
 		
 		case YALNIX_EXIT:
-			TracePrintf(0, "This is HandleKernelTrap and we are calling Exit()\n");
 			KernelExit((int)CurrUC->regs[0]);
 			break;
 
@@ -145,7 +144,7 @@ void HandleKernelTrap(UserContext *CurrUC){
 	//Store the value that we get from the syscall into the regs[0];
 	CurrUC->regs[0] = sys_return;
 	TracePrintf(0, "This is the value of sys_return --> %d\n", sys_return);
-	current_process->curr_uc = *CurrUC; // keep updated registers
+//	current_process->curr_uc = *CurrUC; // keep updated registers
 	current_process->curr_uc.regs[0] = sys_return; // sets return value register
 
 	*CurrUC = current_process->curr_uc;

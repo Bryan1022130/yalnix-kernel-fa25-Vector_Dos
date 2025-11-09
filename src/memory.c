@@ -53,6 +53,6 @@ void frame_alloc(unsigned char *track, int frame_number){
 }
 
 void frame_free(unsigned char *track, int frame_number){
-	TracePrintf(0, "Info --> This is the frame that is being freed -> %d", frame_number);
+	TracePrintf(0, "Info --> This is the frame that is being freed -> %d\n", frame_number);
 	track[frame_number] = UNUSED;
 }
