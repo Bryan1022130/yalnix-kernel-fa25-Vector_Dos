@@ -161,6 +161,8 @@ void HandleKernelTrap(UserContext *CurrUC){
  */
 
 void HandleClockTrap(UserContext *CurrUC){
+    TracePrintf(0, "Entering HandleClockTrap ============================================================================\n");
+    TracePrintf(0, "This is the pid of the process calling the clock trap --> %d\n", current_process->pid);
     current_process->curr_uc = *CurrUC;
     TracePrintf(0, "\n\n");
 
@@ -204,8 +206,6 @@ void HandleClockTrap(UserContext *CurrUC){
 	}
 	node = next;
     }
-    
-
 
     if(idle_process == current_process && current_process->currState == READY){
 	    Enqueue(readyQueue, current_process);
@@ -239,7 +239,7 @@ void HandleClockTrap(UserContext *CurrUC){
         
     // Load new process's user context
     memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
-    *CurrUC = current_process->curr_uc;
+    //*CurrUC = current_process->curr_uc;
     TracePrintf(0, "Leaving HandleClockTrap ============================================================================\n\n\n\n");
     return;
 }

@@ -138,13 +138,13 @@ int KernelFork(void){
 	    return ERROR;
     }
 
-    if(parent->pid != child_pid){
-	    TracePrintf(0, "I am the parent process! Just to make sure here is my pid -> %d\n", parent->pid);
+    if(current_process->pid != child_pid){
+	    TracePrintf(0, "I am the parent process! Just to make sure here is my pid -> %d\n", current_process->pid);
 	    //The parent returns the child pid 
 	    return child_pid;
 
     }else{
-	    TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", parent->pid);
+	    TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", current_process->pid);
 	    return 0;
     }
 
