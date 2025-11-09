@@ -7,3 +7,9 @@ forky
 init
 getpid
 syscall_test
+brk_test
+delay_test
+exec_test
+getpid_test
+progB
+tty_test
