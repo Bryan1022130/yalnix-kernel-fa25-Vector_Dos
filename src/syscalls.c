@@ -187,6 +187,11 @@ void KernelExit(int status) {
     TracePrintf(0,"I am going to start the exit logic!\n");
     PCB *child = current_process->first_child;	
 
+    if (current_process->pid == 1) {
+	    TracePrintf(0, "I am the parent process! I will halt now!\n");
+	    Halt();
+    }
+
     //Loop through the children process of the current process
     while (child){
 	PCB *next_child = child->next_sibling;
