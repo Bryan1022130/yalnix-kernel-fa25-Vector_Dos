@@ -3,4 +3,7 @@ TTYLOG*
 yalnix
 backup/
 PHYS_MEM_*
-
+forky
+init
+getpid
+syscall_test
