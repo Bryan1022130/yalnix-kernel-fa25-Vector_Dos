@@ -55,5 +55,5 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used);
 
 //Process allocation functions
 PCB *spawn_proc(void);
-void free_proc(PCB *proc);
+void free_proc(PCB *proc, int free_flip);
 PCB *get_next_ready_process(void);

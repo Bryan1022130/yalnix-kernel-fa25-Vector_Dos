@@ -55,11 +55,13 @@ void data_copy(void *parent_pte, int cpfn){
 
 //Syscall Functions
 int KernelGetPid(void){
+    TracePrintf(0, "==========================================================================================\n");
     if (current_process == NULL) {
         TracePrintf(0, "GetPid called but current_process NULL\n");
         return ERROR;
     }
     TracePrintf(0, "KernelGetPid(): This is the current pid number -> %d\n", current_process->pid);
+    TracePrintf(0, "==========================================================================================\n");
     return current_process->pid;
 }
 
@@ -92,7 +94,7 @@ int KernelFork(void){
 	    //If there is an error free allocated frames and free the proc
 	    if(pfn == ERROR){
 		    rollback_frames(first_frame_used, frames_used);
-		    free_proc(child);
+		    free_proc(child, 1);
 		    return ERROR;
 	    }else if(used == 0){
 		    first_frame_used = pfn;
@@ -151,9 +153,10 @@ int KernelFork(void){
 }
 
 int KernelExec(char *filename, char *argv[]) {
+    TracePrintf(0, "==========================================================================================\n");
     TracePrintf(1, "Exec called by pid %d for %s\n", current_process->pid, filename);
 
-    if (filename == NULL) return ERROR;
+    if (filename == NULL || argv == NULL) return ERROR;
 
     // free old region1 frames
     pte_t *pt = (pte_t *)current_process->AddressSpace;
@@ -167,49 +170,67 @@ int KernelExec(char *filename, char *argv[]) {
     if (result == ERROR) return ERROR;
 
     TracePrintf(1, "Exec success -> now running new program %s\n", filename);
+    TracePrintf(0, "==========================================================================================\n");
 }
 
 void KernelExit(int status) {
-
+    TracePrintf(0, "========================================EXIT START==================================================\n");
     TracePrintf(1, "Process %d exiting with status %d\n", current_process->pid, status);
     TracePrintf(1, "This is exit syscall\n");
 
-    // save exit status
-    current_process->exit_status = status;
-    // Mark proc as finished but not freed
-    current_process->currState = ZOMBIE;
+    if(current_process->pid == 1)
+	    Halt();
 
-    // making orphans (setting their parent to init PID 1
-    PCB *child = current_process->first_child;
-    while (child != NULL){
+    TracePrintf(0,"I am going to start the exit logic!\n");
+    
+    PCB *child = current_process->first_child;	
+    //Loop through the children process of the current process
+    while (child){
+	PCB *next_child = child->next_sibling;
+
+	child->ppid = init_process->pid;
         child->parent = init_process;
-        child = child->next_sibling;
+
+	child->next_sibling = init_process->first_child;
+	init_process->first_child = child;
+
+        child = next_child;
     }
+    current_process->first_child = NULL;
 
-    if (current_process->parent != NULL) {
+    if (current_process->parent != NULL){
         PCB *parent = current_process->parent;
-
         if (parent->currState == BLOCKED) {
-            TracePrintf(2, "KernelExit: waking parent PID %d\n", parent->pid);
+            TracePrintf(1, "KernelExit: waking parent PID %d\n", parent->pid);
             parent->currState = READY;
+	    remove_data(sleepQueue, parent);
             Enqueue(readyQueue, parent);
         }
     }
 
+    TracePrintf(0, "I will now erase most of my data :)\n");
+
+    //Erase some of the data from the process
+    free_proc(current_process, 0);
+    current_process->exit_status = status;
+    current_process->currState = ZOMBIE;
+
     // Pick next proc to run
     PCB *next_proc = get_next_ready_process();
-
     if(next_proc == NULL){
-        TracePrintf(0, "KernelExit: no more runnable process, halting system.\n");
-        Halt();
-        return;
+	    TracePrintf(0, "We have not other process that can run so run idle :)\n");
+	    next_proc = idle_process;
     }
 
     // context switch from dying proc
     TracePrintf(1, "KernelExit: switching from PID %d to PID %d\n", current_process->pid, next_proc->pid);
-    KernelContextSwitch(KCSwitch, current_process, next_proc);
+    int rc = KernelContextSwitch(KCSwitch, current_process, next_proc);
+    if(rc == ERROR){
+	    TracePrintf(0, "ERROR: KernelExit returned unexpectedly for PID %d\n", current_process->pid);
+	    return;
+    }
 
-    TracePrintf(0, "ERROR: KernelExit returned unexpectedly for PID %d\n", current_process->pid);
+    TracePrintf(0, "===========================================EXIT END===============================================\n");
 }
 
 int KernelWait(int *status_ptr) {
@@ -235,7 +256,7 @@ int KernelWait(int *status_ptr) {
 
             int pid = child->pid;
 	    // free child's PCB and memory
-            free_proc(child);
+            free_proc(child, 1);
 	    // returns child's PID to parent
             return pid;
         }

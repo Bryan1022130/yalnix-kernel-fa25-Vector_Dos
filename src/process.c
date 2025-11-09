@@ -171,26 +171,42 @@ PCB* spawn_proc(void){
 }
 
 //Need to add more to this
-void free_proc(PCB *proc){
+void free_proc(PCB *proc, int free_flip){
+	TracePrintf(0, "+++++++++++++++++++++++++++++FREE PROC++++++++++++++++++++++++++++++++++\n");
 	if(proc == NULL){
 		TracePrintf(0, "ERROR! You are trying to free a NULL process!\n");
 	}
 
 	TracePrintf(0, "We are going to free the process with a pid of --> %d\n", proc->pid);
 
-	//free it kernelstack frames
-	free_sframes(proc, track_global, frame_count);
+	//Unmap its region 1 and free frames
+	pte_t *region1 = (pte_t *)proc->AddressSpace;
+	for(int x = 0; x < MAX_PT_LEN; x++){
+		frame_free(track_global, region1[x].pfn);
+		region1[x].prot = 0;
+		region1[x].pfn = 0;
+		region1[x].valid = 0;
+	}
 
-	//free it malloc space
-	free(proc->AddressSpace);
-	memset(proc, 0, sizeof(PCB));
-	free(proc);
+	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	//free pid
 	TracePrintf(0, "Illegal PID we're retiring : %d\n", proc->pid);
 	helper_retire_pid(proc->pid);
-	
+
+	//free the malloc space
+	free(proc->AddressSpace);
+
+	if(free_flip){
+		//free its kernelstack frames
+		free_sframes(proc, track_global, frame_count);
+
+		memset(proc, 0, sizeof(PCB));
+		free(proc);
+	}
+
 	TracePrintf(0, "Everything went well! We are leaving the free_proc() process!\n");
+	TracePrintf(0, "+++++++++++++++++++++++++++++FREE PROC END++++++++++++++++++++++++++++++++++\n");
 	return;
 }
 

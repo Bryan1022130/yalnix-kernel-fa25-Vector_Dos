@@ -122,3 +122,42 @@ QueueNode *peek(Queue *MQueue){
 	TracePrintf(0, "Okay we are now leaving the peek funciton\n");
 	return MQueue->head;
 }
+
+void remove_data(Queue *MQueue, void *find_data){
+	TracePrintf(0, "Hello! I will look for node to remove!\n");
+	if(isEmpty(MQueue)){
+		TracePrintf(0, "ERROR! The queue that you passed in was empty!\n");
+		return;
+	}
+	if(MQueue->head == NULL){
+		TracePrintf(0, "Error the head is NULL!\n");
+		return;
+	}
+	
+	if((PCB *)MQueue->head->data == (PCB *)find_data){
+		TracePrintf(0, "I found the PCB at the head! I am going to Dequeue.\n");
+		Dequeue(MQueue);
+		return;
+	}
+
+	//Loop through all nodes
+	QueueNode *prev = MQueue->head;
+	QueueNode *current = MQueue->head->next;
+
+	while(current){
+		if((PCB *)current->data == (PCB *)find_data){
+			TracePrintf(0, "Great I found your process! I will now remove it ;)\n");
+			prev->next = current->next;
+			if(current == MQueue->tail){
+				MQueue->tail = prev;
+			}
+			free(current);
+			MQueue->size--;
+			return;
+		}
+		//Advance to next node
+		prev = current;
+		current = current->next;
+	}
+	TracePrintf(0, "I could not find the process in the Queue! [THIS MAY BE AN ERROR]\n");
+}

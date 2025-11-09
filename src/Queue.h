@@ -41,3 +41,5 @@ int isEmpty(Queue *MQueue);
 // Peek at the head Node
 QueueNode *peek(Queue *MQueue);
 
+//To remove a specific Node
+void remove_data(Queue *MQueue, void *find_data);
