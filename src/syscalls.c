@@ -211,10 +211,13 @@ void KernelExit(int status) {
     TracePrintf(0, "I will now erase most of my data :)\n");
 
     //Erase some of the data from the process
-    free_proc(current_process, 0);
+   // free_proc(current_process, 0);
     current_process->exit_status = status;
     current_process->currState = ZOMBIE;
 
+
+    TracePrintf(1, "KernelExit: process %d is now ZOMBIE, waiting to be reaped\n",
+             current_process->pid);
     // Pick next proc to run
     PCB *next_proc = get_next_ready_process();
     if(next_proc == NULL){
