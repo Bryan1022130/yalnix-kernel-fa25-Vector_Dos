@@ -18,7 +18,7 @@ extern PCB *idle_process;
 extern Terminal t_array[NUM_TERMINALS];
 extern PCB *init_process;
 
-
+//Helper Functions
 void rollback_frames(int first_frame, int amount){
 	TracePrintf(0, "We are rolling back stack frames becauses there was an error!\n");
 	for(int x = first_frame; x < amount; x++){
@@ -27,16 +27,17 @@ void rollback_frames(int first_frame, int amount){
 	TracePrintf(0, "We are done rolling back the stack frames. Leaving! Bye!\n");
 }
 
-int data_copy(void *parent_pte, int cpfn){
+void data_copy(void *parent_pte, int cpfn){
 	//This space is allocated in memory.c
 	int temp_vpn_kernel = 125;
-
-	void *kernel_ptr = (void *)(temp_vpn_kernel << PAGESHIFT);
 
 	//Store in kernel memory so that we can memcpy
 	kernel_page_table[temp_vpn_kernel].pfn = cpfn;
 	kernel_page_table[temp_vpn_kernel].valid = 1;
 	kernel_page_table[temp_vpn_kernel].prot = (PROT_READ | PROT_WRITE);
+
+
+	void *kernel_ptr = (void *)(temp_vpn_kernel << PAGESHIFT);
 
 	//Flush so that new table entry is recongnized
 	WriteRegister(REG_TLB_FLUSH, (unsigned int)kernel_ptr);
@@ -52,29 +53,31 @@ int data_copy(void *parent_pte, int cpfn){
 	WriteRegister(REG_TLB_FLUSH, (unsigned int)kernel_ptr);
 }
 
+//Syscall Functions
 int KernelGetPid(void){
     if (current_process == NULL) {
         TracePrintf(0, "GetPid called but current_process NULL\n");
         return ERROR;
     }
-    TracePrintf(0, "This is the current pid number -> %d\n", current_process->pid);
+    TracePrintf(0, "KernelGetPid(): This is the current pid number -> %d\n", current_process->pid);
     return current_process->pid;
 }
 
-int KernelFork(void) {
+int KernelFork(void){
     TracePrintf(0, "==========================================================================================\n");
     TracePrintf(0, "This is the KernelFork() function and this is the current pid -> %d\n", current_process->pid);
 
+    PCB *parent = current_process;
     PCB *child = spawn_proc();
     if(child == NULL){
 	    TracePrintf(0, "There was an error making a process in KernelFork()\n");
 	    return ERROR;
     }
-    
+ 
     //Set up info needed for fork
     int child_pid = child->pid;
     pte_t *child_reg1 = (pte_t *)child->AddressSpace;
-    pte_t *parent_reg1 = (pte_t *)current_process->AddressSpace;
+    pte_t *parent_reg1 = (pte_t *)parent->AddressSpace;
 
     int frames_used = 0;
     int first_frame_used = 0;
@@ -101,11 +104,10 @@ int KernelFork(void) {
 	    //We have the pfn, we need to cycle through each parents page table entry
 	    //Copy over page
 	    //Note:  This might have to be the macro for VMEM_1_BASE
-	    void *parent_pte_find = (void *)((vpn + ((unsigned int )current_process->AddressSpace >> PAGESHIFT)) << PAGESHIFT);
-	    if(data_copy(parent_pte_find, pfn)  == ERROR){
-		    TracePrintf(0, "Error with trying to copy parent data to child in KernelFork()\n");
-		    return ERROR;
-	    }
+	    void *parent_pte_find = (void *)((vpn + ((unsigned int )VMEM_1_BASE >> PAGESHIFT)) << PAGESHIFT);
+	    TracePrintf(0, "We are going to copy the data over right now!\n");
+
+	    data_copy(parent_pte_find, pfn);
 
 	    //set up new page table entries for child region 1 page table
 	    child_reg1[vpn].pfn = pfn;
@@ -115,16 +117,16 @@ int KernelFork(void) {
     }
 
     //Set up other information
-    child->ppid = current_process->pid;
-    child->parent = current_process;
-    child->curr_uc = current_process->curr_uc;
-    child->user_heap_brk = current_process->user_heap_brk;
-    child->user_stack_ptr = current_process->user_stack_ptr;
+    child->ppid = parent->pid;
+    child->parent = parent;
+    memcpy(&child->curr_uc, &parent->curr_uc, sizeof(UserContext));
+    child->user_heap_brk = parent->user_heap_brk;
+    child->user_stack_ptr = parent->user_stack_ptr;
     child->exit_status = 0;
 
     //Update fork children tracking information
-    child->next_sibling = current_process->first_child;
-    current_process->first_child = child;
+    child->next_sibling = parent->first_child;
+    parent->first_child = child;
     child->first_child = NULL;
     
     //KCCopy to copy info from parent to child
@@ -134,32 +136,21 @@ int KernelFork(void) {
 	    return ERROR;
     }
 
-    if(current_process->pid != child_pid){
-	    TracePrintf(0, "I am the parent process! Just to make sure here is my pid -> %d\n", current_process->pid);
+    if(parent->pid != child_pid){
+	    TracePrintf(0, "I am the parent process! Just to make sure here is my pid -> %d\n", parent->pid);
 	    //The parent returns the child pid 
-	    return_value = child_pid;
+	    return child_pid;
 
     }else{
-	    TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", current_process->pid);
-	    TracePrintf(0, "Okay great! I will add myself to the ready queue because I am not on it yet :(!\n");
-	    child->currState = READY;
-	    Enqueue(readyQueue, child);
+	    TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", parent->pid);
+	    return 0;
     }
 
-    return return_value;
+    //If this is returned than we have an error
+    return ERROR;
 }
 
 int KernelExec(char *filename, char *argv[]) {
-    /*
-     * GOAL:
-     *  Replace current process’s memory image with a new program.
-
-     *  1. Reclaim current memory frames (Region 1) via frame_free().
-     *  2. Load executable 'filename' into new address space.
-     *  3. Reset user stack and registers (via LoadProgram()).
-     *  4. If successful, never return (process continues in new program).
-     *  5. If failed, return -1.
-     */
     TracePrintf(1, "Exec called by pid %d for %s\n", current_process->pid, filename);
 
     if (filename == NULL) return ERROR;
@@ -176,7 +167,6 @@ int KernelExec(char *filename, char *argv[]) {
     if (result == ERROR) return ERROR;
 
     TracePrintf(1, "Exec success -> now running new program %s\n", filename);
-    return 0;
 }
 
 void KernelExit(int status) {
@@ -223,7 +213,6 @@ void KernelExit(int status) {
 }
 
 int KernelWait(int *status_ptr) {
-
     while (1){
     PCB *child = current_process->first_child;
 
@@ -268,6 +257,7 @@ int KernelWait(int *status_ptr) {
     TracePrintf(1, "KernelWait: PID %d awakened — rechecking children\n",
                     current_process->pid);
   }
+    return SUCCESS;
 }
 
 int KernelBrk(void *addr) {
@@ -374,22 +364,17 @@ int KernelBrk(void *addr) {
     proc->user_heap_brk = (void *)new_brk;
     TracePrintf(1, "KernelBrk: success, new brk=%p\n", proc->user_heap_brk);
 
-    // later (CP4) you’ll map/unmap frames here
-
     TracePrintf(1, "THIS IS THE END OF OUR KERNEL FUNCTION THAT WE CREATED\n");
     return 0;
-
 }
 
 int KernelDelay(int clock_ticks) {
+    TracePrintf(0, "==================================================================================\n");
+    TracePrintf(1, "KernelDelay: called by PID %d with %d ticks\n", current_process->pid, clock_ticks);
+    TracePrintf(1, "KernelDelay: for reference this also the num of hardware clock ticks --> %d\n", current_tick);
 
-    TracePrintf(1, "KernelDelay: called by PID %d with %d ticks\n",
-	current_process->pid, clock_ticks);
-
-    // check if tick makes sense
-    // tick cannot be less than 0
     if (clock_ticks < 0) {
-	TracePrintf(0, "KernelDelay: invalid tick count (<0)\n");
+	TracePrintf(0, "KernelDelay: invalid tick count \n");
 	return ERROR;
     }
 
@@ -399,19 +384,15 @@ int KernelDelay(int clock_ticks) {
 	return 0;
     }
 
-    // Records wake up time
-    // clock trap increments current_tick very tick
-    // ordered by wake tick in sleep queue moved to ready queue when ready
+    //The wake time should be ticks passed plus the current clock ticks
     current_process->wake_tick = current_tick + clock_ticks;
 
     // block current proccess and put it in sleep queue
     current_process->currState = BLOCKED;
-    Enqueue(sleepQueue, current_process); // add proc to sleep queue
-	//Enqueue(readyQueue, idle_process);
-    TracePrintf(1, "KernelDelay: PID %d sleeping unitil tick %lu\n",
-	current_process->pid, current_process->wake_tick);
+    Enqueue(sleepQueue, current_process); 
 
-    // Get next ready process
+    TracePrintf(1, "KernelDelay: PID %d sleeping unitil tick %lu\n", current_process->pid, current_process->wake_tick);
+
     // Context switch, picks next ready process, idle if none
     PCB *next = get_next_ready_process();
 
@@ -420,11 +401,13 @@ int KernelDelay(int clock_ticks) {
 	next = idle_process;
     }
 
+    next->currState = RUNNING;
     KernelContextSwitch(KCSwitch, current_process, next);
-    TracePrintf(1, "KernelDelay: PID %d resumed after delay\n",
-		    current_process->pid);
+    TracePrintf(1, "KernelDelay: PID %d resumed after delay\n", current_process->pid);
+    TracePrintf(0, "==================================================================================\n");
     return 0;
 }
+
 /* ============================
  * I/O Syscalls
  * ============================

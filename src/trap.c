@@ -489,9 +489,10 @@ void abort(void){
 	TracePrintf(0, "We are aborting the current process!\n");
 	
 	//Get the next process that can run 
+	/*
 	PCB *next = get_next_ready_process();
 	if(next == NULL){
-		TracePrintf(0, "There is no ready process. ERROR idle should be in Queue!");
+		TracePrintf(0, "There is no ready process. ERROR idle should be in Queue!\n");
 		return;
 	}
 
@@ -504,4 +505,5 @@ void abort(void){
 	}
 
 	return;
+	*/
 }

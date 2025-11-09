@@ -31,4 +31,4 @@ int KernelReclaim(int lock_id);
 
 //Helper functions 
 void rollback_frames(int first_frame, int amount);
-int data_copy(void *parent_pte, int cpfn);
+void data_copy(void *parent_pte, int cpfn);

@@ -149,7 +149,7 @@ PCB* spawn_proc(void){
 
 	//Setup new process properties
 	proc->AddressSpace = reg1_proc;
-	proc->curr_uc = *KernelUC; //Copy in the User Context
+	//proc->curr_uc = current_process->curr_uc; //Copy in the User Context
 	proc->pid = helper_new_pid(reg1_proc);
 	proc->wake_tick = 0;
 
@@ -161,11 +161,13 @@ PCB* spawn_proc(void){
 		return NULL;
 	}
 
-	TracePrintf(0, "============================================ Debug Info =========================================================");
+	TracePrintf(0, "============================================ Debug Info =========================================================\n");
 	TracePrintf(0, "Process with PID: %d was created\n", proc->pid);
 	TracePrintf(0, "There are its stack frames pfns -> %d and -> %d\n", proc->kernel_stack_frames[0], proc->kernel_stack_frames[1]);
 	TracePrintf(0, "We are now going to exit the spawn_process function!\n");
-	TracePrintf(0, "============================================ Debug Info End =====================================================");
+	TracePrintf(0, "============================================ Debug Info End =====================================================\n");
+
+	return proc;
 }
 
 //Need to add more to this
