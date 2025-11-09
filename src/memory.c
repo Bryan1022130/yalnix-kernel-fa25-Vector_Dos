@@ -8,6 +8,7 @@
 #define TEMP_KSTACK 125
 #define V1_KSTACK 126
 #define V2_KSTACK 127
+
 #define IN_USE 1
 #define UNUSED 0
 
@@ -38,17 +39,16 @@ int find_frame(unsigned char *track, int track_size){
 	for(int z = 0; z < track_size; z++){
 		if(track[z] == UNUSED){
 			frame_alloc(track, z);
-			TracePrintf(0, "This is where we found a free frame ---> %d\n", z);
 			return z;
 		}
 	}
-
 	TracePrintf(0, "We did not find any free frames! Returning ERROR\n");
 	return ERROR;
 }
 
 //Index into buffer and set as in use
 void frame_alloc(unsigned char *track, int frame_number){
+	TracePrintf(0, "Info --> This is the frame that is being alloced -> %d\n", frame_number);
 	track[frame_number] = IN_USE;
 }
 

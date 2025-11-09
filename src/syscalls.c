@@ -86,6 +86,7 @@ int KernelFork(void){
     int used = 0;
     int return_value = 0;
 
+    TracePrintf(0, "I am going to copy over parent contents to the child\n");
     //Loop through parent region 1 space and copying over to child
     for (int vpn = 0; vpn < MAX_PT_LEN; vpn++){
 	    if (!parent_reg1[vpn].valid) continue;
@@ -117,6 +118,7 @@ int KernelFork(void){
 	    child_reg1[vpn].valid = 1;
 
     }
+    TracePrintf(0, "I am going to set up information for the child now\n");
 
     //Set up other information
     child->ppid = parent->pid;
@@ -141,10 +143,12 @@ int KernelFork(void){
     if(current_process->pid != child_pid){
 	    TracePrintf(0, "I am the parent process! Just to make sure here is my pid -> %d\n", current_process->pid);
 	    //The parent returns the child pid 
+	     TracePrintf(0, "==========================================================================================\n");
 	    return child_pid;
 
     }else{
 	    TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", current_process->pid);
+	    TracePrintf(0, "==========================================================================================\n");
 	    return 0;
     }
 
@@ -178,8 +182,8 @@ void KernelExit(int status) {
     TracePrintf(1, "Process %d exiting with status %d\n", current_process->pid, status);
     TracePrintf(1, "This is exit syscall\n");
     TracePrintf(0,"I am going to start the exit logic!\n");
-    
     PCB *child = current_process->first_child;	
+
     //Loop through the children process of the current process
     while (child){
 	PCB *next_child = child->next_sibling;

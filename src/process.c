@@ -100,7 +100,7 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
 		//Get the current pfn from our process && current proc
 		int kernel_curr_pfn = current_process->kernel_stack_frames[t];
 		int kernel_new_pfn = new_pcb->kernel_stack_frames[t];
-		TracePrintf(0, "This is the kernel pfn opf curr -> %d, and this is pfn of new -> %d", kernel_curr_pfn, kernel_new_pfn);
+		TracePrintf(0, "This is the kernel pfn of current process -> %d, and this is pfn of new process -> %d\n", kernel_curr_pfn, kernel_new_pfn);
 			
 		//Map this value in kernel virtual memory 
 		kernel_page_table[holdvpn].pfn = kernel_new_pfn;

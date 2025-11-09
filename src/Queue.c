@@ -44,7 +44,7 @@ void Enqueue(Queue *MQueue, void *data){
 	if(Node == NULL) return;
 	
 	PCB *convert = (PCB *)data;
-	TracePrintf(0, "You have enqueued and this is state of your PCB PID--> %d\n", convert->pid);
+	TracePrintf(0, "You have enqueued and this the pid of the process going into the queue--> %d\n", convert->pid);
 
 
 	//If the Queue is empty, make the first node the head node and tail 
@@ -58,13 +58,7 @@ void Enqueue(Queue *MQueue, void *data){
 	//Otherwise attach the new node to current tail and then update the tail Node
 	MQueue->tail->next = Node;
 	MQueue->tail = Node;
-	MQueue->size++;
-	
-	if(convert->pid == 0){
-		TracePrintf(0, "This is the IDLE PROCESS\n");
-	}else{
-		TracePrintf(0, "This is the INIT PROCESS\n");
-	}
+	MQueue->size++;	
 }
 
 void *Dequeue(Queue *MQueue){
