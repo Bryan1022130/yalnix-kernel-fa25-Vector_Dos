@@ -24,13 +24,12 @@ int test(void) {
     TtyPrintf(0, "[USER] Starting delay loop (3x 1 tick)...\n");
     int rid = 0;
     
-    for (int i = 1; i <= 50; i++) {
+    for (int i = 1; i <= 5; i++) {
        // TtyPrintf(0, "[USER] Delay %d/3 start.\n", i);
         Delay(1);
 	rid = GetPid();
         //TtyPrintf(0, "[USER] Delay %d/3 done.\n", i);
     }
-    return 0;
 
     //Delay(1);
     
@@ -46,8 +45,6 @@ int test(void) {
 
     // 6. Confirm kernel handled all traps, then exit
     TtyPrintf(0, "[USER] All syscalls executed successfully. Exiting now.\n");
-    Exit(0);
-
 }
 
 int main(void) {
