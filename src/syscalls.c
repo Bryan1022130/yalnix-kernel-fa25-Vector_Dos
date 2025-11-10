@@ -294,7 +294,26 @@ int KernelBrk(void *addr) {
 
     // TODO:
     // if addr < what the brk was when the program started,
-    // or addr is in the stack mappings, fail. (checking for null not sufficient)
+    // or addr is in the stack mappings, fail. (checking for null not sufficient
+
+    void *heap_start = current_process->user_heap_brk;
+    void *stack_start = current_process->user_stack_ptr;
+
+    TracePrintf(0, "current heap_start = %p\n", heap_start);
+    TracePrintf(0, "current stack_start = %p\n", stack_start);
+    TracePrintf(0, "current rounded addr = %p\n", addr);
+
+    if (addr < heap_start) {
+        TracePrintf(0, "KernelBrk: Requested addr (%p) is below heapstart (%p)\n", addr, heap_start);
+        return ERROR;
+    }
+
+
+    if (addr >= stack_start - PAGESIZE) {
+        TracePrintf(0, "KernelBrk: Requested addr (%p) collides with stack (%p)\n", addr, stack_start);
+        return ERROR;
+    }
+
     if (!addr) return ERROR;
 
     // Converting to integers
@@ -322,13 +341,13 @@ int KernelBrk(void *addr) {
 	return ERROR;
     }
 
-    if (new_brk == old_brk){
+    if (new_brk == old_brk) {
 	    TracePrintf(0, "Your new brk address is the same as the current!\n");
 	    return 0;
     }
 
     // Growing and shinking heap
-    if (new_brk > old_brk){
+    if (new_brk > old_brk) {
     // grow heap
 	int start_vpn = old_vpn; 
 	int end_vpn = new_vpn - 1;
@@ -359,7 +378,7 @@ int KernelBrk(void *addr) {
 		pt[vpn].prot = (PROT_READ | PROT_WRITE);
 	}
 	// shrinking heap
-	}else {
+	} else {
 
 	int start_vpn = new_vpn; //first page to free
 	int end_vpn = old_vpn -1; // last page to free
