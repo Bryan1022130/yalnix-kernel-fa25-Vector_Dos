@@ -7,7 +7,7 @@ int main(void){
 	void *addr2 = (void *)0x140000;
 	int rc1 = Brk(addr1);
 	int rc2 = Brk(addr2);
-	TtyPrintf(0, "[Brk Test] Brk()0x120000)=%d, Brk()0x140000)=d%\n", rc1, rc2);
+	TtyPrintf(0, "[Brk Test] Brk()0x120000)=%d, Brk()0x140000)%d\n", rc1, rc2);
 
 	for (uintptr_t i = 0x120000; i < 0x140000; i++) {
 		*(char *)i = 'a';
