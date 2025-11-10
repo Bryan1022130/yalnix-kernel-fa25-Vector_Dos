@@ -4,8 +4,6 @@
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ... 
 #include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
-#include <ylib.h> // Function declarations for many libc functions, Macro for NULL 
-#include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 
 //Our Header Files
@@ -109,7 +107,6 @@ int create_sframes(PCB *free_proc, unsigned char *track){
  */ 
 
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
-	TracePrintf(0,"\n\n");
 	TracePrintf(0, "--------------------------------> We are the start of the KernelStart function <---------------------------------\n");
 
 	/* <<<---------------------------------------------------------
@@ -130,9 +127,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Malloc and clear input_buffer that will hold user input
 	input_buffer = (char *)malloc(TERMINAL_MAX_LINE * sizeof(char));
-	if(input_buffer == NULL){
-	TracePrintf(0, "Error with malloc for input_buffer\n");
-		return;
+	if (input_buffer == NULL) {
+		TracePrintf(0, "Error with malloc for input_buffer\n");
+		Halt();
 	}
 
 	//clear
@@ -188,9 +185,9 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	current_kernel_brk = (void *)orig_brk_address;
 
 	int kbrk_return = SetKernelBrk(current_kernel_brk);
-	if(kbrk_return != 0){
+	if (kbrk_return != 0) {
 		TracePrintf(0, "There was an error in SetKernelBrk\n");
-		return;
+		Halt();
 	}
 
 	TracePrintf(1, "##################################### WE HAVE CALLED KERNELBREAK ##################################################\n");
@@ -199,45 +196,45 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//Create the idle proc or process 1
 	int idle_ret = idle_proc_create(track, user_page_table, uctxt);
-	if(idle_ret == ERROR){
+	if (idle_ret == ERROR) {
 		TracePrintf(0, "Idle process failed!\n");
-		return;
+		Halt();
 	}
 
-	if(cmd_args[0] == NULL){
+	if (cmd_args[0] == NULL) {
 		TracePrintf(0, "Nothing was passed so I will just loop cause Idle :)\n");
 		idle_process->currState = READY;
 		Enqueue(readyQueue, idle_process);
-	}else{
-		TracePrintf(0, "We have a program to execute!\n");
+	} else {
 		TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS (INIT) -------------------------------------\n");
 
 		PCB *init_pcb = create_init_proc(track);
 		init_process = init_pcb;
-		if(init_pcb == NULL){
-			TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");
+		if (init_pcb == NULL) {
+			TracePrintf(0, "There was an error when trying to call pcb_alloc for init process\n");
 			TracePrintf(0, "Returning to idle process\n");
-			return;
+			Halt();
 		}
 		TracePrintf(0, "<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy SHOULD BE ONCE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>\n\n\n");
-		if(KernelContextSwitch(KCCopy, init_pcb, NULL) < 0) return;
+
+		if (KernelContextSwitch(KCCopy, init_pcb, NULL) < 0) 
+			Halt();
 
 		if (idle_process->pid == current_process->pid){
                 	TracePrintf(0, "This is the pid of the idle process because current and idle are the same --> %d\n", current_process->pid);
 			TracePrintf(0, "Just run idle\n");
 
-        	}else{
+        	} else {
                 	TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
 			TracePrintf(0, "We should load program here\n");
-			if(LoadProgram(cmd_args[0], cmd_args, current_process) < 0) return;
+			if(LoadProgram(cmd_args[0], cmd_args, current_process) < 0)
+				Halt();
         	}
 	}
 		
-	//Write to hardware where init is in region 1
 	WriteRegister(REG_PTBR1, (unsigned int)current_process->AddressSpace);
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);	
 	memcpy(uctxt, &current_process->curr_uc, sizeof(UserContext));
-
 	TracePrintf(1, "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ KernelStart Complete +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n\n");
 	return;
 }

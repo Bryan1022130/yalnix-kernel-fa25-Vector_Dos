@@ -199,7 +199,7 @@ void HandleClockTrap(UserContext *CurrUC){
 	    //mark proc ready and move to ready
 	    p->currState = READY;
 	    Enqueue(readyQueue, p);
-	}else {
+	} else {
 	    prev = node;
 	}
 	node = next;
@@ -475,6 +475,7 @@ void HandleTrap(UserContext *){
 
 //Abort function
 void abort(void){
+	//TODO
 	TracePrintf(0, "We are aborting the current process!\n");
 	
 	//Get the next process that can run 

@@ -10,7 +10,9 @@
 
 //Our Header File
 #include "process.h" //API for process block control
-	
+
+extern unsigned int frame_count;
+
 //KernelStart.c function declarations
 int  SetKernelBrk(void *addr);
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt);
@@ -32,4 +34,3 @@ void SetupRegion1(pte_t *user_page_table);
 //Load Program function
 int LoadProgram(char *name, char *args[], PCB *proc);
 
-extern unsigned int frame_count;

@@ -21,7 +21,7 @@ void SetupRegion1(pte_t *user_page_table){
 	memset(user_page_table, 0, (MAX_PT_LEN * sizeof(pte_t)));
 
 	//Set all of the region 1 space as invalid {May be redundant?}
-	for(int x = 0; x < MAX_PT_LEN; x++){
+	for (int x = 0; x < MAX_PT_LEN; x++) {
 		user_page_table[x].prot = 0;
                 user_page_table[x].pfn = 0;
 		user_page_table[x].valid = INVALID;

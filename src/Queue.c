@@ -7,9 +7,9 @@ extern PCB *current_process;
 #define FALSE 0
 
 //Initialzie the Queue and return it to users
-Queue *initializeQueue(){
+Queue *initializeQueue(void) {
 	Queue *NewQueue = (Queue*) malloc(sizeof(Queue));
-	if(NewQueue == NULL){
+	if (NewQueue == NULL) {
 		TracePrintf(0, "Error with malloc for Queue");
 		return NULL;
 	}
@@ -21,10 +21,10 @@ Queue *initializeQueue(){
 }
 
 // Create a instance of a node in heap memory
-QueueNode *makeNode(void *data){
+QueueNode *makeNode(void *data) {
 	QueueNode *aNode = (QueueNode *) malloc(sizeof(QueueNode));
 
-	if(aNode == NULL){
+	if (aNode == NULL) {
 		TracePrintf(0, "Error with malloc in create Node");
 		return NULL;
 	}
@@ -34,11 +34,11 @@ QueueNode *makeNode(void *data){
 	return aNode;
 }
 
-int getSize(Queue *MQueue){
+int getSize(Queue *MQueue) {
 	return MQueue->size;
 }
 
-void Enqueue(Queue *MQueue, void *data){
+void Enqueue(Queue *MQueue, void *data) {
 	// Make a new Node that is added into the Queue
 	QueueNode *Node = makeNode(data);
 	if(Node == NULL) return;
@@ -48,7 +48,7 @@ void Enqueue(Queue *MQueue, void *data){
 
 
 	//If the Queue is empty, make the first node the head node and tail 
-	if(isEmpty(MQueue)){
+	if(isEmpty(MQueue)) {
 		MQueue->head = Node;
 		MQueue->tail = Node;
 		MQueue->size++;
@@ -61,7 +61,7 @@ void Enqueue(Queue *MQueue, void *data){
 	MQueue->size++;	
 }
 
-void *Dequeue(Queue *MQueue){
+void *Dequeue(Queue *MQueue) {
 	if(isEmpty(MQueue) == TRUE){
 		TracePrintf(0, "Error! The Queue is currently empty");
 		return NULL;
@@ -78,7 +78,7 @@ void *Dequeue(Queue *MQueue){
 	MQueue->size--;
 	
 	//Incase we dequeued the last Node
-	if(MQueue->head == NULL){
+	if(MQueue->head == NULL) {
 		MQueue->tail = NULL;
 	}
 
@@ -88,7 +88,7 @@ void *Dequeue(Queue *MQueue){
 	return tempdata;
 }
 
-int isEmpty(Queue *MQueue){
+int isEmpty(Queue *MQueue) {
 	//return 1 for true 
 	if(MQueue->size == 0){
 		return TRUE;
@@ -97,17 +97,12 @@ int isEmpty(Queue *MQueue){
 	return FALSE;
 }
 
-QueueNode *peek(Queue *MQueue){
-	if(MQueue->head == NULL){
-		if(current_process->pid == 0){
-			TracePrintf(0, "IDLE CALLED\n");
-		}else{
-			TracePrintf(0, "INIT CALLED\n");
-		}
-
+QueueNode *peek(Queue *MQueue) {
+	if (MQueue->head == NULL) {
 		TracePrintf(0, "The Queue is empty!\n");
 		return NULL;
 	}
+
 	QueueNode *temp = MQueue->head;
 	PCB *tempdata = temp->data;
 	int pid_extract = tempdata->pid; 
@@ -119,16 +114,18 @@ QueueNode *peek(Queue *MQueue){
 
 void remove_data(Queue *MQueue, void *find_data){
 	TracePrintf(0, "Hello! I will look for node to remove!\n");
-	if(isEmpty(MQueue)){
+
+	if (isEmpty(MQueue)) {
 		TracePrintf(0, "ERROR! The queue that you passed in was empty!\n");
 		return;
 	}
-	if(MQueue->head == NULL){
+
+	if (MQueue->head == NULL) {
 		TracePrintf(0, "Error the head is NULL!\n");
 		return;
 	}
 	
-	if((PCB *)MQueue->head->data == (PCB *)find_data){
+	if ((PCB *)MQueue->head->data == (PCB *)find_data) {
 		TracePrintf(0, "I found the PCB at the head! I am going to Dequeue.\n");
 		Dequeue(MQueue);
 		return;
@@ -138,8 +135,8 @@ void remove_data(Queue *MQueue, void *find_data){
 	QueueNode *prev = MQueue->head;
 	QueueNode *current = MQueue->head->next;
 
-	while(current){
-		if((PCB *)current->data == (PCB *)find_data){
+	while(current) {
+		if ((PCB *)current->data == (PCB *)find_data) {
 			TracePrintf(0, "Great I found your process! I will now remove it ;)\n");
 			prev->next = current->next;
 			if(current == MQueue->tail){

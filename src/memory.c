@@ -12,16 +12,13 @@
 #define IN_USE 1
 #define UNUSED 0
 
-//Mark all frames unused
-//Note: We need to reserved space for the data section of the kernel since that dosen't change
-//Note: We also need to alloc frames for the kernel stack
 void init_frames(unsigned char *track){
-	for(unsigned int x = 0; x < frame_count; x++){
+	for (unsigned int x = 0; x < frame_count; x++) {
 		track[x] = UNUSED;
 	}
 
 	//Allocated stack frames for the kernel data section
-	for(int y = 0; y < _orig_kernel_brk_page; y++){
+	for (int y = 0; y < _orig_kernel_brk_page; y++) {
 		frame_alloc(track, y);
 	}
 	
@@ -35,23 +32,24 @@ void init_frames(unsigned char *track){
 
 //Loop through the current buffer and just return the first frame available
 int find_frame(unsigned char *track){
-	for(unsigned int z = 0; z < frame_count; z++){
+	for (unsigned int z = 0; z < frame_count; z++) {
 		if(track[z] == UNUSED){
 			frame_alloc(track, z);
 			return z;
 		}
 	}
+
 	TracePrintf(0, "We did not find any free frames! Returning ERROR\n");
 	return ERROR;
 }
 
 //Index into buffer and set as in use
-void frame_alloc(unsigned char *track, int frame_number){
-	TracePrintf(0, "Info --> This is the frame that is being alloced -> %d\n", frame_number);
+void frame_alloc(unsigned char *track, int frame_number) {
+	TracePrintf(0, "Info --> This is the frame that is being allocated -> %d\n", frame_number);
 	track[frame_number] = IN_USE;
 }
 
-void frame_free(unsigned char *track, int frame_number){
+void frame_free(unsigned char *track, int frame_number) {
 	TracePrintf(0, "Info --> This is the frame that is being freed -> %d\n", frame_number);
 	track[frame_number] = UNUSED;
 }

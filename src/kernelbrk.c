@@ -1,11 +1,8 @@
 //Header files from yalnix_framework && libc library
 #include <sys/types.h> //For u_long
-#include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
 #include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
-#include <ylib.h> // Function declarations for many libc functions, Macro for NULL
-#include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
 #include <stdint.h>
 
@@ -51,65 +48,61 @@ int SetKernelBrk(void * addr){
             return ERROR;
         }
 
-
-        if(!vm_enabled){
-                TracePrintf(1, "THIS IS CALLED WHEN VIRTUAL MEMORY IS NOT ENABLED\n");
-
+        if (!vm_enabled) {
                 current_kernel_brk = (void *)new_kbrk_addr;
 
-                TracePrintf(1, "[SetKernelBrk] Updated current_brk (no VM): %p\n", current_kernel_brk);
+                TracePrintf(1, "[SetKernelBrk (NO VM)] Updated current_brk (no VM): %p\n", current_kernel_brk);
                 return SUCCESS;
         }
-            TracePrintf(1, "VIRTUAL MEMORY HAS BEEN ENABLED \n");
 
-            //Check if the requested new address space for the Kernel Heap Brk is valid
+	TracePrintf(1, "VIRTUAL MEMORY HAS BEEN ENABLED\n");
 
-            uintptr_t start = old_kbrk;        
-            uintptr_t end   = new_kbrk_addr; 
+	//Check if the requested new address space for the Kernel Heap Brk is valid
+        uintptr_t start = old_kbrk;        
+        uintptr_t end = new_kbrk_addr; 
 
-            // Step 2: Growing the heap (allocate frames)
-                    // --- Grow the kernel heap ---
-    if (end > start) {
-        TracePrintf(1, "[SetKernelBrk] Growing kernel heap...\n");
-        for (uintptr_t vaddr = start; vaddr < end; vaddr += PAGESIZE) {
-            uintptr_t vpn = vaddr >> PAGESHIFT;
-            if (kernel_page_table[vpn].valid) {
-		    TracePrintf(0, "[SetKernelBrk] A page was unexpectedly mapped!\n");
-		    return ERROR;
+        // --- Grow the kernel heap ---
+	if (end > start) {
+		TracePrintf(1, "[SetKernelBrk] Growing kernel heap...\n");
+		for (uintptr_t vaddr = start; vaddr < end; vaddr += PAGESIZE) {
+			uintptr_t vpn = vaddr >> PAGESHIFT;
+			if (kernel_page_table[vpn].valid) {
+				TracePrintf(0, "[SetKernelBrk] A page was unexpectedly mapped!\n");
+				return ERROR;
+			}
+
+			int pfn = find_frame(track_global);
+			if (pfn == ERROR) {
+				TracePrintf(0, "[SetKernelBrk] Out of physical frames!\n");
+				return ERROR;
+			}
+
+			kernel_page_table[vpn].pfn = pfn;
+			kernel_page_table[vpn].prot = PROT_READ | PROT_WRITE;
+			kernel_page_table[vpn].valid = TRUE;
 		}
+		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+	}
 
-            int pfn = find_frame(track_global);
-            if (pfn == ERROR) {
-                TracePrintf(0, "[SetKernelBrk] Out of physical frames!\n");
-                return ERROR;
-            }
-
-            kernel_page_table[vpn].pfn = pfn;
-            kernel_page_table[vpn].prot = PROT_READ | PROT_WRITE;
-            kernel_page_table[vpn].valid = TRUE;
-        }
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-    }
-
-    // --- Shrink the kernel heap ---
-    else if (end < start) {
-        TracePrintf(1, "[SetKernelBrk] Shrinking kernel heap...\n");
-        for (uintptr_t vaddr = end; vaddr < start; vaddr += PAGESIZE) {
-            uintptr_t vpn = vaddr >> PAGESHIFT;
-		if (!kernel_page_table[vpn].valid) {
-		    TracePrintf(0, "[SetKernelBrk] A page was unexpectedly not mapped!\n");
-		    return ERROR;
+	// --- Shrink the kernel heap ---
+	else if (end < start) {
+		TracePrintf(1, "[SetKernelBrk] Shrinking kernel heap...\n");
+		for (uintptr_t vaddr = end; vaddr < start; vaddr += PAGESIZE) {
+			uintptr_t vpn = vaddr >> PAGESHIFT;
+			if (!kernel_page_table[vpn].valid) {
+				TracePrintf(0, "[SetKernelBrk] A page was unexpectedly not mapped!\n");
+				return ERROR;
+			}
+			frame_free(track_global, kernel_page_table[vpn].pfn);
+			kernel_page_table[vpn].valid = FALSE;
+			kernel_page_table[vpn].prot = 0;
+			kernel_page_table[vpn].pfn = 0;
 		}
-            frame_free(track_global, kernel_page_table[vpn].pfn);
-            kernel_page_table[vpn].valid = FALSE;
-            kernel_page_table[vpn].prot = 0;
-            kernel_page_table[vpn].pfn = 0;
-        }
-        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-    }
+		WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+	}
 
-    // --- Finalize ---
-    current_kernel_brk = (void *)new_kbrk_addr;
-    TracePrintf(1, "[SetKernelBrk] Moved break to %p (VM enabled)\n", current_kernel_brk);
-    return SUCCESS;
+	// --- Finalize ---
+	current_kernel_brk = (void *)new_kbrk_addr;
+	TracePrintf(1, "[SetKernelBrk] Moved break to %p (VM enabled)\n", current_kernel_brk);
+	return SUCCESS;
 }

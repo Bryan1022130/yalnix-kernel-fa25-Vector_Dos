@@ -22,7 +22,7 @@ void TerminalSetup(void){
 	
 	//Clear out and populate the struct
 	memset(t_array, 0, NUM_TERMINALS * sizeof(Terminal));
-	for(int x = 0; x < NUM_TERMINALS; x++){
+	for (int x = 0; x < NUM_TERMINALS; x++) {
 		t_array[x].is_busy = 0;
 		t_array[x].terminal_num = x;
 		t_array[x].waiting_process = NULL;
@@ -34,8 +34,8 @@ void TerminalSetup(void){
 	TracePrintf(0, "I am done setting up the terminals!\n");
 }
 
-//Add more logic here
-void TerminalFree(int tnum){
+//TODO;Add more logic here
+void TerminalFree(int tnum) {
 	TracePrintf(0, "We are freeing Terminal %d\n", tnum);
 	memset(&t_array[tnum], 0, sizeof(Terminal));
 	TracePrintf(0, "Done! Leaving now!\n");

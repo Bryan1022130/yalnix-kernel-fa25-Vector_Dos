@@ -3,9 +3,9 @@
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
 #include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
-#include <ylib.h> // Function declarations for many libc functions, Macro for NULL
-#include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
-#include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC	      
+#include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC	  
+
+//Our header files
 #include "process.h"
 #include "idle.h"
 
@@ -46,7 +46,7 @@ void DoIdle(void) {
  * Idle Process that runs when there is not other process being runned 
  * ===================================================================================================================
  */
-int idle_proc_create(unsigned char *track, pte_t *user_page_table, UserContext *uctxt){
+int idle_proc_create(unsigned char *track, pte_t *user_page_table, UserContext *uctxt) {
         TracePrintf(0, "Start of the idle_proc_create function <|> \n");
 
         //Create idle_process and clear the memory 
@@ -54,20 +54,18 @@ int idle_proc_create(unsigned char *track, pte_t *user_page_table, UserContext *
 
         //Point to our user_page_table and clear the table
         pte_t *idle_pt = user_page_table;
-        memset(idle_pt, 0, sizeof(pte_t) * MAX_PT_LEN);
 
         //Get a pid from the help of hardware
         idle_process->pid = helper_new_pid(user_page_table);
 
        //Allocate a physical page for the process
        int pfn = find_frame(track);
-        if(pfn == ERROR){
+        if (pfn == ERROR) {
 		free(idle_process);
                 TracePrintf(0, "No frames were found!\n");
                 return ERROR;
         }
 
-        //We are storing it at the top of the user stack region
 	//This should have one valid page, for idle’s user stack	
         unsigned long stack_page_index = MAX_PT_LEN - 1;
         idle_pt[stack_page_index].valid = TRUE;
@@ -92,7 +90,6 @@ int idle_proc_create(unsigned char *track, pte_t *user_page_table, UserContext *
 	//Mark its kernel stack frames
 	idle_process->kernel_stack_frames[0] = 126;
 	idle_process->kernel_stack_frames[1] = 127;
-
         WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
 
         WriteRegister(REG_PTBR1, (unsigned int)user_page_table);

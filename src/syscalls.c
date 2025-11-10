@@ -18,15 +18,17 @@ extern Terminal t_array[NUM_TERMINALS];
 extern PCB *init_process;
 
 //Helper Functions
-void rollback_frames(int first_frame, int amount){
+void rollback_frames(int first_frame, int amount) {
 	TracePrintf(0, "We are rolling back stack frames becauses there was an error!\n");
-	for(int x = first_frame; x < amount; x++){
+
+	for (int x = first_frame; x < amount; x++) {
 		frame_free(track_global, x);
 	}
+
 	TracePrintf(0, "We are done rolling back the stack frames. Leaving! Bye!\n");
 }
 
-void data_copy(void *parent_pte, int cpfn){
+void data_copy(void *parent_pte, int cpfn) {
 	//This space is allocated in memory.c
 	int temp_vpn_kernel = 125;
 
@@ -34,7 +36,6 @@ void data_copy(void *parent_pte, int cpfn){
 	kernel_page_table[temp_vpn_kernel].pfn = cpfn;
 	kernel_page_table[temp_vpn_kernel].valid = 1;
 	kernel_page_table[temp_vpn_kernel].prot = (PROT_READ | PROT_WRITE);
-
 
 	void *kernel_ptr = (void *)(temp_vpn_kernel << PAGESHIFT);
 
@@ -53,14 +54,7 @@ void data_copy(void *parent_pte, int cpfn){
 }
 
 //Syscall Functions
-int KernelGetPid(void){
-    TracePrintf(0, "==========================================================================================\n");
-    if (current_process == NULL) {
-        TracePrintf(0, "GetPid called but current_process NULL\n");
-        return ERROR;
-    }
-    TracePrintf(0, "KernelGetPid(): This is the current pid number -> %d\n", current_process->pid);
-    TracePrintf(0, "==========================================================================================\n");
+int KernelGetPid(void) {
     return current_process->pid;
 }
 
@@ -70,7 +64,8 @@ int KernelFork(void){
 
     PCB *parent = current_process;
     PCB *child = spawn_proc();
-    if(child == NULL){
+
+    if(child == NULL) {
 	    TracePrintf(0, "There was an error making a process in KernelFork()\n");
 	    return ERROR;
     }
@@ -86,16 +81,16 @@ int KernelFork(void){
 
     TracePrintf(0, "I am going to copy over parent contents to the child\n");
     //Loop through parent region 1 space and copying over to child
-    for (int vpn = 0; vpn < MAX_PT_LEN; vpn++){
+    for (int vpn = 0; vpn < MAX_PT_LEN; vpn++) {
 	    if (!parent_reg1[vpn].valid) continue;
 
 	    int pfn = find_frame(track_global);
 	    //If there is an error free allocated frames and free the proc
-	    if(pfn == ERROR){
+	    if (pfn == ERROR) {
 		    rollback_frames(first_frame_used, frames_used);
 		    free_proc(child, 1);
 		    return ERROR;
-	    }else if(used == 0){
+	    } else if(used == 0) {
 		    first_frame_used = pfn;
 		    used = 1;
 	    }
@@ -103,8 +98,6 @@ int KernelFork(void){
 	    frames_used++;
 
 	    //We have the pfn, we need to cycle through each parents page table entry
-	    //Copy over page
-	    //Note:  This might have to be the macro for VMEM_1_BASE
 	    void *parent_pte_find = (void *)((vpn + ((unsigned int )VMEM_1_BASE >> PAGESHIFT)) << PAGESHIFT);
 	    TracePrintf(0, "We are going to copy the data over right now!\n");
 
@@ -133,25 +126,21 @@ int KernelFork(void){
     
     //KCCopy to copy info from parent to child
     int rc = KernelContextSwitch(KCCopy, child, NULL);
-    if(rc == ERROR){
+    if (rc == ERROR) {
 	    TracePrintf(0, "There was an error with KernelContextSwitch for child process on Fork()\n");
 	    return ERROR;
     }
 
     if(current_process->pid != child_pid){
 	    TracePrintf(0, "I am the parent process! Just to make sure here is my pid -> %d\n", current_process->pid);
-	    //The parent returns the child pid 
-	     TracePrintf(0, "==========================================================================================\n");
+	    TracePrintf(0, "==========================================================================================\n");
 	    return child_pid;
 
-    }else{
-	    TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", current_process->pid);
-	    TracePrintf(0, "==========================================================================================\n");
-	    return 0;
     }
 
-    //If this is returned than we have an error
-    return ERROR;
+    TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", current_process->pid);
+    TracePrintf(0, "==========================================================================================\n");
+    return 0;
 }
 
 int KernelExec(char *filename, char *argv[]) {
@@ -163,6 +152,7 @@ int KernelExec(char *filename, char *argv[]) {
     if(argv ==NULL){
 	TracePrintf(1, "Exec: arg is NULL, nuntinouing no args\n");
     }
+
     // free old region1 frames
     pte_t *pt = (pte_t *)current_process->AddressSpace;
     for (int i = 0; i < MAX_PT_LEN; i++) {
@@ -181,8 +171,8 @@ int KernelExec(char *filename, char *argv[]) {
 
 void KernelExit(int status) {
     TracePrintf(0, "========================================EXIT START==================================================\n");
-    TracePrintf(1, "Process %d exiting with status %d\n", current_process->pid, status);
-    TracePrintf(1, "This is exit syscall\n");
+    TracePrintf(0, "Process %d exiting with status %d\n", current_process->pid, status);
+    TracePrintf(0, "This is exit syscall\n");
     TracePrintf(0,"I am going to start the exit logic!\n");
     PCB *child = current_process->first_child;	
 
@@ -192,7 +182,7 @@ void KernelExit(int status) {
     }
 
     //Loop through the children process of the current process
-    while (child){
+    while (child) {
 	PCB *next_child = child->next_sibling;
 
 	child->ppid = init_process->pid;
@@ -205,7 +195,7 @@ void KernelExit(int status) {
     }
     current_process->first_child = NULL;
 
-    if (current_process->parent != NULL){
+    if (current_process->parent != NULL) {
         PCB *parent = current_process->parent;
         if (parent->currState == BLOCKED) {
             TracePrintf(1, "KernelExit: waking parent PID %d\n", parent->pid);
@@ -218,16 +208,15 @@ void KernelExit(int status) {
     TracePrintf(0, "I will now erase most of my data :)\n");
 
     //Erase some of the data from the process
-   // free_proc(current_process, 0);
     current_process->exit_status = status;
     current_process->currState = ZOMBIE;
 
 
-    TracePrintf(1, "KernelExit: process %d is now ZOMBIE, waiting to be reaped\n",
-             current_process->pid);
+    TracePrintf(1, "KernelExit: process %d is now ZOMBIE, waiting to be reaped\n", current_process->pid);
+
     // Pick next proc to run
     PCB *next_proc = get_next_ready_process();
-    if(next_proc == NULL){
+    if (next_proc == NULL) {
 	    TracePrintf(0, "We have not other process that can run so run idle :)\n");
 	    next_proc = idle_process;
     }
@@ -235,7 +224,7 @@ void KernelExit(int status) {
     // context switch from dying proc
     TracePrintf(1, "KernelExit: switching from PID %d to PID %d\n", current_process->pid, next_proc->pid);
     int rc = KernelContextSwitch(KCSwitch, current_process, next_proc);
-    if(rc == ERROR){
+    if (rc == ERROR) {
 	    TracePrintf(0, "ERROR: KernelExit returned unexpectedly for PID %d\n", current_process->pid);
 	    return;
     }
@@ -244,7 +233,6 @@ void KernelExit(int status) {
 }
 
 int KernelWait(int *status_ptr) {
-
     TracePrintf(0, "=============================================================================>\n");
     TracePrintf(1, "This is wait syscall\n");
     while (1){

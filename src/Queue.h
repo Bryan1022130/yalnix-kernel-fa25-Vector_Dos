@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <ykernel.h>
-#include <hardware.h> // For macros regarding kernel space
+#include <hardware.h> 
 #include <yalnix.h>
 #include <ylib.h>
 #include <yuser.h>
@@ -16,7 +16,6 @@ typedef struct QueueNode{
 }QueueNode;
 
 //Struct to represent the entire Queue
-//Keep track of the Head, Tail, and total size 
 typedef struct{ 
 	QueueNode *head;
 	QueueNode *tail;

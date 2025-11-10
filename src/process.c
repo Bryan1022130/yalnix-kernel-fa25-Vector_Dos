@@ -4,8 +4,6 @@
 #include <ctype.h>
 #include <load_info.h>
 #include <yalnix.h>
-#include <ylib.h>
-#include <yuser.h>
 #include <string.h>
 #include "process.h"
 #include "Queue.h"
@@ -43,8 +41,8 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     //copy the bytes of the kernel context into the current process’s PCB 
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
-   int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
-   TracePrintf(0, "This is the value of the base_vpn --> %d\n", ks_base_vpn);
+    int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
+    TracePrintf(0, "This is the value of the base_vpn --> %d\n", ks_base_vpn);
     for (int i = 0; i < KSTACKS; i++) {
         kernel_page_table[ks_base_vpn + i].pfn = next->kernel_stack_frames[i];
         kernel_page_table[ks_base_vpn + i].prot = PROT_READ | PROT_WRITE;
@@ -69,14 +67,14 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
 KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *){
 	TracePrintf(1, "This is the start of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++>\n");
 
-	if(kc_in == NULL){
+	if (kc_in == NULL) {
 		TracePrintf(0, "In KCCopy kc_in was null");
 		return NULL;
 	}
 
 	//Check if the process is valid
 	PCB *new_pcb = (PCB *)new_pcb_p;
-	if(new_pcb == NULL){
+	if (new_pcb == NULL) {
 		TracePrintf(0, "Error with one of the PCB being NULL!");
 		return NULL;
 	}
@@ -86,16 +84,11 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *){
 	
 	int holdvpn = (((KERNEL_STACK_BASE) >> PAGESHIFT) - 1);
 	int stack_base = KERNEL_STACK_BASE >> PAGESHIFT;
-
-	//char *src = (char *)KERNEL_STACK_BASE;
 	int num_stack_pages = KERNEL_STACK_MAXSIZE / PAGESIZE;
-
-	//pte_t *region0_pt = (pte_t *)ReadRegister(REG_PTBR0);
-
 	TracePrintf(0,"This is the value of holdvpn --> %d\n", holdvpn);
 
 	//Copy over the content of the current kernel stack into frames that have been allocated
-	for(int t = 0; t < num_stack_pages; t++){
+	for (int t = 0; t < num_stack_pages; t++) {
 		//Get the current pfn from our process && current proc
 		int kernel_curr_pfn = current_process->kernel_stack_frames[t];
 		int kernel_new_pfn = new_pcb->kernel_stack_frames[t];
@@ -109,7 +102,6 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *){
 
 		//This is the vaddr of the currently running kernel stack
 		unsigned long int pagefind = (stack_base + t) << PAGESHIFT;
-		TracePrintf(0, "This is the value of the pagefind ==> %lx\n", pagefind);
 		
 		//We are copying the content of the kernel stack table from
 		memcpy((void *)((holdvpn) << PAGESHIFT), (void *)pagefind, PAGESIZE);
@@ -130,30 +122,28 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *){
 }
 
 // ======================================================================================> Process Spawning Logic 
-PCB* spawn_proc(void){
-	PCB *proc = (PCB *)malloc(sizeof(PCB));
-	pte_t *reg1_proc = malloc(MAX_PT_LEN * sizeof(pte_t));
+PCB* spawn_proc(void) {
 
-	if(proc == NULL){
+	PCB *proc = calloc(1, sizeof(PCB));
+	if (proc == NULL) {
 		TracePrintf(0, "Error with creating process! Returning NULL\n");
 		return NULL;
-	}else if(reg1_proc == NULL){
+	} 
+
+	pte_t *reg1_proc = calloc(1, MAX_PT_LEN * sizeof(pte_t));
+	if(reg1_proc == NULL) {
 		TracePrintf(0, "Error with creating region 1 space! Returning NULL\n");
 		free(proc);
 		return NULL;
 	}
-	//Clear malloced space
-	memset(proc, 0, sizeof(PCB));
-	memset(reg1_proc, 0, (MAX_PT_LEN * sizeof(pte_t)));
 
 	//Setup new process properties
 	proc->AddressSpace = reg1_proc;
-	//proc->curr_uc = current_process->curr_uc; //Copy in the User Context
 	proc->pid = helper_new_pid(reg1_proc);
 	proc->wake_tick = 0;
 
 	//Create its stack frames
-	if(create_sframes(proc, track_global) == ERROR){
+	if (create_sframes(proc, track_global) == ERROR) {
 		TracePrintf(0, "Error with creating stack frames for proc -> %d\n", proc->pid);
 		free(proc);
 		free(reg1_proc);
@@ -170,17 +160,18 @@ PCB* spawn_proc(void){
 }
 
 //Need to add more to this
-void free_proc(PCB *proc, int free_flip){
+void free_proc(PCB *proc, int free_flip) {
 	TracePrintf(0, "+++++++++++++++++++++++++++++FREE PROC++++++++++++++++++++++++++++++++++\n");
-	if(proc == NULL){
-		TracePrintf(0, "ERROR! You are trying to free a NULL process!\n");
-	}
-
 	TracePrintf(0, "We are going to free the process with a pid of --> %d\n", proc->pid);
 
+	if(proc == NULL){
+		TracePrintf(0, "ERROR! You are trying to free a NULL process!\n");
+		return;
+	}
+
 	//Unmap its region 1 and free frames
-	pte_t *region1 = (pte_t *)proc->AddressSpace;
-	for(int x = 0; x < MAX_PT_LEN; x++){
+	pte_t *region1 = proc->AddressSpace;
+	for (int x = 0; x < MAX_PT_LEN; x++) {
 		if(!region1[x].valid) continue;
 		frame_free(track_global, region1[x].pfn);
 		region1[x].prot = 0;
@@ -191,13 +182,13 @@ void free_proc(PCB *proc, int free_flip){
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 
 	//free pid
-	TracePrintf(0, "Illegal PID we're retiring : %d\n", proc->pid);
+	TracePrintf(0, "PID we're retiring : %d\n", proc->pid);
 	helper_retire_pid(proc->pid);
 
 	//free the malloc space
 	free(proc->AddressSpace);
 
-	if(free_flip){
+	if (free_flip) {
 		//free its kernelstack frames
 		free_sframes(proc, track_global);
 
@@ -211,8 +202,8 @@ void free_proc(PCB *proc, int free_flip){
 }
 
 // ======================================================================================> Process Queue Logic 
-PCB *get_next_ready_process(void){
-	if(!isEmpty(readyQueue)){
+PCB *get_next_ready_process(void) {
+	if (!isEmpty(readyQueue)) {
 		PCB *ready_proc = Dequeue(readyQueue);
 		TracePrintf(0, "The process at the start of the readyQueue is -> %d\n", ready_proc->pid);
 		return ready_proc;
