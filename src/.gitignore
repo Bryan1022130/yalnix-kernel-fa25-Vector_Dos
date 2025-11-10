@@ -3,4 +3,5 @@ TTYLOG*
 yalnix
 backup/
 PHYS_MEM_*
-
+DISK
+.nfs*
