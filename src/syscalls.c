@@ -58,7 +58,7 @@ int KernelGetPid(void) {
     return current_process->pid;
 }
 
-int KernelFork(void){
+int KernelFork(void) {
     TracePrintf(0, "==========================================================================================\n");
     TracePrintf(0, "This is the KernelFork() function and this is the current pid -> %d\n", current_process->pid);
 
@@ -210,8 +210,6 @@ void KernelExit(int status) {
     //Erase some of the data from the process
     current_process->exit_status = status;
     current_process->currState = ZOMBIE;
-
-
     TracePrintf(1, "KernelExit: process %d is now ZOMBIE, waiting to be reaped\n", current_process->pid);
 
     // Pick next proc to run
@@ -289,10 +287,8 @@ int KernelBrk(void *addr) {
      TracePrintf(1, "THIS IS OUR KERNEL FUNCTION THAT WE CREATED\n");
 
      TracePrintf(1, "KernelBrk: requested addr=%p\n", addr);
+     addr = (void *)UP_TO_PAGE(addr);
 
-    addr = (void *)UP_TO_PAGE(addr);
-
-    // TODO:
     // if addr < what the brk was when the program started,
     // or addr is in the stack mappings, fail. (checking for null not sufficient
 
@@ -307,7 +303,6 @@ int KernelBrk(void *addr) {
         TracePrintf(0, "KernelBrk: Requested addr (%p) is below heapstart (%p)\n", addr, heap_start);
         return ERROR;
     }
-
 
     if (addr >= stack_start - PAGESIZE) {
         TracePrintf(0, "KernelBrk: Requested addr (%p) collides with stack (%p)\n", addr, stack_start);
