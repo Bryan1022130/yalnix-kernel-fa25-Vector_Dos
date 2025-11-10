@@ -339,6 +339,8 @@ void HandleReceiveTrap(UserContext *CurrUC) {
     int terminal = CurrUC->code;
 
     //Read the input in a loop until length < 0
+
+    /*
     int length;
     int message_index = 0;
     input_buffer[TERMINAL_MAX_LINE - 1] = '\0'; //Null terminate the buffer
@@ -355,12 +357,13 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 		    } 
 	    }
 
-	    //Malloc space for the char *
-	    t_array[terminal].messages[message_index] = (char *)malloc(TERMINAL_MAX_LINE * sizeof(char));
+	    
+	    t_array[terminal].message[message_index] = (char *)malloc(TERMINAL_MAX_LINE * sizeof(char));
 	    if(t_array[terminal].messages[message_index] == NULL){
 		    TracePrintf(0, "Error with malloc for HandleReceiveTrap");
 		    return;
 	    }
+	    
 
 	    //clear
 	    memset(t_array[terminal].messages[message_index], 0, (TERMINAL_MAX_LINE * sizeof(char)));
@@ -379,6 +382,8 @@ void HandleReceiveTrap(UserContext *CurrUC) {
     
     //Set terminal as not busy anymore
     t_array[terminal].is_busy = 0;
+    */
+    
     *CurrUC = current_process->curr_uc;
 }
 
