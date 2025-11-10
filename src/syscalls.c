@@ -6,9 +6,9 @@
 #include <hardware.h>
 #include <ykernel.h>
 
-// extern globals from kernelstart.c
+//extern globals from kernelstart.c
 extern PCB *current_process;
-extern Queue *sleepQueue;
+extern Queue *blockedQueue;
 extern unsigned long current_tick;
 extern pte_t *kernel_page_table;
 extern unsigned char *track_global;
@@ -200,7 +200,7 @@ void KernelExit(int status) {
         if (parent->currState == BLOCKED) {
             TracePrintf(1, "KernelExit: waking parent PID %d\n", parent->pid);
             parent->currState = READY;
-	    remove_data(sleepQueue, parent);
+	    remove_data(blockedQueue, parent);
             Enqueue(readyQueue, parent);
         }
     }
@@ -268,7 +268,7 @@ int KernelWait(int *status_ptr) {
 
     // if none are terminated, block until clock trap wakes us
     current_process->currState = BLOCKED;
-    Enqueue(sleepQueue, current_process); // adds to cleep queue to mark as inactive
+    Enqueue(blockedQueue, current_process); // adds to cleep queue to mark as inactive
 
     PCB *next = get_next_ready_process();
     if (next == NULL) next = idle_process;
@@ -418,11 +418,11 @@ int KernelDelay(int clock_ticks) {
     //The wake time should be ticks passed plus the current clock ticks
     current_process->wake_tick = current_tick + clock_ticks;
 
-    // block current proccess and put it in sleep queue
+    // block current proccess and put it in blocked queue
     current_process->currState = BLOCKED;
-    Enqueue(sleepQueue, current_process); 
+    Enqueue(blockedQueue, current_process); 
 
-    TracePrintf(1, "KernelDelay: PID %d sleeping unitil tick %lu\n", current_process->pid, current_process->wake_tick);
+    TracePrintf(1, "KernelDelay: PID %d blocked unitil tick %lu\n", current_process->pid, current_process->wake_tick);
 
     // Context switch, picks next ready process, idle if none
     PCB *next = get_next_ready_process();
@@ -458,7 +458,7 @@ int KernelTtyRead(int tty_id, void *buf, int len){
 
 
 int KernelTtyWrite(int tty_id, void *buf, int len){
-	if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len <= 0){
+	if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len < 0){
 		TracePrintf(0, "One of your arguments was invalid!\n");
 		return ERROR;
 	}

@@ -41,7 +41,9 @@ PCB *init_process = NULL;
 
 // global process queues
 Queue *readyQueue;    
-Queue *sleepQueue;
+
+//For process that are writing out
+Queue *blockedQueue;
 
 //Kernel Control
 void *current_kernel_brk;
@@ -137,7 +139,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 
 	//initialize process queues
 	readyQueue = initializeQueue();
-	sleepQueue = initializeQueue();
+	blockedQueue = initializeQueue();
 
 	//Store current UserContext globally
 	KernelUC = uctxt;

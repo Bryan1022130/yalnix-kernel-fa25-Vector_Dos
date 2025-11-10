@@ -16,7 +16,7 @@
 //Extern Variables
 extern unsigned long current_tick;
 extern Queue *readyQueue;
-extern Queue *sleepQueue;
+extern Queue *blockedQueue;
 extern PCB *current_process;
 extern PCB *idle_process;
 extern PCB *process_free_head;
@@ -173,7 +173,7 @@ void HandleClockTrap(UserContext *CurrUC){
 
 	
     // wake up sleeping process when its time
-    QueueNode *node = sleepQueue->head;
+    QueueNode *node = blockedQueue->head;
     QueueNode *prev = NULL;
 
     
@@ -188,13 +188,13 @@ void HandleClockTrap(UserContext *CurrUC){
 
 	    // remove from SleepQueue
 	    if (prev == NULL)
-		sleepQueue->head = next;
+		blockedQueue->head = next;
 	    else
 		prev->next = next;
 	    if(next == NULL)
-		sleepQueue->tail = prev;
+		blockedQueue->tail = prev;
 
-	    sleepQueue->size--;
+	    blockedQueue->size--;
 
 	    //mark proc ready and move to ready
 	    p->currState = READY;
