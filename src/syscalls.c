@@ -468,10 +468,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len){
 		return ERROR;
 	}
 
-	//The current process is waiting until a the Transmit Trap to be free
-	t_array[tty_id].waiting_process = current_process;
-
-	//If len is under TERMINAL_MAX_LINE or equal
+	//If len is under TERMINAL_MAX_LINE than we only need one transmit
 	if(len <= TERMINAL_MAX_LINE){
 		TracePrintf(0, "We can transmit your message with one call!\n");
 		TtyTransmit(tty_id, buf, len);
@@ -479,17 +476,19 @@ int KernelTtyWrite(int tty_id, void *buf, int len){
 		return len;
 	}
 
-	TracePrintf(0, "Looks like we are going to transmit your message with many cycles!\n");
+	//Block the process since we need more than 1 transmit
+	t_array[tty_id].waiting_process = current_process;
+	Enqueue(blockedQueue, (void *)current_process); // NOTE : MIGHT HAVE TO MOVE THIS ELSE WHERE
+
+	TracePrintf(0, "Looks like we are going to transmit your message in chunks!\n");
 	TracePrintf(0, "For debug purposes this is the amount that len is -> %ld\n");
 
-	char *temp_buf = malloc(TERMINAL_MAX_LINE * sizeof(char));
-	if(temp_buf == NULL){
+	char *temp_buf = calloc(1, TERMINAL_MAX_LINE * sizeof(char));
+	if (temp_buf == NULL) {
 		TracePrintf(0, "There was an error with malloc in KernelTtyWrite()");
 		return ERROR;
 	}
 
-	//clear malloced space
-	memset(temp_buf, 0, sizeof(TERMINAL_MAX_LINE * sizeof(char)));
 
 	//--------------------------------------------------- Support logic for when len > TERMINAL_MAX_LINE
 	
