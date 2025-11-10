@@ -36,7 +36,6 @@
 
 extern PCB *current_process;
 extern unsigned char *track_global;
-extern unsigned long int frame_count;
 
 /*
  *  Load a program into an existing address space.  The program comes from
@@ -57,9 +56,8 @@ LoadProgram(char *name, char *args[], PCB *proc)
 
 {
   int fd;
-  int (*entry)();
   struct load_info li;
-  int i;
+  unsigned int i;
   char *cp;
   char **cpp;
   char *cp2;
@@ -209,16 +207,13 @@ LoadProgram(char *name, char *args[], PCB *proc)
    * ==>> for every valid page, free the pfn and mark the page invalid.
    */
 
-  //Loop from text_pg1 to MAX_PT_LEN - 1
-  unsigned int PAGE_CYCLES = MAX_PT_LEN - 1;
-
   //Get the byte address of the start of the page table for region 1
   //This is stored in our PCB and points to the virtual space
   //but physical memory is also change since its mapped
   
   pte_t *PT = (pte_t *)proc->AddressSpace;
 
-  for(unsigned int i = 0; i < PAGE_CYCLES; i++){
+  for(i = 0; i < MAX_PT_LEN; i++){
           if(PT[i].valid == VALID){
 
                 //free the physical frame
@@ -250,7 +245,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
   unsigned int text_end = text_pg1 + li.t_npg;
   for(unsigned int j = text_pg1; j < text_end; j++){
         //Grab a physical frame; based on the manual
-        unsigned int pfn_grab = find_frame(track_global, frame_count);
+        unsigned int pfn_grab = find_frame(track_global);
 	TracePrintf(0, "This is the pfn we got for text -- > %d\n", pfn_grab);
         if(pfn_grab == ERROR){
                 TracePrintf(0, "Error when allocating a frame !\n");
@@ -271,7 +266,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
    */
   unsigned int data_end = data_pg1 + data_npg;
   for(unsigned int u = data_pg1; u < data_end; u++){
-	  unsigned int pfn_grab = find_frame(track_global, frame_count);
+	  int pfn_grab = find_frame(track_global);
 	  TracePrintf(0, "This is the pfn we got for data -- > %d\n", pfn_grab);
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");
@@ -291,9 +286,9 @@ LoadProgram(char *name, char *args[], PCB *proc)
    * ==>> protection of (PROT_READ | PROT_WRITE).
    */
   unsigned int stack_start = MAX_PT_LEN - stack_npg;
-  for(unsigned int t = stack_start; t <= PAGE_CYCLES; t++){
+  for(unsigned int t = stack_start; t < MAX_PT_LEN; t++){
           //Allocated a physical frame to store in region 1
-          unsigned int pfn_grab = find_frame(track_global, frame_count);
+          int pfn_grab = find_frame(track_global);
 	  TracePrintf(0, "This is the pfn we got for stack -- > %d\n", pfn_grab);
           if(pfn_grab == ERROR){
                   TracePrintf(0, "Error when allocating a frame !\n");

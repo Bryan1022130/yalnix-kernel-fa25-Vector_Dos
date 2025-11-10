@@ -15,9 +15,8 @@
 //Mark all frames unused
 //Note: We need to reserved space for the data section of the kernel since that dosen't change
 //Note: We also need to alloc frames for the kernel stack
-void init_frames(unsigned char *track, int track_size){
-
-	for(int x = 0; x < track_size; x++){
+void init_frames(unsigned char *track){
+	for(unsigned int x = 0; x < frame_count; x++){
 		track[x] = UNUSED;
 	}
 
@@ -35,8 +34,8 @@ void init_frames(unsigned char *track, int track_size){
 }
 
 //Loop through the current buffer and just return the first frame available
-int find_frame(unsigned char *track, int track_size){
-	for(int z = 0; z < track_size; z++){
+int find_frame(unsigned char *track){
+	for(unsigned int z = 0; z < frame_count; z++){
 		if(track[z] == UNUSED){
 			frame_alloc(track, z);
 			return z;

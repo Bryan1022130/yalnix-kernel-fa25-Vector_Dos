@@ -7,6 +7,7 @@
 #include <yuser.h> //Function declarations for syscalls for our kernel like Fork() && TtyPrintf()
 #include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC	      
 #include "process.h"
+#include "idle.h"
 
 //Macros 
 #define TRUE 1
@@ -45,23 +46,21 @@ void DoIdle(void) {
  * Idle Process that runs when there is not other process being runned 
  * ===================================================================================================================
  */
-int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_table, UserContext *uctxt){
+int idle_proc_create(unsigned char *track, pte_t *user_page_table, UserContext *uctxt){
         TracePrintf(0, "Start of the idle_proc_create function <|> \n");
 
         //Create idle_process and clear the memory 
-        idle_process = (PCB *)malloc(sizeof(PCB));
-	memset(idle_process, 0, sizeof(PCB));
+	idle_process = calloc(1, sizeof(PCB));
 
         //Point to our user_page_table and clear the table
         pte_t *idle_pt = user_page_table;
         memset(idle_pt, 0, sizeof(pte_t) * MAX_PT_LEN);
 
         //Get a pid from the help of hardware
-        int pid_find = helper_new_pid(user_page_table);
-        idle_process->pid = pid_find;
+        idle_process->pid = helper_new_pid(user_page_table);
 
        //Allocate a physical page for the process
-       int pfn = find_frame(track, track_size);
+       int pfn = find_frame(track);
         if(pfn == ERROR){
 		free(idle_process);
                 TracePrintf(0, "No frames were found!\n");
@@ -89,7 +88,6 @@ int idle_proc_create(unsigned char *track, int track_size, pte_t *user_page_tabl
          * Write region 1 table to Hardware
          * =======================================
          */
-	unsigned int sbase = (KERNEL_STACK_BASE >> PAGESHIFT);
 
 	//Mark its kernel stack frames
 	idle_process->kernel_stack_frames[0] = 126;

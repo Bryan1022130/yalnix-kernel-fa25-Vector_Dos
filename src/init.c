@@ -26,10 +26,9 @@ extern PCB *idle_process;
 extern pte_t *kernel_page_table;
 extern UserContext *KernelUC;
 
-extern unsigned long int frame_count;
 extern Queue *readyQueue;
 
-PCB *create_init_proc(unsigned char *track, int track_size){
+PCB *create_init_proc(unsigned char *track){
         TracePrintf(0, "Start of the init process </> \n");
 
         PCB *init_proc =(PCB *)malloc(sizeof(PCB));
@@ -41,7 +40,7 @@ PCB *create_init_proc(unsigned char *track, int track_size){
 	memset(init_proc, 0, sizeof(PCB));
 	
 	//Set up its Kernel Frames
-	int kf_ret = create_sframes(init_proc, track, frame_count);
+	int kf_ret = create_sframes(init_proc, track);
 	if(kf_ret == ERROR){
 		TracePrintf(0, "Init Proc: Error with setting up kernel stack!\n");
 		free(init_proc);

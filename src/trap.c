@@ -21,7 +21,6 @@ extern PCB *current_process;
 extern PCB *idle_process;
 extern PCB *process_free_head;
 extern unsigned char *track_global;
-extern unsigned long int frame_count;
 extern Terminal t_array[NUM_TERMINALS];
 extern char *input_buffer;
 
@@ -264,51 +263,46 @@ void HandleIllegalTrap(UserContext *CurrUC){
  */
 
 void HandleMemoryTrap(UserContext *CurrUC){
-    current_process->curr_uc = *CurrUC;
-
     TracePrintf(0, "MemoryTrap: You have invoked a Memory Trap!\n");
 
-    if(CurrUC->addr > (void *)VMEM_1_BASE && CurrUC->addr < (void *)VMEM_1_LIMIT){
+    if(CurrUC->addr >= (void *)VMEM_1_BASE && CurrUC->addr < (void *)VMEM_1_LIMIT){
 	    TracePrintf(0, "We are in current region 1 space. Nice!\n");
 	    if(CurrUC->addr > current_process->user_heap_brk){
 		    TracePrintf(0, "Great are able to grow the user stack space!\n");
 		    TracePrintf(0, "I will now set up more stack memory for you.\n");
 
-		    int curr_stack_base = (((unsigned long int)current_process->user_stack_ptr) >> PAGESHIFT);
-		    int new_stack_base = (((unsigned long int) CurrUC->addr) >> PAGESHIFT);
+		    unsigned int curr_stack_base = (((unsigned long int)current_process->user_stack_ptr) >> PAGESHIFT);
+		    unsigned int new_stack_base = (((unsigned long int) CurrUC->addr) >> PAGESHIFT) - MAX_PT_LEN;
 
 		    TracePrintf(0, "Memory Trap: This is the current stack base --> %d\n", curr_stack_base);
 		    TracePrintf(0, "Memory Trap: This is the new stack base --> %d\n", new_stack_base);
 
 		    pte_t *reg1_pt = (pte_t *)current_process->AddressSpace;
 		    //We store our region 1 space in our proc; so we just map it the same way as in template.c
-		    for(int x = new_stack_base; x < curr_stack_base; x++){
-			    unsigned int frame = find_frame(track_global, frame_count);
+		    for(unsigned int x = new_stack_base; x < curr_stack_base; x++){
+			    int frame = find_frame(track_global);
 			    if(frame == ERROR){
 				    TracePrintf(0, "MemoryTrap: Error with finding a frame!\n");
-				    return;
+				    goto die;
 			    }			
 			    TracePrintf(0, "MemoryTrap: This is the frame allocated for stack resize -> %d\n", frame);
 			    reg1_pt[x].pfn = frame;
 			    reg1_pt[x].valid = 1;
-			    reg1_pt[x].prot = (PROT_READ | PROT_WRITE);
+			    reg1_pt[x].prot = PROT_READ | PROT_WRITE;
 		    }
 
 		    //Update the stack base for the proc
 		    TracePrintf(0, "MemoryTrap: Success! I will now return and stack has growed!\n");
 		    current_process->user_stack_ptr = CurrUC->addr;
-		    *CurrUC = current_process->curr_uc;
 		    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 		    return;
-	 
     	}
     }
 
+  die:
     //In we cant grow the stack then we should abort
     TracePrintf(0, "MemoryTrap: Error! I will now abort\n");
     abort();
-    *CurrUC = current_process->curr_uc;
-
 }
 
 
@@ -319,14 +313,10 @@ void HandleMemoryTrap(UserContext *CurrUC){
  */
 
 void HandleMathTrap(UserContext *CurrUC) {
-    current_process->curr_uc = *CurrUC;
-
     TracePrintf(0, "MathTrap: Hello and Welcome to Math Trap!\n");
     TracePrintf(0, "I will call abort(). Please hold\n");
 
     abort();
-
-    *CurrUC = current_process->curr_uc;
 }
 
 /* =========================================
@@ -352,7 +342,7 @@ void HandleReceiveTrap(UserContext *CurrUC) {
     int length;
     int message_index = 0;
     input_buffer[TERMINAL_MAX_LINE - 1] = '\0'; //Null terminate the buffer
-    while(length = TtyReceive(terminal, (void *)input_buffer, TERMINAL_MAX_LINE - 1) > 0){
+    while((length = TtyReceive(terminal, (void *)input_buffer, TERMINAL_MAX_LINE - 1)) > 0){
 	    //Clear out the temp buffer (just in case there is garbage)
 	    memset(input_buffer, 0, (TERMINAL_MAX_LINE * sizeof(char)));
 
@@ -420,7 +410,7 @@ void HandleTransmitTrap(UserContext *CurrUC) {
 	    TracePrintf(0, "There is a process waiting and this is the pid -> %d\n", t_array[terminal].waiting_process->pid);
 	    TracePrintf(0, "This is the size of the waiting buffer is -> %ld\n", t_array[terminal].message_line_len);
 	    unsigned long int mes_len =  t_array[terminal].message_line_len;
-	    while(mes_len < 0){
+	    while(mes_len > 0){
 		    //We made need to buffer to be able to call TTytransit here
 		    //Essentially we are going to call it multiple times until we went through the message
 	    }
@@ -474,7 +464,7 @@ void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]){
 }
 
 //declaration of the default place holder function
-void HandleTrap(UserContext *CurrUC){
+void HandleTrap(UserContext *){
 	int s = 0;
 	while(s < 10){
 		s++;

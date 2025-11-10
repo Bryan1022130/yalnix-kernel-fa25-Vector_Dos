@@ -51,6 +51,7 @@ YALNIX_OUTPUT = yalnix
 
 #Use the gcc compiler for compiling and linking
 CC = gcc
+CFLAGS = -Wall -Wextra -Wpedantic -Wvla -Wshadow -Wno-unused-function
 
 DDIR58 = $(YALNIX_FRAMEWORK)
 LIBDIR = $(DDIR58)/lib

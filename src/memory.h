@@ -16,12 +16,12 @@ int  SetKernelBrk(void *addr);
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt);
 
 //Frame logic 
-int create_sframes(PCB *free_proc, unsigned char *track, int track_size);
-void free_sframes(PCB *free_proc, unsigned char *track, int track_size);
+int create_sframes(PCB *free_proc, unsigned char *track);
+void free_sframes(PCB *free_proc, unsigned char *track);
 
 //Physical memory logic
-void init_frames(unsigned char *track, int track_size);
-int find_frame(unsigned char *track, int track_size);
+void init_frames(unsigned char *track);
+int find_frame(unsigned char *track);
 void frame_alloc(unsigned char *track, int frame_number);
 void frame_free(unsigned char *track, int frame_number);
 
@@ -31,3 +31,5 @@ void SetupRegion1(pte_t *user_page_table);
 
 //Load Program function
 int LoadProgram(char *name, char *args[], PCB *proc);
+
+extern unsigned int frame_count;

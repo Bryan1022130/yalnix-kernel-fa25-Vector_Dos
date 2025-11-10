@@ -19,7 +19,6 @@ extern pte_t *kernel_page_table;
 extern PCB *process_free_head;
 extern UserContext *KernelUC;
 extern unsigned char *track_global;
-extern unsigned long int frame_count;
 
 #define KSTACKS (KERNEL_STACK_MAXSIZE / PAGESIZE) 
 #define TRUE 1
@@ -67,7 +66,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     return &next->curr_kc;
 }
 
-KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *not_used){
+KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *){
 	TracePrintf(1, "This is the start of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++>\n");
 
 	if(kc_in == NULL){
@@ -154,7 +153,7 @@ PCB* spawn_proc(void){
 	proc->wake_tick = 0;
 
 	//Create its stack frames
-	if(create_sframes(proc, track_global, frame_count) == ERROR){
+	if(create_sframes(proc, track_global) == ERROR){
 		TracePrintf(0, "Error with creating stack frames for proc -> %d\n", proc->pid);
 		free(proc);
 		free(reg1_proc);
@@ -200,7 +199,7 @@ void free_proc(PCB *proc, int free_flip){
 
 	if(free_flip){
 		//free its kernelstack frames
-		free_sframes(proc, track_global, frame_count);
+		free_sframes(proc, track_global);
 
 		memset(proc, 0, sizeof(PCB));
 		free(proc);
@@ -219,8 +218,5 @@ PCB *get_next_ready_process(void){
 		return ready_proc;
 	}
 	TracePrintf(0, "The readyQueue is empty. Returing NULL!");
+	return NULL;
 }
-
-
-
-

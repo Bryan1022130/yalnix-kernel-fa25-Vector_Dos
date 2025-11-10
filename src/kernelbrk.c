@@ -14,7 +14,6 @@
 
 extern pte_t *kernel_page_table;
 extern int vm_enabled;
-extern unsigned int frame_count;
 extern void *current_kernel_brk;
 extern unsigned char *track_global;
 
@@ -30,123 +29,87 @@ int SetKernelBrk(void * addr){
         TracePrintf(1, "We are in the function SetKernelBrk\n");
 
         //Convert the address to uintptr_t to be able to use as a integer
-        uintptr_t new_kbrk_addr = (uintptr_t)addr;
+        uintptr_t new_kbrk_addr = UP_TO_PAGE(addr);
         uintptr_t old_kbrk = (uintptr_t)current_kernel_brk;
 
         /* SetKernelBrk operates differently depending on if virtual memory is enabled or not
          * Before Virtual Memory is enabled, it checks if and by how much the SetKernelBrk is being raised from the original kernel check point
          */
 
-        if(vm_enabled == FALSE){
+        uintptr_t heap_start = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
+        uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
+
+        // can't shrink below data/heap start
+        if (new_kbrk_addr < heap_start) {
+            TracePrintf(0, "[SetKernelBrk] Error: address %p is below kernel heap start (%p)\n", (void*)new_kbrk_addr, (void*)heap_start);
+            return ERROR;
+        }
+
+        // can't grow into kernel stack region
+        if (new_kbrk_addr > heap_end_limit) {
+            TracePrintf(0, "[SetKernelBrk] Error: address %p would overlap kernel stack (%p)\n", (void*)new_kbrk_addr, (void*)heap_end_limit);
+            return ERROR;
+        }
+
+
+        if(!vm_enabled){
                 TracePrintf(1, "THIS IS CALLED WHEN VIRTUAL MEMORY IS NOT ENABLED\n");
-
-                uintptr_t original_brk_addr = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
-
-                //It can not be less then the current break point since this space is used for data
-                if(new_kbrk_addr < old_kbrk){
-                        TracePrintf(0, "You can not shrink the heap!\n");
-                        return ERROR;
-                }
-
-                uintptr_t heap_start = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
-                uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
-
-                // can't shrink below data/heap start
-                if (new_kbrk_addr < heap_start) {
-                    TracePrintf(0, "[SetKernelBrk] Error: address %p is below kernel heap start (%p)\n", (void*)new_kbrk_addr, (void*)heap_start);
-                    return ERROR;
-                }
-
-                // can't grow into kernel stack region
-                if (new_kbrk_addr >= heap_end_limit) {
-                    TracePrintf(0, "[SetKernelBrk] Error: address %p would overlap kernel stack (%p)\n", (void*)new_kbrk_addr, (void*)heap_end_limit);
-                    return ERROR;
-                }
-
-                uintptr_t phys_limit = frame_count * PAGESIZE;
-                if (new_kbrk_addr >= phys_limit) {
-                    TracePrintf(0, "[SetKernelBrk] Error: address %p exceeds physical memory limit (%p)\n",
-                                (void*)new_kbrk_addr, (void*)phys_limit);
-                    return ERROR;
-                }
 
                 current_kernel_brk = (void *)new_kbrk_addr;
 
                 TracePrintf(1, "[SetKernelBrk] Updated current_brk (no VM): %p\n", current_kernel_brk);
-                return 0;
+                return SUCCESS;
         }
-        else if (vm_enabled == TRUE){
-                TracePrintf(1, "VIRTUAL MEMORY HAS BEEN ENABLED \n");
+            TracePrintf(1, "VIRTUAL MEMORY HAS BEEN ENABLED \n");
 
-                //SetKernelBrk functions as regular brk after Virtual Memory has been initialized
-                //Stores the byte address of the kernel break
+            //Check if the requested new address space for the Kernel Heap Brk is valid
 
-                //Check if the requested new address space for the Kernel Heap Brk is valid
+            uintptr_t start = old_kbrk;        
+            uintptr_t end   = new_kbrk_addr; 
 
-                uintptr_t heap_start = (uintptr_t)_orig_kernel_brk_page * PAGESIZE;
-                uintptr_t heap_end_limit = (uintptr_t)KERNEL_STACK_BASE;
+            // Step 2: Growing the heap (allocate frames)
+                    // --- Grow the kernel heap ---
+    if (end > start) {
+        TracePrintf(1, "[SetKernelBrk] Growing kernel heap...\n");
+        for (uintptr_t vaddr = start; vaddr < end; vaddr += PAGESIZE) {
+            uintptr_t vpn = vaddr >> PAGESHIFT;
+            if (kernel_page_table[vpn].valid) {
+		    TracePrintf(0, "[SetKernelBrk] A page was unexpectedly mapped!\n");
+		    return ERROR;
+		}
 
-
-                TracePrintf(1, "[SetKernelBrk-VM] Comparing new_brk: %p against heap_start: %p\n",
-                    (void*)new_kbrk_addr, (void*)heap_start);
-
-
-                if (new_kbrk_addr < heap_start) {
-                    TracePrintf(0, "[SetKernelBrk] Error: address %p is below kernel heap start (%p)\n", (void*)new_kbrk_addr, (void*)heap_start);
-                    return ERROR;
-                }
-
-                if (new_kbrk_addr >= heap_end_limit) {
-                    TracePrintf(0, "[SetKernelBrk] Error: address %p overlaps kernel stack base (%p)\n", (void*)new_kbrk_addr, (void*)heap_end_limit);
-                    return ERROR;
-                }
-
-                uintptr_t grow_start = UP_TO_PAGE(old_kbrk);        
-                uintptr_t grow_end   = UP_TO_PAGE(new_kbrk_addr); 
-
-                // Step 2: Growing the heap (allocate frames)
-                        // --- Grow the kernel heap ---
-        if (grow_end > grow_start) {
-            TracePrintf(1, "[SetKernelBrk] Growing kernel heap...\n");
-            for (uintptr_t vaddr = grow_start; vaddr < grow_end; vaddr += PAGESIZE) {
-                int vpn = (int)(vaddr >> PAGESHIFT);
-                if (kernel_page_table[vpn].valid) continue;
-
-                int pfn = find_frame(track_global, frame_count);
-                if (pfn == ERROR) {
-                    TracePrintf(0, "[SetKernelBrk] Out of physical frames!\n");
-                    return ERROR;
-                }
-
-                frame_alloc(track_global, pfn);
-                kernel_page_table[vpn].pfn = pfn;
-                kernel_page_table[vpn].prot = PROT_READ | PROT_WRITE;
-                kernel_page_table[vpn].valid = TRUE;
+            int pfn = find_frame(track_global);
+            if (pfn == ERROR) {
+                TracePrintf(0, "[SetKernelBrk] Out of physical frames!\n");
+                return ERROR;
             }
-            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
-        }
 
-        // --- Shrink the kernel heap ---
-        else if (grow_end < grow_start) {
-            TracePrintf(1, "[SetKernelBrk] Shrinking kernel heap...\n");
-            for (uintptr_t vaddr = grow_end; vaddr < grow_start; vaddr += PAGESIZE) {
-                int vpn = (int)(vaddr >> PAGESHIFT);
-                if (kernel_page_table[vpn].valid) {
-                    frame_free(track_global, kernel_page_table[vpn].pfn);
-                    kernel_page_table[vpn].valid = FALSE;
-                    kernel_page_table[vpn].prot = 0;
-                    kernel_page_table[vpn].pfn = 0;
-                }
-            }
-            WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+            kernel_page_table[vpn].pfn = pfn;
+            kernel_page_table[vpn].prot = PROT_READ | PROT_WRITE;
+            kernel_page_table[vpn].valid = TRUE;
         }
-
-        // --- Finalize ---
-        current_kernel_brk = (void *)new_kbrk_addr;
-        TracePrintf(1, "[SetKernelBrk] Moved break to %p (VM enabled)\n", current_kernel_brk);
-        return 0;
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
     }
 
-    TracePrintf(0, "[SetKernelBrk] Unknown VM state!\n");
-    return ERROR;
+    // --- Shrink the kernel heap ---
+    else if (end < start) {
+        TracePrintf(1, "[SetKernelBrk] Shrinking kernel heap...\n");
+        for (uintptr_t vaddr = end; vaddr < start; vaddr += PAGESIZE) {
+            uintptr_t vpn = vaddr >> PAGESHIFT;
+		if (!kernel_page_table[vpn].valid) {
+		    TracePrintf(0, "[SetKernelBrk] A page was unexpectedly not mapped!\n");
+		    return ERROR;
+		}
+            frame_free(track_global, kernel_page_table[vpn].pfn);
+            kernel_page_table[vpn].valid = FALSE;
+            kernel_page_table[vpn].prot = 0;
+            kernel_page_table[vpn].pfn = 0;
+        }
+        WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_0);
+    }
+
+    // --- Finalize ---
+    current_kernel_brk = (void *)new_kbrk_addr;
+    TracePrintf(1, "[SetKernelBrk] Moved break to %p (VM enabled)\n", current_kernel_brk);
+    return SUCCESS;
 }

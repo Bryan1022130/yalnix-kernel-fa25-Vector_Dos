@@ -50,7 +50,7 @@ void *current_kernel_brk;
 UserContext *KernelUC;
 
 //Frames available in physical memory {pmem_size / PAGESIZE}
-unsigned long int frame_count;
+unsigned int frame_count;
 
 //how many hardware clock ticks have occurred since boot
 unsigned long current_tick = 0;
@@ -73,7 +73,7 @@ HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
  * Kernel Stack free function 
  * ==================================================================================================================
  */
-void free_sframes(PCB *free_proc, unsigned char *track, int track_size){
+void free_sframes(PCB *free_proc, unsigned char *track){
         TracePrintf(0, "Freeing the Kernel Stack for the process, this many --> %d\n", KERNEL_STACK_PAGES);
         for(int i = 0; i < KERNEL_STACK_PAGES; i++){
 		int kernels_pfn = free_proc->kernel_stack_frames[i];
@@ -86,11 +86,11 @@ void free_sframes(PCB *free_proc, unsigned char *track, int track_size){
  * Kernel Stack Allocation function 
  * ==================================================================================================================
  */
-int create_sframes(PCB *free_proc, unsigned char *track, int track_size){
+int create_sframes(PCB *free_proc, unsigned char *track){
         TracePrintf(0, "Creating the Kernel Stack for the process, this many --> %d\n", KERNEL_STACK_PAGES);
         for(int i = 0; i < KERNEL_STACK_PAGES; i++){
                 //Allocate a physical frame for kernel stack
-		int pfn = find_frame(track, track_size);
+		int pfn = find_frame(track);
                 if(pfn == ERROR){
                         TracePrintf(0, "There is no more frames to give!\n");
                         return ERROR;
@@ -123,7 +123,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Free frames creation
 	unsigned char *track = (unsigned char*)malloc(frame_count);
 	track_global = track;
-	init_frames(track, frame_count);
+	init_frames(track);
 
 	//Setup Terminal
 	TerminalSetup();
@@ -198,7 +198,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS (IDLE) -------------------------------------\n");
 
 	//Create the idle proc or process 1
-	int idle_ret = idle_proc_create(track, frame_count, user_page_table, uctxt);
+	int idle_ret = idle_proc_create(track, user_page_table, uctxt);
 	if(idle_ret == ERROR){
 		TracePrintf(0, "Idle process failed!\n");
 		return;
@@ -212,7 +212,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		TracePrintf(0, "We have a program to execute!\n");
 		TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS (INIT) -------------------------------------\n");
 
-		PCB *init_pcb = create_init_proc(track, frame_count);
+		PCB *init_pcb = create_init_proc(track);
 		init_process = init_pcb;
 		if(init_pcb == NULL){
 			TracePrintf(0, "There was an error when trying to call pcb_alloc for init process");

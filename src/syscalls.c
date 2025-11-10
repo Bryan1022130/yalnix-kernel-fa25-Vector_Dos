@@ -12,7 +12,6 @@ extern Queue *sleepQueue;
 extern unsigned long current_tick;
 extern pte_t *kernel_page_table;
 extern unsigned char *track_global;
-extern unsigned long frame_count;
 extern Queue *readyQueue;
 extern PCB *idle_process;
 extern Terminal t_array[NUM_TERMINALS];
@@ -77,21 +76,20 @@ int KernelFork(void){
     }
  
     //Set up info needed for fork
-    int child_pid = child->pid;
+    unsigned int child_pid = child->pid;
     pte_t *child_reg1 = (pte_t *)child->AddressSpace;
     pte_t *parent_reg1 = (pte_t *)parent->AddressSpace;
 
-    int frames_used = 0;
-    int first_frame_used = 0;
-    int used = 0;
-    int return_value = 0;
+    unsigned int frames_used = 0;
+    unsigned int first_frame_used = 0;
+    unsigned int used = 0;
 
     TracePrintf(0, "I am going to copy over parent contents to the child\n");
     //Loop through parent region 1 space and copying over to child
     for (int vpn = 0; vpn < MAX_PT_LEN; vpn++){
 	    if (!parent_reg1[vpn].valid) continue;
 
-	    int pfn = find_frame(track_global, frame_count);
+	    int pfn = find_frame(track_global);
 	    //If there is an error free allocated frames and free the proc
 	    if(pfn == ERROR){
 		    rollback_frames(first_frame_used, frames_used);
@@ -178,6 +176,7 @@ int KernelExec(char *filename, char *argv[]) {
 
     TracePrintf(1, "Exec success -> now running new program %s\n", filename);
     TracePrintf(0, "==========================================================================================\n");
+    return SUCCESS; // never checked
 }
 
 void KernelExit(int status) {
@@ -303,29 +302,21 @@ int KernelBrk(void *addr) {
 
      TracePrintf(1, "KernelBrk: requested addr=%p\n", addr);
 
-    // get current process
-    PCB *proc = current_process;
+    addr = (void *)UP_TO_PAGE(addr);
 
-    if (!proc) return ERROR;
-
-    // check address sanity
+    // TODO:
+    // if addr < what the brk was when the program started,
+    // or addr is in the stack mappings, fail. (checking for null not sufficient)
     if (!addr) return ERROR;
 
-    // For now, pretend success and record where the heap ends
-    //proc->user_heap_brk = (void *)addr;
-
     // Converting to integers
-    uintptr_t new_brk_req = (uintptr_t)addr; // requested break
-    uintptr_t old_brk = (uintptr_t)proc->user_heap_brk; //currrent brk
+    uintptr_t new_brk = (uintptr_t)addr; // new break
+    uintptr_t old_brk = (uintptr_t)current_process->user_heap_brk; //currrent brk
 
-    // page rounding 
-    uintptr_t new_brk = (new_brk_req + (PAGESIZE - 1)) & ~(uintptr_t)(PAGESIZE - 1);
-
-    // Pointers 
-    pte_t *pt = (pte_t *)proc->AddressSpace;
+    pte_t *pt = current_process->AddressSpace;
 
     // computing stack boundary
-    uintptr_t stack_base_vpn = ((uintptr_t)proc->user_stack_ptr) >> PAGESHIFT;
+    uintptr_t stack_base_vpn = ((uintptr_t)current_process->user_stack_ptr) >> PAGESHIFT;
 
     // check is brk makes sense 
     // is the brk above or below the current brk and or base?
@@ -360,7 +351,7 @@ int KernelBrk(void *addr) {
 		// we skip pages already valid
 		if (pt[vpn].valid) continue;
 
-		int pfn = find_frame(track_global, frame_count);
+		int pfn = find_frame(track_global);
 		if (pfn == ERROR){
 			TracePrintf(0, "KernelBrk: OOM while growing at vpn=%d\n", vpn);
 			// roll page pages we just mapped
@@ -399,8 +390,8 @@ int KernelBrk(void *addr) {
     }
     // flush
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
-    proc->user_heap_brk = (void *)new_brk;
-    TracePrintf(1, "KernelBrk: success, new brk=%p\n", proc->user_heap_brk);
+    current_process->user_heap_brk = (void *)new_brk;
+    TracePrintf(1, "KernelBrk: success, new brk=%p\n", current_process->user_heap_brk);
 
     TracePrintf(1, "THIS IS THE END OF OUR KERNEL FUNCTION THAT WE CREATED\n");
     return 0;

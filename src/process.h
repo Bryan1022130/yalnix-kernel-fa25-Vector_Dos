@@ -26,13 +26,15 @@ struct pcb{
         UserContext curr_uc; //Hold the Current User Context { Not just the pointer}
 	
 	//Process information
-	int ppid;
-        int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
+	// TODO: use parent->pid instead of ppid
+	unsigned int ppid;
+        unsigned int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
 	int exit_status; // When a process is going to exit
 
         ProcessState currState; //Enum states for process
-        void *AddressSpace; // to keep track of where it is currently in its address space for region 1 {Page Table}
-				
+        pte_t *AddressSpace; // to keep track of where it is currently in its address space for region 1 {Page Table}
+		
+	// TODO: make these page indices
 	void *user_heap_brk; //The top of heap
 	void *user_stack_ptr; //Lowest stack address
 	
