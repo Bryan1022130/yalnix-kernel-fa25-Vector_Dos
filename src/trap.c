@@ -143,7 +143,7 @@ void HandleKernelTrap(UserContext *CurrUC){
 	//Store the value that we get from the syscall into the regs[0];
 	CurrUC->regs[0] = sys_return;
 	TracePrintf(0, "This is the value of sys_return --> %d\n", sys_return);
-//	current_process->curr_uc = *CurrUC; // keep updated registers
+	//current_process->curr_uc = *CurrUC; 
 	current_process->curr_uc.regs[0] = sys_return; // sets return value register
 
 	*CurrUC = current_process->curr_uc;
@@ -401,34 +401,60 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 //TtyWrite.
 
 void HandleTransmitTrap(UserContext *CurrUC) {
+    TracePrintf(0, "======================================START TRANSMIT TRAP=========================================================\n");
     current_process->curr_uc = *CurrUC;
 
     TracePrintf(0, "TransmitTrap: Hello we are in the TransmitTrap handler!\n");
     TracePrintf(0,"This means that all your data from TTyTransmit has been written out!\n");
 
     int terminal = CurrUC->code;
-    //clear out the input_bufffer
-    memset(input_buffer, 0, sizeof(TERMINAL_MAX_LINE * sizeof(char)));
 
-    //Check if there is a blocked process
-    if(t_array[terminal].waiting_process != NULL){
-	    TracePrintf(0, "There is a process waiting and this is the pid -> %d\n", t_array[terminal].waiting_process->pid);
-	    TracePrintf(0, "This is the size of the waiting buffer is -> %ld\n", t_array[terminal].message_line_len);
-	    unsigned long int mes_len =  t_array[terminal].message_line_len;
-	    while(mes_len > 0){
-		    //We made need to buffer to be able to call TTytransit here
-		    //Essentially we are going to call it multiple times until we went through the message
+    MessageNode *current_message = t_array[terminal].message_head;
+    //We dont create a node for input < TERMINAL_MAX_LINE
+    //So checking for if current_message == NULL is not correct
+    //Thus we need to check if the waiting process == NULL also 
+    if(current_message == NULL && t_array[terminal].waiting_process == NULL){
+	    TracePrintf(0, "HandleTransmitTrap: ERROR!. The message head of terminal is NULL!\n");
+	    Halt();
+    }
+
+    //Logic if there is multiple messages
+    if (current_message != NULL) {
+	    TracePrintf(0, "Nice we transmitted this amount --> %d\n", current_message->length);
+
+	    //Move the to the next node and free the node
+	    t_array[terminal].message_head = current_message->next;
+	    free(current_message);
+
+	    //Check if there is a blocked process
+	    if (t_array[terminal].message_head != NULL) {
+		    TracePrintf(0, "Perfect we have another messages to transmit!\n");
+		    MessageNode *new_message = t_array[terminal].message_head;
+		    TracePrintf(0, "This is the amount we are going to send --> %d\n", new_message->length);
+		    TtyTransmit(terminal, (void *)new_message->message, new_message->length);
+		    TracePrintf(0, "This is farewell for now friend! Until the next interrupt :)\n");
+		    *CurrUC = current_process->curr_uc;
+		    TracePrintf(0, "======================================END TRANSMIT TRAP=========================================================\n");
+		    return;
 	    }
     }
 
-    TracePrintf(0, "I guess there was no process waiting!\n");
-
-    //Free the process from waiting 
+    TracePrintf(0, "Hey we did it! All your messasge was sent!\n");
+    PCB *wait_proc = t_array[terminal].waiting_process;
+    if (wait_proc == NULL) {
+	    TracePrintf(0, "ERROR! Why is the waiting process NULL! Check your TtyWrite logic\n");
+	    Halt();
+    }
+    
+    //Now we can unblock the process
+    TracePrintf(0, "We are unblocking process -> %d\n", wait_proc->pid);
+    wait_proc->currState = READY;
+    remove_data(blockedQueue, wait_proc);
+    Enqueue(readyQueue, wait_proc);
     t_array[terminal].waiting_process = NULL;
-    t_array[terminal].waiting_buffer = NULL;
-    t_array[terminal].message_line_len = 0;
 
     *CurrUC = current_process->curr_uc;
+    TracePrintf(0, "======================================END TRANSMIT TRAP=========================================================\n");
 }
 
 void HandleDiskTrap(UserContext *CurrUC) {

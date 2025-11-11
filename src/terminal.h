@@ -7,6 +7,9 @@ typedef struct messagenode {
 
 	//NextNode
 	struct messagenode *next;
+
+	//if it has been read
+	unsigned char not_read;
 }MessageNode;
 
 typedef struct termial {

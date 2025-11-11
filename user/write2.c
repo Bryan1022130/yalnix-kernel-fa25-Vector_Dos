@@ -1,0 +1,15 @@
+#include <yalnix.h>
+#include <ylib.h>
+#include <yuser.h>
+
+int main(void) {
+	char *buffer = "The mysterious fog rolled across the abandoned carnival grounds as seventeen clockwork ravens circled overhead, their mechanical wings creating an eerie symphony of clicks and whirs. Nobody remembered when the carnival had closed, but locals whispered stories about the fortune teller who predicted her own disappearance on a Tuesday afternoon in September. The Ferris wheel stood frozen at an impossible angle, defying all known laws of physics and engineering, while cotton candy machines spontaneously generated pink clouds that smelled of forgotten dreams and childhood nostalgia. A group of quantum physicists arrived to study the phenomenon but found themselves inexplicably compelled to ride the carousel, which played backwards versions of songs that wouldn't be written for another fifty years. The lead scientist, Dr. Pemberton, discovered that the carousel horses blinked in Morse code, transmitting the complete works of Shakespeare mixed with recipes for sourdough bread and instructions for building a time machine from household appliances. His assistant, Margaret, documented everything in a notebook that kept adding its own observations in emerald green ink when nobody was looking. The notebook had opinions about experimental methodology and wasn't shy about sharing them, often contradicting Margaret's conclusions with footnotes written in languages that hadn't been invented yet. Meanwhile, in a parallel dimension accessible only through the hall of mirrors, a council of sentient geometric shapes debated whether circles or triangles held superior philosophical perspectives. The hexagons remained neutral, as they always did, while the dodecahedrons proposed a compromise involving fractal patterns and the golden ratio. Back in the normal world, or what passed for normal in this particular narrative, a street vendor sold probability clouds in recyclable containers, each one containing a different likelihood of rain on Tuesdays. His best customer was a woman who collected unlikely events and displayed them in her apartment like butterflies pinned to cork boards. She had acquired a sunset that lasted three hours, a conversation between two trees that disagreed about autumn, and a moment of complete silence from a city intersection that typically roared with traffic twenty-four hours a day. Her collection attracted the attention of the Museum of Improbable Occurrences, which offered her a curator position that paid in experiences rather than currency. She accepted immediately, trading her apartment for a houseboat that sailed on clouds and occasionally docked at rainbow endpoints to pick up passengers who had missed their connections to reality. The houseboat's captain was a reformed pirate who had given up plundering after discovering that stolen treasure always turned into chocolate coins at midnight.";
+
+        int ret = TtyWrite(3, (void *)buffer, (int)strlen(buffer));
+
+        if(ret < 0) {
+                Exit(-1);
+        }
+
+        Exit(56);
+}
