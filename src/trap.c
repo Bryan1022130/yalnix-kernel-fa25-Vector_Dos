@@ -471,7 +471,13 @@ void HandleTransmitTrap(UserContext *CurrUC) {
 	    TracePrintf(0, "ERROR! Why is the waiting process NULL! Check your TtyWrite logic\n");
 	    Halt();
     }
-    
+
+    if (t_array[terminal].one_message_buffer) { 
+	    TracePrintf(0 , "Hello! This should only be true when we have a small message!\n");
+	    TracePrintf(0, "Okay! I will not free the buffer!\n");
+	    free(t_array[terminal].one_message_buffer);
+    }
+
     //Now we can unblock the process
     TracePrintf(0, "We are unblocking process -> %d\n", wait_proc->pid);
     wait_proc->currState = READY;

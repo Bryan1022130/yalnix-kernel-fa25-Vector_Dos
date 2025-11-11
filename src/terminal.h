@@ -20,6 +20,8 @@ typedef struct termial {
 	 //Blocked Process Logic {Might have to change later}
 	 PCB *waiting_process;
 
+	 char *one_message_buffer;
+
 	 //Linked-List to store messages in chunks
 	 MessageNode *message_head;
 

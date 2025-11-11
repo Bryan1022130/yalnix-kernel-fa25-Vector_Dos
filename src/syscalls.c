@@ -458,7 +458,7 @@ int KernelTtyRead(int tty_id, void *buf, int len){
 }
 
 
-int KernelTtyWrite(int tty_id, void *buf, int len){
+int KernelTtyWrite(int tty_id, void *buf, int len) {
 	if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len < 0) {
 		TracePrintf(0, "One of your arguments was invalid!\n");
 		return ERROR;
@@ -469,24 +469,25 @@ int KernelTtyWrite(int tty_id, void *buf, int len){
 		return ERROR;
 	}
 
-	char *kbuffer = malloc(len);
-	if(kbuffer == NULL){
+	char *kbuffer = calloc(1, len);
+	if (kbuffer == NULL) {
 		TracePrintf(0, "Error with malloc for TtyWrite\n");
 		return ERROR;
 	}
 
-	memset(kbuffer, 0, len);
+	//Copy the into a region 0 buffer
 	memcpy(kbuffer, buf, len);
 
 	//If len is under TERMINAL_MAX_LINE than we only need one transmit
 	if (len < TERMINAL_MAX_LINE) {
 		TracePrintf(0, "We can transmit your message with one call!\n");
-		TracePrintf(0, "Process %d has sent a messages! I will block it until the trap handler has executed!\n", current_process->pid);
+		TracePrintf(0, "Process %d has sent a messages! I will block it until the trap handler has executed!\n", current_process->pid);	
 
 		//remove_data(readyQueue, (void *)current_process); //Take of the ready queue
 		//Put proc in blocked queue
 		t_array[tty_id].waiting_process = current_process;
 		current_process->currState = BLOCKED;
+		t_array[tty_id].one_message_buffer = kbuffer; //Store the buffer so that I can free it later { This is a special case}
 		Enqueue(blockedQueue, (void *)current_process); //Add to block queue
 		
 		TtyTransmit(tty_id, kbuffer, len); // NOTE FREE KBUFFER IN THE TRAP+++++++++++++++++++++++++++++++++++
@@ -507,7 +508,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len){
 	TracePrintf(0, "For debug purposes this is the amount that len is -> %d\n", len);
 
 	//--------------------------------------------------- Support logic for when len > TERMINAL_MAX_LINE
-		
+	
 	//We need to split by chunks of TERMINAL_MAX_LINE - 1
 	// -1 to leave space for null terminator
 	unsigned int bytes_left = len;
@@ -519,12 +520,18 @@ int KernelTtyWrite(int tty_id, void *buf, int len){
 		TracePrintf(0, "THIS IS IN THE LOOP!\n");
 		//For each loop create a node, add message to list, repeat
 		unsigned int chunk_split = (bytes_left < buffer_size) ? bytes_left : buffer_size;
-
+		
+		//Create the node sturct 
 		MessageNode *message_node = calloc(1, sizeof(MessageNode));
-		if(message_node == NULL){
+		//Malloc buffer for message_node, assign to field in struct
+		char* mbuffer = calloc(1, TERMINAL_MAX_LINE);
+		if(message_node == NULL || mbuffer == NULL){
 			TracePrintf(0, "TtyWrite: There was an error with creating a MessageNode!\n");
 			return ERROR;
 		}
+
+		message_node->message = mbuffer;
+		mbuffer[TERMINAL_MAX_LINE] = '\0'; //Might not need this???
 		TracePrintf(0, "Before Memcpy THIS IS IN THE LOOP!\n");
 		memcpy(message_node->message, kbuffer + i, chunk_split);
 		TracePrintf(0, " NExt cycleTHIS IS IN THE LOOP!\n");
