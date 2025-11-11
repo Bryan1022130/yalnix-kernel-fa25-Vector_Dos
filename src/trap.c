@@ -322,7 +322,7 @@ void HandleMathTrap(UserContext *CurrUC) {
 /* =========================================
  * General Flow:
  * -> Index into CurrUC->code
- * -> Read the input from terminal with TtyRecieve
+ * -> Read the user input from terminal with TtyRecieve
  * ---> Buffer if neccessary
  * -> Store in our terminal struct
  * -> This will get read later on by Ttyread
@@ -333,14 +333,41 @@ void HandleReceiveTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
 
     TracePrintf(0, "Hello this is ReceiveTrap handler!\n");
-    TracePrintf(0, "I will now read input!\n");
+    TracePrintf(0, "I will read user input!\n");
 
     //extract the terminal number for US->code
     int terminal = CurrUC->code;
 
-    //Read the input in a loop until length < 0
+    //This is assumming that a user input can only be up to TERMINAL_MAX_LINE
+    MessageNode *read_node = calloc(1, sizeof(read_node));
+    if (read_node == NULL) { 
+	    TracePrintf(0, "HandleReceiveTrap: There was an error when creating a node for user input\n");
+	    Halt();
+    }
+    //Alloc buff for recieve
+    char *buffer_zero = calloc(1, TERMINAL_MAX_LINE);
+    if (buffer_zero == NULL) {
+	    TracePrintf(0, "HandleReceiveTrap: There was an error when creating buffer for receive\n");
+	    Halt();
+    }
+
+    int message_length = TtyReceive(terminal, (void *)buffer_zero, TERMINAL_MAX_LINE - 1);
+    buffer_zero[TERMINAL_MAX_LINE] = '\0'; //Might not need this??
+
+    //Fill in the MessageNode
+    memcpy(read_node->message, buffer_zero, TERMINAL_MAX_LINE);
+    read_node->length = message_length;
+
+    if(read_add_message(terminal, read_node) == ERROR) {
+	    TracePrintf(0, "There was an error with read_add_message in HandleRecieve!\n");
+	    return;
+
+    }
+    //TODO: ADD MORE LOGIC THAT MAY BE MISSING AFTER GETTING MORE CLARIFCATION
+
 
     /*
+    //Read the input in a loop until length < 0
     int length;
     int message_index = 0;
     input_buffer[TERMINAL_MAX_LINE - 1] = '\0'; //Null terminate the buffer
@@ -379,10 +406,10 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 	    TracePrintf(0, "There was an error inside of TTYReceive!\n");
 	    return;
     }
+    */
     
     //Set terminal as not busy anymore
     t_array[terminal].is_busy = 0;
-    */
     
     *CurrUC = current_process->curr_uc;
 }
@@ -394,7 +421,6 @@ void HandleReceiveTrap(UserContext *CurrUC) {
  * -> Check if there is more output and make sure it runs
  * =========================================
  */
-
 
 //when the hardware throws the TRAP TTY TRANSMIT to indicate this transmit is complete, the kernel moves
 //the caller back to the ready queue. When the caller gets dispatched next, the userland process will return from
