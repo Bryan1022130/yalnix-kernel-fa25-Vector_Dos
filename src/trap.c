@@ -358,19 +358,23 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 	    read_node->length = message_length; //Store message length
 
 	    if (message_length < TERMINAL_MAX_LINE) { 
-		    TracePrintf(0, "There is the last line of input to read\n");
+		    TracePrintf(0, "This is the last line of input to read\n");
 		    TracePrintf(0, "This the length of message_length --> %d\n", message_length);
 
 		    realloc(buffer_zero, message_length); //Realloc the buffer to not waste memory 
-		    
+		    TracePrintf(0, "I just reallocated the buffer to the length above\n");
+
 		    //Add node to the list of messages
 		    if(read_add_message(terminal, read_node) == ERROR) {
 			    TracePrintf(0, "There was an error with read_add_message in HandleRecieve!\n");
 		    }
-
+		    TracePrintf(0, "Good by now! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 		    *CurrUC = current_process->curr_uc;
 		    return;
 	    }
+
+	    TracePrintf(0, "Looks like we need to cycle again!\n");
+	    TracePrintf(0, "This the length of message_length --> %d\n", message_length);
 
 	    //Add the message in to the linked-list of messages for TtyRead
 	    if(read_add_message(terminal, read_node) == ERROR) {
@@ -388,10 +392,6 @@ void HandleReceiveTrap(UserContext *CurrUC) {
  * =========================================
  */
 
-//when the hardware throws the TRAP TTY TRANSMIT to indicate this transmit is complete, the kernel moves
-//the caller back to the ready queue. When the caller gets dispatched next, the userland process will return from
-//TtyWrite.
-
 void HandleTransmitTrap(UserContext *CurrUC) {
     TracePrintf(0, "======================================START TRANSMIT TRAP=========================================================\n");
     current_process->curr_uc = *CurrUC;
@@ -401,47 +401,57 @@ void HandleTransmitTrap(UserContext *CurrUC) {
 
     int terminal = CurrUC->code;
 
-    MessageNode *current_message = t_array[terminal].message_head;
+    MessageNode *current_message = t_array[terminal].transmit_message_head;
+
     //We dont create a node for input < TERMINAL_MAX_LINE
     //So checking for if current_message == NULL is not correct
     //Thus we need to check if the waiting process == NULL also 
-    if(current_message == NULL && t_array[terminal].waiting_process == NULL){
-	    TracePrintf(0, "HandleTransmitTrap: ERROR!. The message head of terminal is NULL!\n");
+    if(current_message == NULL && t_array[terminal].transmit_waiting_process == NULL){
+	    TracePrintf(0, "HandleTransmitTrap: ERROR!. The transit message head and waiting process are NULL!\n");
 	    Halt();
     }
 
     //Logic if there is multiple messages
     if (current_message != NULL) {
+
 	    TracePrintf(0, "Nice we transmitted this amount --> %d\n", current_message->length);
 
-	    //Move the to the next node and free the node
-	    t_array[terminal].message_head = current_message->next;
+	    //Free the current_message malloced buffer
+	    free(current_message->message);
+
+	    //Move the to the next node and free the MessageNode
+	    t_array[terminal].transmit_message_head = current_message->next;
 	    free(current_message);
 
 	    //Check if there is a blocked process
-	    if (t_array[terminal].message_head != NULL) {
+	    if (t_array[terminal].transmit_message_head != NULL) {
+
 		    TracePrintf(0, "Perfect we have another messages to transmit!\n");
-		    MessageNode *new_message = t_array[terminal].message_head;
+		    MessageNode *new_message = t_array[terminal].transmit_message_head;
 		    TracePrintf(0, "This is the amount we are going to send --> %d\n", new_message->length);
 		    TtyTransmit(terminal, (void *)new_message->message, new_message->length);
-		    TracePrintf(0, "This is farewell for now friend! Until the next interrupt :)\n");
+		    TracePrintf(0, "\n\nThis is farewell for now friend! Until the next interrupt :)\n");
+
 		    *CurrUC = current_process->curr_uc;
 		    TracePrintf(0, "======================================END TRANSMIT TRAP=========================================================\n");
 		    return;
 	    }
     }
 
-    TracePrintf(0, "Hey we did it! All your messasge was sent!\n");
-    PCB *wait_proc = t_array[terminal].waiting_process;
+    TracePrintf(0, "Hey we did it! All your messasge were sent!\n");
+    PCB *wait_proc = t_array[terminal].transmit_waiting_process;
     if (wait_proc == NULL) {
 	    TracePrintf(0, "ERROR! Why is the waiting process NULL! Check your TtyWrite logic\n");
 	    Halt();
     }
 
-    if (t_array[terminal].one_message_buffer) { 
-	    TracePrintf(0 , "Hello! This should only be true when we have a small message!\n");
-	    TracePrintf(0, "Okay! I will not free the buffer!\n");
+    if (t_array[terminal].one_message_buffer != NULL) { 
+	    TracePrintf(0,"Hello! This should only be true when we have a small message!\n");
+	    TracePrintf(0,"Okay! I will now free the buffer!\n");
 	    free(t_array[terminal].one_message_buffer);
+	    
+	    t_array[terminal].one_message_buffer = NULL;
+	    t_array[terminal].one_message_length = 0;
     }
 
     //Now we can unblock the process
@@ -449,7 +459,7 @@ void HandleTransmitTrap(UserContext *CurrUC) {
     wait_proc->currState = READY;
     remove_data(blockedQueue, wait_proc);
     Enqueue(readyQueue, wait_proc);
-    t_array[terminal].waiting_process = NULL;
+    t_array[terminal].transmit_waiting_process = NULL;
 
     *CurrUC = current_process->curr_uc;
     TracePrintf(0, "======================================END TRANSMIT TRAP=========================================================\n");

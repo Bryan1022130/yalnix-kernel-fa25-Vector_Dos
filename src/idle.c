@@ -28,6 +28,7 @@ extern pte_t *kernel_page_table;
 void DoIdle(void) {
         int count = 0;
         while(1) {
+		/*
                 TracePrintf(1,"Idle loop running (%d)\n", count++);
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
@@ -37,6 +38,7 @@ void DoIdle(void) {
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
+		*/
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
                 Pause();
         }
