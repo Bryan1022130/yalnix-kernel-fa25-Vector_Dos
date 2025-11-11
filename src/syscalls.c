@@ -469,6 +469,9 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 		return ERROR;
 	}
 
+	//TODO: Check if the bufferi valid
+	
+	//Create a buffer that in region 0
 	char *kbuffer = calloc(1, len);
 	if (kbuffer == NULL) {
 		TracePrintf(0, "Error with malloc for TtyWrite\n");
