@@ -825,6 +825,7 @@ int KernelPipeWrite(int pipe_id, void *buf, int len) {
  * ============================
  */
 
+/*
 int KernelLockInit(int *lock_idp) {
     return 0;
 }
@@ -836,6 +837,8 @@ int KernelAcquire(int lock_id) {
 int KernelRelease(int lock_id) {
     return 0;
 }
+
+*/
 
 int KernelCvarInit(int *cvar_idp) {
     return 0;
