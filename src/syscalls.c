@@ -451,9 +451,99 @@ int KernelTtyRead(int tty_id, void *buf, int len){
 		return ERROR;
 	}
 
-//	if (t_array[tty_id.
+	if (t_array[tty_id].read_waiting_process != NULL) { 
+		TracePrintf(0, "Stop! There is already a process waiting for terminal %d!\n", tty_id);
+		return ERROR;
+	}
 
-	return 0;
+	if (t_array[tty_id].input_read_head ==  NULL) { 
+		TracePrintf(0, "There is no input yet to read!\n");
+		TracePrintf(0, "Blocking process %d until we get new messages!\n");
+
+		current_process->currState = BLOCKED;
+		t_array[tty_id].read_waiting_process = current_process;
+		Enqueue(blockedQueue, current_process);
+
+		PCB *next = get_next_ready_process();
+		if (KernelContextSwitch(KCSwitch, current_process, next) < 0) {
+			TracePrintf(0, "There was an error with the KCSwitch in TtyWrite!\n");
+			Halt(); //for testing
+			return ERROR;
+		}
+	}
+
+	MessageNode *curr_message = t_array[tty_id].input_read_head;
+
+	//Check if there is enough bytes in this one node
+	if (curr_message->length >= len) {
+		//Case where they are exactly the same
+		if(curr_message->length == len){
+			TracePrintf(0, "TtyRead: Hey! We can return to you a message of the exact length that you requested!\n");
+			//Copy over the requested bytes
+			memcpy(buf, (void *)curr_message->message, len);
+			
+			//Remove off the list
+			MessageNode *head = read_remove_message(tty_id);
+
+			//free message buffer and Node
+			free(head->message);
+			free(head);
+			
+			//Finally Return length
+			return len;
+		}
+		//If the message stored is bigger than len
+		TracePrintf(0, "TtyRead: Hey! The message I found is longer than you requested! I will return only what you requsted!\n");
+		//Memcpy upto length
+		memcpy(buf, (void *)curr_message->message, len);
+
+		//Shift the data over
+		memmove(curr_message->message, curr_message->message + len, curr_message->length - len);
+
+		//Update the overall len
+		curr_message->length -= len;
+
+		//realloc the buffer to save space
+		curr_message->message = realloc(curr_message->message, curr_message->length);
+
+		return len;
+	}
+
+	//Although the current MessageNode may be < len; lets first check if we can tranvserse node to satisfy
+	unsigned int bytes_copied = 0;
+	
+	//We loop until we can satisfy len or until we reach then end
+	//Note: We dont have to stricly return len only as much as we currently have
+	while (bytes_copied < len && curr_message != NULL) {
+		int bytes_in_node = curr_message->length; //Bytes in the curernt node
+		int bytes_search = len - bytes_copied; //Bytes we need left to satisfy user request
+		//To ensure we only memcpy bytes that are avaibles in the curent node
+		int bytes_to_copy = (bytes_in_node < bytes_search) ? bytes_in_node : bytes_search;
+
+		//copy to buffer; start from + bytes copied to not override data
+		memcpy(buf + bytes_copied, curr_message->message, bytes_to_copy);
+		bytes_copied += bytes_to_copy;
+
+		if (bytes_to_copy == curr_message->length) {
+			//advande to next node
+			curr_message = curr_message->next;
+
+			//Remove off the list
+			MessageNode *head = read_remove_message(tty_id);
+
+			//free message buffer and Node
+			free(head->message);
+			free(head);
+		 } else {
+			//Incase we reach a node and we only use part of the its buffer
+			TracePrintf(0, "Great we only used part of this node! We shift it around to save for the next call!\n");
+			memmove(curr_message->message, curr_message->message + bytes_to_copy, curr_message->length - bytes_to_copy);
+			curr_message->length -= bytes_to_copy;
+		 }
+
+	}
+
+	return bytes_copied;
 }
 
 
