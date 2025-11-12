@@ -5,6 +5,7 @@
 #include <yalnix.h>
 #include <hardware.h>
 #include <ykernel.h>
+#include "pipe.h"
 
 //extern globals from kernelstart.c
 extern PCB *current_process;
@@ -688,18 +689,135 @@ int KernelWriteSector(int sector, void *buf) {
  */
 
 int KernelPipeInit(int *pipe_id_ptr) {
-    TracePrintf(0, "PipeInit()\n");
+    TracePrintf(0, "PipeInit() called by PID %d\n", current_process->pid);
+
+    // vailidating pointer
+    if(pipe_id_ptr == NULL) {
+        TracePrintf(0, "PipeInt: invalid user pointer\n");
+        return ERROR;
+    }
+
+    // find free slot in the global pipe table
+    for (int i = 0; i < MAX_PIPES; i++){
+        // checking if slot is occupied
+        if (!pipe_table[i].in_use) {
+            Pipe *p = &pipe_table[i];
+
+            // initilizing pipe state
+            memset(p->buffer, 0, PIPE_BUFFER_LEN);
+            p->head = p->tail = p->count = 0;
+            p->in_use = 1;
+            p->waiting_readers = initializeQueue();
+            p->waiting_writers = initializeQueue();
+
+            // writing ID back to user memory
+            *pipe_id_ptr = i;
+
+            TracePrintf(0, "PipeInit: created pipe ID %d\n", i);
+            return 0;
+        }
+    }
+
+    TracePrintf(0, "PipeInit: no free pipes avaliable!\n");
     return ERROR;
 }
 
 int KernelPipeRead(int pipe_id, void *buf, int len) {
-    TracePrintf(0, "PipeRead()\n");
-    return ERROR;
+    TracePrintf(0, "PipeRead() called by PID %d for pipe %d, len=%d\n",
+		current_process->pid, pipe_id, len);
+
+    // validating input
+    if (buf == NULL || len <= 0) {
+	TracePrintf(0,"PipeRead: invalid args\n");
+ 	return ERROR;
+    }
+
+    Pipe *p = get_pipe(pipe_id);
+    if (p == NULL || !p->in_use) {
+        TracePrintf(0, "PipeRead: invalid pipe ID %d\n", pipe_id);
+	return ERROR;
+    }
+
+    int available = bytes_available(p);
+    if (available <= 0) {
+	TracePrintf(0, "PipeRead: pipe empty, blocking PID %d\n", current_process->pid);
+
+        // blocking current process
+        current_process->currState = BLOCKED;
+        Enqueue(p->waiting_readers, current_process);
+
+	//switching context to the next ready process
+        PCB *next = get_next_ready_process();
+        if (next == NULL) next = idle_process;
+        KernelContextSwitch(KCSwitch, current_process, next);
+
+        available = bytes_available(p);
+    }
+
+    //reading from pipe up to len
+    int to_read = (len > available) ? available : len;
+    int read = PipeReadBytes(p, buf, to_read);
+    TracePrintf(0, "PipeRead: read %d bytes from pipe %d\n", read, pipe_id);
+
+
+    // wake waiting waiter
+    if (p->waiting_writers && p->waiting_writers->head != NULL) {
+        PCB *writer = Dequeue(p->waiting_writers);
+        writer->currState = READY;
+        Enqueue(readyQueue, writer);
+        TracePrintf(0, "PipeRead: woke writer PID %d\n", writer->pid);
+    }
+
+    // bytes read
+    return read;
 }
 
 int KernelPipeWrite(int pipe_id, void *buf, int len) {
-    TracePrintf(0, "PipeWrite()\n");
-    return ERROR;
+    TracePrintf(0, "PipeWrite() called by PID %d for the pipe %d , len=%d\n",
+            current_process->pid, pipe_id, len);
+
+    // validating input
+    if (buf == NULL || len <= 0) {
+        TracePrintf(0, "PipeWrite: invalid args\n");
+        return ERROR;
+    }
+
+    Pipe *p = get_pipe(pipe_id);
+    if (p == NULL || !p->in_use) {
+        TracePrintf(0, "PipeWrite: invalid pipe ID %d\n", pipe_id);
+        return ERROR;
+    }
+
+    // checking how much space is left
+    int available = space_available(p);
+    if (available <= 0) {
+        TracePrintf(0, "PipeWrite: pipe full, blocking PID %d\n", current_process->pid);
+
+        // blocking
+        current_process->currState = BLOCKED;
+        Enqueue(p->waiting_writers, current_process);
+
+        PCB *next = get_next_ready_process();
+        if (next == NULL) next = idle_process;
+        KernelContextSwitch(KCSwitch, current_process, next);
+
+        available = space_available(p);
+    }
+
+    // copying data into pipe
+    int written = PipeWriteBytes(p, buf, len);
+    TracePrintf(0, "PipeWrite: wrote %d bytes to pipe %d\n", written, pipe_id);
+
+    // wake waiting reader
+    if (p->waiting_readers && p->waiting_readers->head != NULL) {
+        PCB *reader = Dequeue(p->waiting_readers);
+        reader->currState = READY;
+        Enqueue(readyQueue, reader);
+        TracePrintf(0, "PipeWrite: woke reader PID %d\n", reader->pid);
+    }
+
+    // how many btyes we successfully wrote
+    return written;
 }
 
 /* ============================

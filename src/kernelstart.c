@@ -127,6 +127,10 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	//Setup Terminal
 	TerminalSetup();
 
+        // Pipe Table Set up
+        PipeTableInit();
+	TracePrintf(0, "Pipe system ready for IPC\n");
+
 	//Malloc and clear input_buffer that will hold user input
 	input_buffer = (char *)malloc(TERMINAL_MAX_LINE * sizeof(char));
 	if (input_buffer == NULL) {
