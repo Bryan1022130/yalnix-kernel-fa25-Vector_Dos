@@ -14,6 +14,7 @@
 #include "idle.h"
 #include "init.h"
 #include "terminal.h"
+#include "pipe.h"
 
 //Macros for if VM is enabled
 #define TRUE 1

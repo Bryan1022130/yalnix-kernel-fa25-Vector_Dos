@@ -521,16 +521,16 @@ void abort(void){
 		TracePrintf(0, "Idle is aborting! Time to Halt())\n");
 		Halt();
 	}
-	
-	//Get the next process that can run 
-	/*
+
+	//Get a new process to run 
 	PCB *next = get_next_ready_process();
 	if(next == NULL){
 		TracePrintf(0, "There is no ready process. ERROR idle should be in Queue!\n");
 		return;
 	}
 
-	free_proc(current_process);
+	//Free the proc from queues, and most of its memory
+	free_proc(current_process, 0);
 
 	//Context Switch
 	if(KernelContextSwitch(KCSwitch, current_process, next) < 0){
@@ -539,5 +539,4 @@ void abort(void){
 	}
 
 	return;
-	*/
 }

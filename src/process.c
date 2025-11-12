@@ -12,7 +12,7 @@
 extern PCB *current_process;
 extern PCB *idle_process;
 extern Queue *readyQueue;
-extern Queue *sleepQueue;
+extern Queue *blockedQueue;
 extern pte_t *kernel_page_table;
 extern PCB *process_free_head;
 extern UserContext *KernelUC;
@@ -159,7 +159,7 @@ PCB* spawn_proc(void) {
 	return proc;
 }
 
-//Need to add more to this
+//Need to add more to this {Might need to return a int to signify success}
 void free_proc(PCB *proc, int free_flip) {
 	TracePrintf(0, "+++++++++++++++++++++++++++++FREE PROC++++++++++++++++++++++++++++++++++\n");
 	TracePrintf(0, "We are going to free the process with a pid of --> %d\n", proc->pid);
@@ -180,18 +180,28 @@ void free_proc(PCB *proc, int free_flip) {
 	}
 
 	WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
+	
+	//Free its region 1 space
+	free(proc->AddressSpace);
 
 	//free pid
 	TracePrintf(0, "PID we're retiring : %d\n", proc->pid);
 	helper_retire_pid(proc->pid);
+	
+	//Remove from all queues
+	remove_data(readyQueue, (void *)proc);
+	remove_data(blockedQueue, (void *)proc);
 
-	//free the malloc space
-	free(proc->AddressSpace);
+	//Im not sure yet if this is before or after abort KCS
+	
+	//TODO : I have to move the children of the process to somewhere else
+	
 
 	if (free_flip) {
 		//free its kernelstack frames
 		free_sframes(proc, track_global);
-
+		
+		//Free the proc itself
 		memset(proc, 0, sizeof(PCB));
 		free(proc);
 	}
