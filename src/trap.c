@@ -368,7 +368,7 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 		    if(read_add_message(terminal, read_node) == ERROR) {
 			    TracePrintf(0, "There was an error with read_add_message in HandleRecieve!\n");
 		    }
-		    TracePrintf(0, "Good by now! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+		    TracePrintf(0, "Good bye now! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 		    *CurrUC = current_process->curr_uc;
 		    return;
 	    }
@@ -516,6 +516,11 @@ void HandleTrap(UserContext *){
 void abort(void){
 	//TODO
 	TracePrintf(0, "We are aborting the current process!\n");
+
+	if (current_process->pid == 1){
+		TracePrintf(0, "Idle is aborting! Time to Halt())\n");
+		Halt();
+	}
 	
 	//Get the next process that can run 
 	/*
