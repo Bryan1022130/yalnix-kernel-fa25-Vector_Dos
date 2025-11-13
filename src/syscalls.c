@@ -6,6 +6,8 @@
 #include <hardware.h>
 #include <ykernel.h>
 #include "pipe.h"
+#include "lock.h"
+#include "cvar.h"
 
 //extern globals from kernelstart.c
 extern PCB *current_process;
@@ -841,21 +843,177 @@ int KernelRelease(int lock_id) {
 */
 
 int KernelCvarInit(int *cvar_idp) {
+    TracePrintf(0, "CvarInit() called by PID %d\n", current_process->pid);
+
+    //validating pointer 
+    if (cvar_idp == NULL) {
+    TracePrintf(0, "CvarInit: invalid user pointer\n");
+    return ERROR;
+    }
+
+    // allocating new Cvar structure
+    Cvar *cv = calloc(1, sizeof(Cvar));
+    if (cv == NULL) {
+        TracePrintf(0, "CvarInit: malloc failed\n");
+        return ERROR;
+    }
+
+    // assign ID and initialize fields
+    cv->id = cvar_count++;
+    cv->in_use = 1;
+    cv->waiters = initializeQueue();
+    cv->next = NULL;
+
+    // adding to global list 
+    add_cvar(cv);
+
+    //write the ID back to user memory
+    *cvar_idp = cv->id;
+
+    TracePrintf(0, "CvarInit: created Cvar ID %d\n", cv->id);
     return 0;
+
 }
 
 int KernelCvarSignal(int cvar_id) {
+    TracePrintf(0, "CvarSignal() called by PID %d for cvar %d\n",
+                current_process->pid, cvar_id);
+
+    // validating
+    Cvar *cv = find_cvar(cvar_id);
+    if (cv == NULL || !cv->in_use) {
+        TracePrintf(0,"CvarSignal: invalid cvar ID %d\n", cvar_id);
+        return ERROR;
+    }
+
+    // cheking if anyone is waiting 
+    if (cv->waiters == NULL || cv->waiters->head == NULL) {
+        TracePrintf(0, "CvarSignal: no process waiting on CV %d\n", cvar_id);
+        return 0;
+    }
+
+    // Dequeue one waiter
+    CvarWaiter *w = Dequeue(cv->waiters);
+    if (w == NULL) {
+        TracePrintf(0, "CvarSignal: dequeue returned null/n");
+        return 0;
+    }
+
+    PCB *proc = w->proc;
+    int lock_id = w->lock_id;
+    free(w);
+
+    // marking the proc as ready 
+    proc->currState = READY;
+    Enqueue(readyQueue, proc);
+    TracePrintf(0, "CvarSignal: woke PID %d waiting on CV %d (will reacquire lock %d)\n",
+                proc->pid, cvar_id, lock_id);
+
     return 0;
 }
 
 int KernelCvarBroadcast(int cvar_id) {
+    TracePrintf(0, "CvarBroadcast() called by PID %d for cvar %d\n",
+                current_process->pid, cvar_id);
+
+    // validate
+    Cvar *cv = find_cvar(cvar_id);
+    if (cv == NULL || !cv->in_use) {
+        TracePrintf(0, "CvarBroadcast: invalid cvar ID %d\n", cvar_id);
+        return ERROR;
+    }
+
+    //check if proc waiting
+    if (cv->waiters == NULL || cv->waiters->head == NULL) {
+        TracePrintf(0, "CvarBroadcast: no processes waiting on CV %d\n", cvar_id);
+        return 0;
+    }
+
+    // wake every proc in waiting queue
+    while (cv->waiters->head != NULL) {
+        CvarWaiter *w = Dequeue(cv->waiters);
+        if (w == NULL) break;
+        PCB *proc = w->proc;
+        int lock_id = w->lock_id;
+        free(w);
+
+        proc->currState = READY;
+        Enqueue(readyQueue, proc);
+        TracePrintf(0, "CvarBroadcast: woke PID %d (CV %d, lock %d)\n",
+                    proc->pid, cvar_id, lock_id);
+    }
+
+    TracePrintf(0,"CvarBroadcast: done waking all waiters on CV %d\n", cvar_id);
     return 0;
 }
 
 int KernelCvarWait(int cvar_id, int lock_id) {
+    TracePrintf(0, "CvarWait() called by PID %d (cvar %d, lock %d)\n",
+                current_process->pid, cvar_id, lock_id);
+
+    // validate
+    Cvar *cv = find_cvar(cvar_id);
+    Lock *lk = find_lock(lock_id);
+    if (cv == NULL || lk == NULL) {
+        TracePrintf(0, "CvarWait: invalid cvar or lock ID\n");
+        return ERROR;
+    }
+
+    TracePrintf(0, "CvarWait: releasing lock %d before sleeping\n", lock_id);
+    KernelRelease(lock_id);
+
+    // blocking current proc on cvar's waiting queue
+    CvarWaiter *w = calloc(1, sizeof(CvarWaiter));
+    w->proc = current_process;
+    w->lock_id = lock_id;
+    Enqueue(cv->waiters, w);
+
+    current_process->currState = BLOCKED;
+    TracePrintf(0, "CvarWait: PID %d blocked on CV %d\n", current_process->pid, cvar_id);
+
+    PCB *next = get_next_ready_process();
+    if (next == NULL) next = idle_process;
+    KernelContextSwitch(KCSwitch, current_process, next);
+
+    //when process is woken it must re-aquire the lock before retunring 
+    TracePrintf(0, "CvarWait: PID %d woke up, re-acquiring lock %d\n", current_process->pid, lock_id);
+    KernelAcquire(lock_id);
+
     return 0;
 }
 
-int KernelReclaim(int lock_id) {
-    return 0;
+int KernelReclaim(int id) {
+    TracePrintf(0, "Reclaim() called by PID %d for ID %d\n", 
+                current_process->pid, id);
+
+    // finding and freeing lock
+    Lock *lk = find_lock(id);
+    if (lk && lk->current_state != FREE_LOCK) {
+        TracePrintf(0, "Reclaim freeing Lock ID %d\n", id);
+        if (lk->lock_waiting_queue) free(lk->lock_waiting_queue);
+        lk->lock_waiting_queue = NULL;
+        lk->locked_process = NULL;
+        lk->current_state = FREE_LOCK;
+        return 0;
+    }
+
+    // finding and freeing condition variable
+    Cvar *cv = find_cvar(id);
+    if (cv && cv->in_use) {
+        TracePrintf(0, "Reclaim: freeing Cvar ID %d\n", id);
+        if (cv->waiters) free(cv->waiters);
+        cv->in_use = 0;
+        return 0;
+    }
+
+    // finding and freeing pipe
+    Pipe *p = get_pipe(id);
+    if (p && p->in_use) {
+        TracePrintf(0, "Reclaim: free Pipe ID %d\n", id);
+        PipeFree(id);
+        return 0;
+    }
+
+    TracePrintf(0, "Reclaim: invalid ID  %d not found\n", id);
+    return ERROR;
 }
