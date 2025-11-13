@@ -262,12 +262,14 @@ void HandleIllegalTrap(UserContext *CurrUC){
  * =========================================
  */
 
-void HandleMemoryTrap(UserContext *CurrUC){
+//TODO: CHECK WHY WHEN I DO A MEMSORY THAT IA VALID I GET AN ERROR
+void HandleMemoryTrap(UserContext *CurrUC) {
     TracePrintf(0, "MemoryTrap: You have invoked a Memory Trap!\n");
 
     if(CurrUC->addr >= (void *)VMEM_1_BASE && CurrUC->addr < (void *)VMEM_1_LIMIT){
 	    TracePrintf(0, "We are in current region 1 space. Nice!\n");
-	    if(CurrUC->addr > current_process->user_heap_brk){
+	    if (CurrUC->addr > current_process->user_heap_brk) {
+		    TracePrintf(0, "This is the current_user_brk --> %p and this is the user addr --> %p\n", current_process->user_heap_brk, CurrUC->addr);
 		    TracePrintf(0, "Great are able to grow the user stack space!\n");
 		    TracePrintf(0, "I will now set up more stack memory for you.\n");
 

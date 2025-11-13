@@ -115,7 +115,6 @@ int KernelFork(void) {
     TracePrintf(0, "I am going to set up information for the child now\n");
 
     //Set up other information
-    child->ppid = parent->pid;
     child->parent = parent;
     memcpy(&child->curr_uc, &parent->curr_uc, sizeof(UserContext));
     child->user_heap_brk = parent->user_heap_brk;
@@ -187,8 +186,6 @@ void KernelExit(int status) {
     //Loop through the children process of the current process
     while (child) {
 	PCB *next_child = child->next_sibling;
-
-	child->ppid = init_process->pid;
         child->parent = init_process;
 
 	child->next_sibling = init_process->first_child;
