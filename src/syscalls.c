@@ -193,6 +193,7 @@ void KernelExit(int status) {
 
         child = next_child;
     }
+
     current_process->first_child = NULL;
 
     if (current_process->parent != NULL) {
@@ -233,6 +234,7 @@ void KernelExit(int status) {
 int KernelWait(int *status_ptr) {
     TracePrintf(0, "=============================================================================>\n");
     TracePrintf(1, "This is wait syscall\n");
+
     while (1){
     PCB *child = current_process->first_child;
 
@@ -246,8 +248,7 @@ int KernelWait(int *status_ptr) {
     while (child != NULL) {
         if (child->currState == ZOMBIE) {
 	    // found terminated child to reap
-	    TracePrintf(1, "KernelWait: found zombie child PID %d for parent %d\n",
-			child->pid, current_process->pid);
+	    TracePrintf(1, "KernelWait: found zombie child PID %d for parent %d\n", child->pid, current_process->pid);
 
 	    // copy exit status into parent memory
             if (status_ptr != NULL)
@@ -263,8 +264,7 @@ int KernelWait(int *status_ptr) {
     }
 
     // No zombie found
-    TracePrintf(1, "KernelWait: no zombie found, blocking PID %d until a child exits\n",
-                    current_process->pid);
+    TracePrintf(1, "KernelWait: no zombie found, blocking PID %d until a child exits\n", current_process->pid);
 
     // if none are terminated, block until clock trap wakes us
     current_process->currState = BLOCKED;
@@ -274,9 +274,7 @@ int KernelWait(int *status_ptr) {
     if (next == NULL) next = idle_process;
 
     KernelContextSwitch(KCSwitch, current_process, next);
-    TracePrintf(1, "KernelWait: PID %d awakened — rechecking children\n",
-                    current_process->pid);
-  
+    TracePrintf(1, "KernelWait: PID %d awakened — rechecking children\n", current_process->pid);
     TracePrintf(0, "===========================================WAIT END==========================>\n");
     return SUCCESS;
     }
@@ -357,7 +355,7 @@ int KernelBrk(void *addr) {
 		if (pfn == ERROR){
 			TracePrintf(0, "KernelBrk: OOM while growing at vpn=%d\n", vpn);
 			// roll page pages we just mapped
-			for (int r = start_vpn; r < vpn; r++){
+			for (int r = start_vpn; r < vpn; r++) {
 				if (pt[r].valid){
 					frame_free(track_global, pt[r].pfn);
 					pt[r].pfn = 0;
@@ -410,7 +408,7 @@ int KernelDelay(int clock_ticks) {
     }
 
     // if 0 clock has not started
-    if( clock_ticks == 0) {
+    if (clock_ticks == 0) {
 	TracePrintf(1, "KernelDelay: tick count = 0, returning\n");
 	return 0;
     }
@@ -426,8 +424,7 @@ int KernelDelay(int clock_ticks) {
 
     // Context switch, picks next ready process, idle if none
     PCB *next = get_next_ready_process();
-
-    if (next == NULL){
+    if (next == NULL) {
 	TracePrintf(0, "KernelDelay: no other ready process, continuing with idle\n");
 	next = idle_process;
     }
