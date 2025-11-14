@@ -1,5 +1,5 @@
 //Header files from yalnix_framework
-#include <sys/types.h> //For u_long
+#include <sys/types.h> //for u_long
 #include <load_info.h> //The struct for load_info
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
@@ -24,9 +24,6 @@ extern unsigned char *track_global;
 extern Terminal t_array[NUM_TERMINALS];
 extern char *input_buffer;
 
-//On the way into a trap, your kernel should copy the incoming user context at that address to the PCB of the current process.
-//On the way out of a trap, your kernel should copy user context in the PCB of the current process (which may have changed) to that address.
-
 /* <<<---------------------------------
  * General Flow
  * #include <yalnix.h>
@@ -39,12 +36,10 @@ extern char *input_buffer;
 void HandleKernelTrap(UserContext *CurrUC){
 	TracePrintf(0, "In HandleKernelTrap Function ===========================================================\n");
 	current_process->curr_uc = *CurrUC;
-	
-	//Set up the variable that will be the return value 
+	 
 	int sys_return = 0;
 	int extract_code = CurrUC->code;
 
-	//Find what Syscall the code points to 
 	switch(extract_code){
 		case YALNIX_FORK:
 			sys_return = KernelFork();
@@ -140,13 +135,12 @@ void HandleKernelTrap(UserContext *CurrUC){
 			break;
 	}
 
-	//Store the value that we get from the syscall into the regs[0];
+	//Store return value of syscall into regs[0] && UserContext
 	CurrUC->regs[0] = sys_return;
-	TracePrintf(0, "This is the value of sys_return --> %d\n", sys_return);
-	//current_process->curr_uc = *CurrUC; 
-	current_process->curr_uc.regs[0] = sys_return; // sets return value register
-
+	current_process->curr_uc.regs[0] = sys_return;
 	*CurrUC = current_process->curr_uc;
+
+	TracePrintf(0, "########## This is the return value of your syscall -> %d ############\n", sys_return);
 	TracePrintf(0, "Leaving HandleKernelTrap =====================================================================\n");
 	return;
 }
@@ -159,19 +153,17 @@ void HandleKernelTrap(UserContext *CurrUC){
  */
 
 void HandleClockTrap(UserContext *CurrUC){
-    TracePrintf(0, "Entering HandleClockTrap ============================================================================\n");
+    TracePrintf(0, "=================================================== Entering HandleClockTrap ===============================================\n");
     TracePrintf(0, "This is the pid of the process calling the clock trap --> %d\n", current_process->pid);
     current_process->curr_uc = *CurrUC;
-    TracePrintf(0, "\n\n");
 
-    //Increment how many ticks
+    //Track clock traps for Delayy()
     current_tick++;
 
-    // Save current user context
+    // Save current UserContext into current process
     PCB *old_proc = current_process;
     memcpy(&old_proc->curr_uc, CurrUC, sizeof(UserContext));
 
-	
     // wake up sleeping process when its time
     QueueNode *node = blockedQueue->head;
     QueueNode *prev = NULL;
@@ -183,14 +175,14 @@ void HandleClockTrap(UserContext *CurrUC){
 
 	// ckeck if its time to wake sleeping process
 	if (p->wake_tick <= current_tick) {
-	    TracePrintf(1, "ClockTrap: waking PID %d at tick %lu\n",
-		    p->pid, current_tick);
+	    TracePrintf(1, "ClockTrap: waking PID %d at tick %lu\n",p->pid, current_tick);
 
-	    // remove from SleepQueue
+	    // remove from blockedQueue
 	    if (prev == NULL)
 		blockedQueue->head = next;
 	    else
 		prev->next = next;
+
 	    if(next == NULL)
 		blockedQueue->tail = prev;
 
@@ -205,40 +197,38 @@ void HandleClockTrap(UserContext *CurrUC){
 	node = next;
     }
 
+    //If no other process; enqueue the idle process
     if(idle_process == current_process && current_process->currState == READY){
 	    Enqueue(readyQueue, current_process);
     } 
 
     //Check if there is node
     QueueNode *rnode = peek(readyQueue);
-    TracePrintf(0, "Dequeued node: %p\n", rnode);
     if(rnode == NULL && current_process->currState == RUNNING){
-	    TracePrintf(0,"There is no new process that is ready!");
+	    TracePrintf(0,"There are no new ready processes!");
 	    return;
     }
 
     //Extract the next PCB from the Queue
     PCB *next = get_next_ready_process();
     if(old_proc->currState == RUNNING){
-	    TracePrintf(0, "THE CURRENT PROCESS WAS RUNNING SETTING TO THE READY QUEUE\n");
+	    TracePrintf(0, "I will be putting process %d into readyQueue and subbing in process %d\n", current_process->pid, next->pid);
+	    //Add current process into readyQueue
 	    current_process->currState = READY;
 	    Enqueue(readyQueue, current_process);
+	    next->currState = RUNNING;
     }
 
-    next->currState = RUNNING;
     if(next != old_proc){
 	TracePrintf(0, "Switching from PID %d to PID %d\n", old_proc->pid, next->pid);
-    	int kcs = KernelContextSwitch(KCSwitch, old_proc, next);
-    	if(kcs == ERROR){
+	if(KernelContextSwitch(KCSwitch, old_proc, next) == ERROR) { 
 	  	  TracePrintf(0, "There was an error with Kernel context switch!\n");
 		  return;
     	}
     }
-        
-    // Load new process's user context
-    memcpy(CurrUC, &current_process->curr_uc, sizeof(UserContext));
-    //*CurrUC = current_process->curr_uc;
-    TracePrintf(0, "Leaving HandleClockTrap ============================================================================\n\n\n\n");
+
+    *CurrUC = current_process->curr_uc;
+    TracePrintf(0, "========================================= Process %d leaving ClockTrap =======================================\n\n\n\n", current_process->pid);
     return;
 }
 
@@ -324,7 +314,7 @@ void HandleMathTrap(UserContext *CurrUC) {
 /* =========================================
  * General Flow:
  * -> Index into CurrUC->code
- * -> Read the user input from terminal with TtyRecieve
+ * -> Read the user input from terminal with TtyReceive
  * ---> Buffer if neccessary
  * -> Store in our terminal struct
  * -> This will get read later on by Ttyread
@@ -334,8 +324,7 @@ void HandleMathTrap(UserContext *CurrUC) {
 //Handle input here only
 void HandleReceiveTrap(UserContext *CurrUC) {
     current_process->curr_uc = *CurrUC;
-    TracePrintf(0, "Hello this is ReceiveTrapHandler!\n");
-    TracePrintf(0, "I will read user input, even if it takes multiple cycles!\n");
+    TracePrintf(0, "================================= Hello this is ReceiveTrapHandler! ==================================\n");
 
     //extract the terminal number
     int terminal = CurrUC->code;
@@ -368,8 +357,9 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 
 		    //Add node to the list of messages
 		    if(read_add_message(terminal, read_node) == ERROR) {
-			    TracePrintf(0, "There was an error with read_add_message in HandleRecieve!\n");
+			    TracePrintf(0, "There was an error with read_add_message in HandleReceive!\n");
 		    }
+		    TracePrintf(0, "Just to be safe here is the string ===> %s\n", read_node->message);
 		    TracePrintf(0, "Good bye now! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 		    *CurrUC = current_process->curr_uc;
 		    return;
@@ -380,7 +370,7 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 
 	    //Add the message in to the linked-list of messages for TtyRead
 	    if(read_add_message(terminal, read_node) == ERROR) {
-		    TracePrintf(0, "There was an error with read_add_message in HandleRecieve!\n");
+		    TracePrintf(0, "There was an error with read_add_message in HandleReceive!\n");
 		    return;
 	    }
     }

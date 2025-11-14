@@ -103,20 +103,20 @@ int add_message(int terminal, MessageNode *message) {
 //Remove the head message
 MessageNode *remove_message(int terminal) {
 	if (t_array[terminal].transmit_message_head == NULL) {
-		TracePrintf(0, "There is no MessageNode to return :(. Returning NULL!\n");
+		TracePrintf(0, "RemoveMessage:There is no MessageNode to return :(. Returning NULL!\n");
 		return NULL;
 	}
 	
 	//Incase this is the only node in the list 
 	if (t_array[terminal].transmit_message_head->next == NULL) {
-		TracePrintf(0, "We found a message but the message list is now going to be empty!\n");
+		TracePrintf(0, "RemoveMessage: We found a message but the message list is now going to be empty!\n");
 		MessageNode *node = t_array[terminal].transmit_message_head;
 		node->next = NULL;
 		t_array[terminal].transmit_message_head = NULL;
 		return node;
 	}
 
-	TracePrintf(0, "Found a message! Updating the head of the list!\n");
+	TracePrintf(0, "RemoveMessage: Found a message! Updating the head of the list!\n");
 	MessageNode *node = t_array[terminal].transmit_message_head;
 	node->next = NULL;
 
@@ -231,7 +231,6 @@ MessageNode *read_remove_message(int terminal) {
 	if (t_array[terminal].input_read_head->next == NULL) {
 		TracePrintf(0, "We found a message but the message list is now going to be empty!\n");
 		MessageNode *node = t_array[terminal].input_read_head;
-		node->next = NULL;
 		t_array[terminal].input_read_head = NULL;
 		return node;
 	}
