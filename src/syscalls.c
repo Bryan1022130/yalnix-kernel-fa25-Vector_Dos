@@ -961,7 +961,7 @@ int KernelCvarWait(int cvar_id, int lock_id) {
 
     // validate
     Cvar *cv = find_cvar(cvar_id);
-    Lock *lk = find_lock(lock_id);
+    Lock *lk = get_lock(lock_id);
     if (cv == NULL || lk == NULL) {
         TracePrintf(0, "CvarWait: invalid cvar or lock ID\n");
         return ERROR;
@@ -995,13 +995,17 @@ int KernelReclaim(int id) {
                 current_process->pid, id);
 
     // finding and freeing lock
-    Lock *lk = find_lock(id);
-    if (lk && lk->current_state != FREE_LOCK) {
+    Lock *lk = get_lock(id);
+    if (lk && lk->in_use) {
         TracePrintf(0, "Reclaim freeing Lock ID %d\n", id);
-        if (lk->lock_waiting_queue) free(lk->lock_waiting_queue);
+
+        if (lk->lock_waiting_queue)
+            free(lk->lock_waiting_queue);
+
         lk->lock_waiting_queue = NULL;
         lk->locked_process = NULL;
-        lk->current_state = FREE_LOCK;
+        lk->in_use = 0;
+
         return 0;
     }
 
@@ -1009,8 +1013,13 @@ int KernelReclaim(int id) {
     Cvar *cv = find_cvar(id);
     if (cv && cv->in_use) {
         TracePrintf(0, "Reclaim: freeing Cvar ID %d\n", id);
-        if (cv->waiters) free(cv->waiters);
+
+        if (cv->waiters)
+            free(cv->waiters);
+
+        cv->waiters = NULL;
         cv->in_use = 0;
+
         return 0;
     }
 
