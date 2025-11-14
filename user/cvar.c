@@ -49,6 +49,6 @@ int main(void){
     if (rc)
       TracePrintf(0,"CvarWait nonzero rc %d\n", rc);
     TracePrintf(0, "Parent Exiting \n");
-    Exit(0);
+    Exit(67);
   }
 }
