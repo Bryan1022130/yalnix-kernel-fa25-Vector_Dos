@@ -125,6 +125,7 @@ int KernelFork(void) {
     //Update fork children tracking information
     child->next_sibling = parent->first_child;
     parent->first_child = child;
+    //Note make the child process a different state than zombie 
     child->first_child = NULL;
     
     //KCCopy to copy info from parent to child
@@ -233,10 +234,9 @@ void KernelExit(int status) {
 }
 
 int KernelWait(int *status_ptr) {
-    TracePrintf(0, "=============================================================================>\n");
-    TracePrintf(1, "This is wait syscall\n");
+    TracePrintf(0, "================================ WAIT START ==========================================>\n");
 
-    while (1){
+    while (1) {
     PCB *child = current_process->first_child;
 
     // No children
@@ -256,9 +256,8 @@ int KernelWait(int *status_ptr) {
 		*status_ptr = child->exit_status;
 
             int pid = child->pid;
-	    // free child's PCB and memory
+	    // free child's PCB and memory, kernel stack, and pcb 
             free_proc(child, 1);
-	    // returns child's PID to parent
             return pid;
         }
         child = child->next_sibling;
@@ -277,7 +276,7 @@ int KernelWait(int *status_ptr) {
     KernelContextSwitch(KCSwitch, current_process, next);
     TracePrintf(1, "KernelWait: PID %d awakened — rechecking children\n", current_process->pid);
     TracePrintf(0, "===========================================WAIT END==========================>\n");
-    return SUCCESS;
+    //return SUCCESS;
     }
 }
 
@@ -681,6 +680,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 
 /* ============================
  * Other Syscalls?
+ * IDK if we implement these
  * ============================
  */
 

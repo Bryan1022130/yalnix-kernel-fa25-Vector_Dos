@@ -4,16 +4,11 @@
 #include "Queue.h"
 #include "process.h"
 
-
 Lock lock_table[MAX_LOCKS];
 
 extern PCB *current_process;
 extern PCB *idle_process;
 extern Queue *readyQueue;
-
-//int lock_count = 0;
-//Lock *linked_locks = NULL; //maybe just make them all free ?
-
 
 void LockTableInit(void) {
     memset(lock_table, 0, sizeof(lock_table));

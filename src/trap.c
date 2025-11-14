@@ -153,12 +153,12 @@ void HandleKernelTrap(UserContext *CurrUC){
  * --------------------------------->>>
  */
 
-void HandleClockTrap(UserContext *CurrUC){
+void HandleClockTrap(UserContext *CurrUC) {
     TracePrintf(0, "=================================================== Entering HandleClockTrap ===============================================\n");
     TracePrintf(0, "This is the pid of the process calling the clock trap --> %d\n", current_process->pid);
     current_process->curr_uc = *CurrUC;
 
-    //Track clock traps for Delayy()
+    //Track clock traps for Delay()
     current_tick++;
 
     // Save current UserContext into current process
@@ -199,7 +199,7 @@ void HandleClockTrap(UserContext *CurrUC){
     }
 
     //If no other process; enqueue the idle process
-    if(idle_process == current_process && current_process->currState == READY){
+    if(idle_process == current_process && current_process->currState == READY) {
 	    Enqueue(readyQueue, current_process);
     } 
 
