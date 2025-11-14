@@ -29,7 +29,11 @@ reader(int num, int len) {
 
   rc = PipeRead(pipe_id, buf, len);
   TracePrintf(0,"reader %d rc = %d (%d)\n",num, rc,len);
-  buf[len] = 0x00;
+
+  if (rc < PIPE_BUFFER) {
+    buf[rc] = 0x00;
+  }
+
   TracePrintf(0,"reader %d got [%s]\n",num, buf);
 
   TracePrintf(0,"reader %d sleeping\n",num);
@@ -65,7 +69,11 @@ reader2(int num, int len) {
 
   rc = PipeRead(pipe_id2, buf, len);
   TracePrintf(0,"reader %d rc = %d (%d)\n",num, rc,len);
-  buf[len] = 0x00;
+
+  if (rc < PIPE_BUFFER) {
+    buf[rc] = 0x00;
+  }
+
   TracePrintf(0,"reader %d got [%s]\n",num, buf);
 
   TracePrintf(0,"reader %d sleeping\n",num);
