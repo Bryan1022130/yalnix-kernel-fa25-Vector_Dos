@@ -12,6 +12,7 @@
 #include "trap.h" 
 #include "terminal.h"
 #include "syscalls.h"
+#include "lock.h"
 
 //Extern Variables
 extern unsigned long current_tick;

@@ -23,11 +23,5 @@ void LockTableInit(void);
 Lock *get_lock(int id);
 void LockFree(int id);
 
-
-
-int KernelLockInit(int *lock_idp);
-int KernelAcquire(int lock_id);
-int KernelRelease(int lock_id);
-
 #endif
 
