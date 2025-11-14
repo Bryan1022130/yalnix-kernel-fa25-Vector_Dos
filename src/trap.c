@@ -328,52 +328,52 @@ void HandleReceiveTrap(UserContext *CurrUC) {
 
     //extract the terminal number
     int terminal = CurrUC->code;
-    
-    while (1) { 
-	    //This is assumming that a user input can only be up to TERMINAL_MAX_LINE
-	    MessageNode *read_node = calloc(1, sizeof(MessageNode));
-	    if (read_node == NULL) { 
-		    TracePrintf(0, "HandleReceiveTrap: There was an error when creating a node for user input\n");
-		    Halt();
-	    }
 
-	    //Alloc buff for recieve
-	    char *buffer_zero = calloc(1, TERMINAL_MAX_LINE);
-	    if (buffer_zero == NULL) {
-		    TracePrintf(0, "HandleReceiveTrap: There was an error when creating buffer for receive\n");
-		    Halt();
-	    }
-
-	    read_node->message = buffer_zero; //Store dynamic buffer in MessageNode
-	    int message_length = TtyReceive(terminal, (void *)buffer_zero, TERMINAL_MAX_LINE); //Read up to TERMINAL_MAX_LINE
-	    read_node->length = message_length; //Store message length
-
-	    if (message_length < TERMINAL_MAX_LINE) { 
-		    TracePrintf(0, "This is the last line of input to read\n");
-		    TracePrintf(0, "This the length of message_length --> %d\n", message_length);
-
-		    realloc(buffer_zero, message_length); //Realloc the buffer to not waste memory 
-		    TracePrintf(0, "I just reallocated the buffer to the length above\n");
-
-		    //Add node to the list of messages
-		    if(read_add_message(terminal, read_node) == ERROR) {
-			    TracePrintf(0, "There was an error with read_add_message in HandleReceive!\n");
-		    }
-		    TracePrintf(0, "Just to be safe here is the string ===> %s\n", read_node->message);
-		    TracePrintf(0, "Good bye now! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-		    *CurrUC = current_process->curr_uc;
-		    return;
-	    }
-
-	    TracePrintf(0, "Looks like we need to cycle again!\n");
-	    TracePrintf(0, "This the length of message_length --> %d\n", message_length);
-
-	    //Add the message in to the linked-list of messages for TtyRead
-	    if(read_add_message(terminal, read_node) == ERROR) {
-		    TracePrintf(0, "There was an error with read_add_message in HandleReceive!\n");
-		    return;
-	    }
+    MessageNode *read_node = calloc(1, sizeof(MessageNode));
+    if (read_node == NULL) { 
+	    TracePrintf(0, "HandleReceiveTrap: There was an error when creating a node for user input\n");
+	    Halt();
     }
+
+    //Alloc buff for recieve
+    char *buffer_zero = calloc(1, TERMINAL_MAX_LINE);
+    if (buffer_zero == NULL) {
+	    TracePrintf(0, "HandleReceiveTrap: There was an error when creating buffer for receive\n");
+	    Halt();
+    }
+
+    read_node->message = buffer_zero; //Store dynamic buffer in MessageNode
+    int message_length = TtyReceive(terminal, (void *)buffer_zero, TERMINAL_MAX_LINE); //Read up to TERMINAL_MAX_LINE
+    read_node->length = message_length; //Store message length
+
+    if (message_length < TERMINAL_MAX_LINE) { 
+	    TracePrintf(0, "HandleReceiveTrap: This the length of message_length --> %d\n", message_length);
+	    realloc(buffer_zero, message_length); //Realloc the buffer to not waste memory 
+	    TracePrintf(0, "HandleReceiveTrap: I just reallocated the buffer to the length above\n");
+
+	    //Add node to the list of messages
+	    if(read_add_message(terminal, read_node) == ERROR) {
+		    free(read_node->message);
+		    free(read_node);
+		    TracePrintf(0, "HandleReceiveTrap: There was an error with read_add_message in HandleReceive!\n");
+	    }
+
+	    TracePrintf(0, "HandleReceiveTrap: Just to be safe here is the string ===> %s\n", read_node->message);
+	    *CurrUC = current_process->curr_uc;
+	    TracePrintf(0, "+++++++++++++++++++++++++++++++++++++ Leaving HandleReceiveTrap +++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	    return;
+    }
+
+    TracePrintf(0, "HandleReceiveTrap: We should have read a full TERMINAL_MAX_LINE input! This the length of message_length --> %d\n", message_length);
+    if(read_add_message(terminal, read_node) == ERROR) {
+	    free(read_node->message);
+	    free(read_node);
+	    TracePrintf(0, "There was an error with read_add_message in HandleReceive!\n");
+	    return;
+    }
+
+    *CurrUC = current_process->curr_uc;
+    TracePrintf(0, "+++++++++++++++++++++++++++++++++++++ Leaving HandleReceiveTrap +++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 }
 
 /* =========================================
