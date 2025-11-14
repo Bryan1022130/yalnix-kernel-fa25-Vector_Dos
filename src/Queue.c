@@ -152,3 +152,39 @@ void remove_data(Queue *MQueue, void *find_data){
 	}
 	TracePrintf(0, "I could not find the process in the Queue! [THIS MAY BE AN ERROR]\n");
 }
+
+int in_queue(Queue *MQueue, void *find_data) {
+	TracePrintf(0, "Hello! I will check if I have the node!\n");
+
+	if (isEmpty(MQueue)) {
+		TracePrintf(0, "ERROR! The queue that you passed in was empty!\n");
+		return 0;
+	}
+
+	if (MQueue->head == NULL) {
+		TracePrintf(0, "Error the head is NULL!\n");
+		return 0;
+	}
+	
+	if ((PCB *)MQueue->head->data == (PCB *)find_data) {
+		TracePrintf(0, "I found the PCB at the head!\n");
+		return 1;
+	}
+
+	//Loop through all nodes
+	QueueNode *current = MQueue->head;
+
+	while(current) {
+		if ((PCB *)current->data == (PCB *)find_data) {
+			TracePrintf(0, "Great I found your process!\n");
+			return 1;
+		}
+		//Advance to next node
+		current = current->next;
+	}
+
+	TracePrintf(0, "I could not find the process in the Queue! [THIS MAY BE AN ERROR]\n");
+	return 0;
+}
+
+

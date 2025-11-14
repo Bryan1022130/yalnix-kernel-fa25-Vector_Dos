@@ -458,10 +458,15 @@ int KernelTtyRead(int tty_id, void *buf, int len){
 
 	//Check if another caller is blocked or there is no input; if yes block this caller 
 	while (t_array[tty_id].read_waiting_process != NULL || t_array[tty_id].input_read_head == NULL) { 
+		//If proc already in blocked queue do not keep adding it back in
+		if(!in_queue(blockedQueue, (void *)current_process)) {
+			TracePrintf(0, " TtyRead: I will now put process %d into the blocked Queue! This should happen once!\n");
+			current_process->currState = BLOCKED;
+			Enqueue(blockedQueue, current_process);
+			}
+
 		//Get a new process
 		PCB *next = get_next_ready_process();
-		current_process->currState = BLOCKED;
-		Enqueue(blockedQueue, current_process);
 		TracePrintf(0, "TtyRead: I put process %d into the blocked queue and im going to switch into %d\n", current_process->pid, next->pid);
 
 		if (KernelContextSwitch(KCSwitch, current_process, next) < 0) {

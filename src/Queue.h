@@ -42,3 +42,6 @@ QueueNode *peek(Queue *MQueue);
 
 //To remove a specific Node
 void remove_data(Queue *MQueue, void *find_data);
+
+//Check if a proc is in the queue
+int in_queue(Queue *MQueue, void *find_data);
