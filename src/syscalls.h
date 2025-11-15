@@ -15,8 +15,6 @@ int KernelBrk(void *addr);
 int KernelDelay(int clock_ticks);
 int KernelTtyRead(int tty_id, void *buf, int len);
 int KernelTtyWrite(int tty_id, void *buf, int len);
-int KernelReadSector(int sector, void *buf);
-int KernelWriteSector(int sector, void *buf);
 int KernelPipeInit(int *pipe_id_ptr);
 int KernelPipeRead(int pipe_id, void *buf, int len);
 int KernelPipeWrite(int pipe_id, void *buf, int len);

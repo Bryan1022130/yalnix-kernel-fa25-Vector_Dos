@@ -78,14 +78,6 @@ void HandleKernelTrap(UserContext *CurrUC){
 			sys_return = KernelTtyWrite((int)CurrUC->regs[0], (void *)CurrUC->regs[1], (int)CurrUC->regs[2]);
 			break;
 
-		case YALNIX_READ_SECTOR:
-			sys_return = KernelReadSector((int)CurrUC->regs[0], (void *)CurrUC->regs[1]);
-			break;
-
-		case YALNIX_WRITE_SECTOR:
-			sys_return = KernelWriteSector((int)CurrUC->regs[0], (void *)CurrUC->regs[1]);
-			break;
-
 		case YALNIX_PIPE_INIT:
 			sys_return = KernelPipeInit((int *)CurrUC->regs[0]);
 			break;
@@ -458,15 +450,6 @@ void HandleTransmitTrap(UserContext *CurrUC) {
     TracePrintf(0, "======================================END TRANSMIT TRAP=========================================================\n");
 }
 
-void HandleDiskTrap(UserContext *CurrUC) {
-    current_process->curr_uc = *CurrUC;
-
-    TracePrintf(0, "TRAP: Disk called.\n");
-    TracePrintf(0, "We are not handling this!");
-
-    *CurrUC = current_process->curr_uc;
-}
-
 /* <<<----------------------------------------------
  *  Function to create the Interrupt Vector Table
  *  -> Status: Working for now 
@@ -487,7 +470,6 @@ void setup_trap_handler(HandleTrapCall Interrupt_Vector_Table[]){
     	Interrupt_Vector_Table[TRAP_MATH] = &HandleMathTrap;
     	Interrupt_Vector_Table[TRAP_TTY_RECEIVE] = &HandleReceiveTrap;
     	Interrupt_Vector_Table[TRAP_TTY_TRANSMIT] = &HandleTransmitTrap;
-    	Interrupt_Vector_Table[TRAP_DISK] = &HandleDiskTrap;
 
 	//Write the Memory Address to the REG_VECTOR_BASE register so it knows where it is
 	WriteRegister(REG_VECTOR_BASE, (unsigned int)Interrupt_Vector_Table);

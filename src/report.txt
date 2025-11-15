@@ -1,0 +1,18 @@
+This file will track what we have implemented thus far
+
+Terminals:
+	Recieve is done
+	Transmit is done
+
+Trap:
+	Kernel
+	Clock {It says that its round robin but we will check}
+	Illegal
+	Memory
+	Math
+	Receive
+	Transmit
+
+Syscalls:
+	Checked all major syscall and I/O
+	Need to verify pipes, cvar, anc lock

@@ -56,8 +56,11 @@ void data_copy(void *parent_pte, int cpfn) {
 
 	WriteRegister(REG_TLB_FLUSH, (unsigned int)kernel_ptr);
 }
+/* ==========================================
+ * Syscall functions 
+ * ==========================================
+ */
 
-//Syscall Functions
 int KernelGetPid(void) {
     return current_process->pid;
 }
@@ -76,14 +79,13 @@ int KernelFork(void) {
  
     //Set up info needed for fork
     unsigned int child_pid = child->pid;
-    pte_t *child_reg1 = (pte_t *)child->AddressSpace;
-    pte_t *parent_reg1 = (pte_t *)parent->AddressSpace;
+    pte_t *child_reg1 = child->AddressSpace;
+    pte_t *parent_reg1 = parent->AddressSpace;
 
     unsigned int frames_used = 0;
     unsigned int first_frame_used = 0;
     unsigned int used = 0;
 
-    TracePrintf(0, "I am going to copy over parent contents to the child\n");
     //Loop through parent region 1 space and copying over to child
     for (int vpn = 0; vpn < MAX_PT_LEN; vpn++) {
 	    if (!parent_reg1[vpn].valid) continue;
@@ -103,8 +105,6 @@ int KernelFork(void) {
 
 	    //We have the pfn, we need to cycle through each parents page table entry
 	    void *parent_pte_find = (void *)((vpn + ((unsigned int )VMEM_1_BASE >> PAGESHIFT)) << PAGESHIFT);
-	    TracePrintf(0, "We are going to copy the data over right now!\n");
-
 	    data_copy(parent_pte_find, pfn);
 
 	    //set up new page table entries for child region 1 page table
@@ -147,17 +147,16 @@ int KernelFork(void) {
 }
 
 int KernelExec(char *filename, char *argv[]) {
-    TracePrintf(0, "==========================================================================================\n");
+    TracePrintf(0, "==================================== Kernel Exec ======================================================\n");
     TracePrintf(1, "Exec called by pid %d for %s\n", current_process->pid, filename);
 
-    if (filename == NULL || argv == NULL) return ERROR;
-
-    if(argv ==NULL){
-	TracePrintf(1, "Exec: arg is NULL, nuntinouing no args\n");
+    if (filename == NULL || argv == NULL) {
+	    TracePrintf(0, "Your filename or argv arguments were NULL!\n");
+	    return ERROR;
     }
 
     // free old region1 frames
-    pte_t *pt = (pte_t *)current_process->AddressSpace;
+    pte_t *pt = current_process->AddressSpace;
     for (int i = 0; i < MAX_PT_LEN; i++) {
         if (pt[i].valid) frame_free(track_global, pt[i].pfn);
         pt[i].valid = 0;
@@ -165,26 +164,29 @@ int KernelExec(char *filename, char *argv[]) {
 
     // load new program
     int result = LoadProgram(filename, argv, current_process);
-    if (result == ERROR) return ERROR;
+    if (result == ERROR) {
+	    TracePrintf(0, "KernelExec: LoadProgram failed!\n");
+	    return ERROR;
+    }
 
     TracePrintf(1, "Exec success -> now running new program %s\n", filename);
-    TracePrintf(0, "==========================================================================================\n");
+    TracePrintf(0, "=================================== Kenenl Exec Exit =======================================================\n");
     return SUCCESS; // never checked
 }
 
 void KernelExit(int status) {
-    TracePrintf(0, "========================================EXIT START==================================================\n");
-    TracePrintf(0, "Process %d exiting with status %d\n", current_process->pid, status);
-    TracePrintf(0, "This is exit syscall\n");
-    TracePrintf(0,"I am going to start the exit logic!\n");
-    PCB *child = current_process->first_child;	
+    TracePrintf(0, "======================================== EXIT START ==================================================\n");
+    TracePrintf(0, "KernelExit: Process %d exiting with status %d\n", current_process->pid, status);
 
     if (current_process->pid == 1) {
-	    TracePrintf(0, "I am the parent process! I will halt now!\n");
+	    TracePrintf(0, "KernelExit: I am the parent process! I will halt now!\n");
 	    Halt();
     }
 
-    //Loop through the children process of the current process
+    //Get our first child to remap parent process
+    PCB *child = current_process->first_child;	
+
+    //Loop and remap
     while (child) {
 	PCB *next_child = child->next_sibling;
         child->parent = init_process;
@@ -197,19 +199,20 @@ void KernelExit(int status) {
 
     current_process->first_child = NULL;
 
+    //Check if parent was blocked from Wait() and wake up
     if (current_process->parent != NULL) {
         PCB *parent = current_process->parent;
         if (parent->currState == BLOCKED) {
             TracePrintf(1, "KernelExit: waking parent PID %d\n", parent->pid);
+	    TracePrintf(0, "KernelExit: removing parent from blocked queue!\n");
             parent->currState = READY;
 	    remove_data(blockedQueue, parent);
             Enqueue(readyQueue, parent);
         }
     }
 
-    TracePrintf(0, "I will now erase most of my data :)\n");
-
     //Erase some of the data from the process
+    //Mark process as zombie 
     current_process->exit_status = status;
     current_process->currState = ZOMBIE;
     TracePrintf(1, "KernelExit: process %d is now ZOMBIE, waiting to be reaped\n", current_process->pid);
@@ -217,77 +220,75 @@ void KernelExit(int status) {
     // Pick next proc to run
     PCB *next_proc = get_next_ready_process();
     if (next_proc == NULL) {
-	    TracePrintf(0, "We have not other process that can run so run idle :)\n");
-	    next_proc = idle_process;
+	    TracePrintf(0, "KenrelExit: Error! No other process besides idle was found! Recheck readyQueue logic!\n");
+	    return;
+	    //next_proc = idle_process;     // REVERT THIS IS FAILS
     }
 
-    // context switch from dying proc
     TracePrintf(1, "KernelExit: switching from PID %d to PID %d\n", current_process->pid, next_proc->pid);
-    int rc = KernelContextSwitch(KCSwitch, current_process, next_proc);
-    if (rc == ERROR) {
+    if (KernelContextSwitch(KCSwitch, current_process, next_proc) == ERROR) { 
 	    TracePrintf(0, "ERROR: KernelExit returned unexpectedly for PID %d\n", current_process->pid);
 	    return;
     }
 
-    TracePrintf(0, "===========================================EXIT END===============================================\n");
+    TracePrintf(0, "=========================================== EXIT END ===============================================\n");
 }
 
 int KernelWait(int *status_ptr) {
-    TracePrintf(0, "================================ WAIT START ==========================================>\n");
+    TracePrintf(0, "================================ WAIT START =================================>\n");
 
     while (1) {
-    PCB *child = current_process->first_child;
+	    PCB *child = current_process->first_child;
 
-    // No children
-    if (child == NULL) {
-        TracePrintf(0, "KernelWait: no children for PID %d\n", current_process->pid);
-        return ERROR;
+	    // No children
+	    if (child == NULL) {
+		TracePrintf(0, "KernelWait: no children for PID %d\n", current_process->pid);
+		return ERROR;
+	    }
+
+	    // look for zombie children
+	    while (child != NULL) {
+		if (child->currState == ZOMBIE) {
+		    TracePrintf(1, "KernelWait: found zombie child PID %d for parent %d\n", child->pid, current_process->pid);
+
+		    // copy exit status into parent memory
+		    if (status_ptr != NULL)
+			*status_ptr = child->exit_status;
+
+		    //Get child pid to return
+		    int pid = child->pid;
+
+		    // free child's PCB and memory, kernel stack, and pcb 
+		    free_proc(child, 1);
+
+		    return pid;
+		}
+		child = child->next_sibling;
+	    }
+
+	    TracePrintf(1, "KernelWait: no zombie found, blocking PID %d until a child exits\n", current_process->pid);
+
+	    current_process->currState = BLOCKED;
+	    Enqueue(blockedQueue, current_process); 
+	    PCB *next = get_next_ready_process();
+
+	    if (next == NULL) next = idle_process;
+
+	    if (KernelContextSwitch(KCSwitch, current_process, next) == ERROR) {
+		    TracePrintf(0, "KernelWait: Error with KCSwitch! Please check this!\n");
+		    return ERROR;
+	    }
+
+	    TracePrintf(1, "KernelWait: PID %d awakened — rechecking children\n", current_process->pid);
+	    TracePrintf(0, "============================== WAIT END ==========================>\n");
     }
 
-    // look for zombie children
-    while (child != NULL) {
-        if (child->currState == ZOMBIE) {
-	    // found terminated child to reap
-	    TracePrintf(1, "KernelWait: found zombie child PID %d for parent %d\n", child->pid, current_process->pid);
-
-	    // copy exit status into parent memory
-            if (status_ptr != NULL)
-		*status_ptr = child->exit_status;
-
-            int pid = child->pid;
-	    // free child's PCB and memory, kernel stack, and pcb 
-            free_proc(child, 1);
-            return pid;
-        }
-        child = child->next_sibling;
-    }
-
-    // No zombie found
-    TracePrintf(1, "KernelWait: no zombie found, blocking PID %d until a child exits\n", current_process->pid);
-
-    // if none are terminated, block until clock trap wakes us
-    current_process->currState = BLOCKED;
-    Enqueue(blockedQueue, current_process); // adds to cleep queue to mark as inactive
-
-    PCB *next = get_next_ready_process();
-    if (next == NULL) next = idle_process;
-
-    KernelContextSwitch(KCSwitch, current_process, next);
-    TracePrintf(1, "KernelWait: PID %d awakened — rechecking children\n", current_process->pid);
-    TracePrintf(0, "===========================================WAIT END==========================>\n");
-    //return SUCCESS;
-    }
 }
 
 int KernelBrk(void *addr) {
-    TracePrintf(0, "=============================================================================>\n");
-     TracePrintf(1, "THIS IS OUR KERNEL FUNCTION THAT WE CREATED\n");
-
-     TracePrintf(1, "KernelBrk: requested addr=%p\n", addr);
-     addr = (void *)UP_TO_PAGE(addr);
-
-    // if addr < what the brk was when the program started,
-    // or addr is in the stack mappings, fail. (checking for null not sufficient
+    TracePrintf(0, "================================ KERNELBRK START============================================>\n");
+    TracePrintf(1, "KernelBrk: requested addr=%p\n", addr);
+    addr = (void *)UP_TO_PAGE(addr);
 
     void *heap_start = current_process->user_heap_brk;
     void *stack_start = current_process->user_stack_ptr;
@@ -309,8 +310,8 @@ int KernelBrk(void *addr) {
     if (!addr) return ERROR;
 
     // Converting to integers
-    uintptr_t new_brk = (uintptr_t)addr; // new break
-    uintptr_t old_brk = (uintptr_t)current_process->user_heap_brk; //currrent brk
+    uintptr_t new_brk = (uintptr_t)addr;
+    uintptr_t old_brk = (uintptr_t)current_process->user_heap_brk;
 
     pte_t *pt = current_process->AddressSpace;
 
@@ -325,7 +326,6 @@ int KernelBrk(void *addr) {
     int old_vpn = (int)((old_brk - VMEM_1_BASE) >> PAGESHIFT);
     int new_vpn = (int)((new_brk - VMEM_1_BASE) >> PAGESHIFT);
 
-    // leaving one page  between heap and stack 
     // Cannot grow to or past (stack_base_vpn -1)
     if (new_vpn >= (int)stack_base_vpn - 1) {
 	TracePrintf(0, "KernelBrk: would collide with stack (new_vpn=%d, stack_base_vpn=%lu)\n",
@@ -391,13 +391,12 @@ int KernelBrk(void *addr) {
     WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
     current_process->user_heap_brk = (void *)new_brk;
     TracePrintf(1, "KernelBrk: success, new brk=%p\n", current_process->user_heap_brk);
-
-    TracePrintf(1, "THIS IS THE END OF OUR KERNEL FUNCTION THAT WE CREATED\n");
+    TracePrintf(0, "================================ KERNELBRK END============================================>\n");
     return 0;
 }
 
 int KernelDelay(int clock_ticks) {
-    TracePrintf(0, "==================================================================================\n");
+    TracePrintf(0, "======================================= KERNEL DELAY ===========================================\n");
     TracePrintf(1, "KernelDelay: called by PID %d with %d ticks\n", current_process->pid, clock_ticks);
     TracePrintf(1, "KernelDelay: for reference this also the num of hardware clock ticks --> %d\n", current_tick);
 
@@ -421,7 +420,6 @@ int KernelDelay(int clock_ticks) {
 
     TracePrintf(1, "KernelDelay: PID %d blocked unitil tick %lu\n", current_process->pid, current_process->wake_tick);
 
-    // Context switch, picks next ready process, idle if none
     PCB *next = get_next_ready_process();
     if (next == NULL) {
 	TracePrintf(0, "KernelDelay: no other ready process, continuing with idle\n");
@@ -429,9 +427,13 @@ int KernelDelay(int clock_ticks) {
     }
 
     next->currState = RUNNING;
-    KernelContextSwitch(KCSwitch, current_process, next);
+    if (KernelContextSwitch(KCSwitch, current_process, next) == ERROR) { 
+	    TracePrintf(0, "KernelDelay: Error with KCSwitch! Please check this!\n");
+	    return ERROR;
+    }
+
     TracePrintf(1, "KernelDelay: PID %d resumed after delay\n", current_process->pid);
-    TracePrintf(0, "==================================================================================\n");
+    TracePrintf(0, "=========================================== KERNEL DELAY =======================================\n");
     return 0;
 }
 
@@ -447,22 +449,14 @@ int KernelTtyRead(int tty_id, void *buf, int len) {
 		return ERROR;
 	}
 
-	if (t_array[tty_id].read_waiting_process == NULL) {
-		TracePrintf(0, "TtyRead: I have no waiting process!\n");
-	}
-
-	if (t_array[tty_id].input_read_head == NULL) { 
-		TracePrintf(0, "TtyRead: My input head is also null so i must wait!\n");
-	}
-
 	//Check if another caller is blocked or there is no input; if yes block this caller 
 	while (t_array[tty_id].read_waiting_process != NULL || t_array[tty_id].input_read_head == NULL) { 
 		//If proc already in blocked queue do not keep adding it back in
-		if(!in_queue(blockedQueue, (void *)current_process)) {
+		if (!in_queue(blockedQueue, (void *)current_process)) {
 			TracePrintf(0, " TtyRead: I will now put process %d into the blocked Queue! This should happen once!\n");
 			current_process->currState = BLOCKED;
 			Enqueue(blockedQueue, current_process);
-			}
+		}
 
 		//Get a new process
 		PCB *next = get_next_ready_process();
@@ -470,7 +464,6 @@ int KernelTtyRead(int tty_id, void *buf, int len) {
 
 		if (KernelContextSwitch(KCSwitch, current_process, next) < 0) {
 			TracePrintf(0, "TtyRead:There was an error with the KCSwitch in TtyRead!\n");
-			Halt(); //for testing
 			return ERROR;
 		}
 	}
@@ -564,6 +557,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 	}
 
 	if(t_array[tty_id].transmit_waiting_process != NULL) {
+		//NOTE MIGHT NOT BE AN ERROR MAYBE JUST BLOCK THE CURRENT PROCESS ANS ADD READY QUEUE `
 		TracePrintf(0, "Sorry but another process is already writing to this terminal! PLEASE WAIT!\n");
 		return ERROR;
 	}
@@ -600,7 +594,6 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 		PCB *next = get_next_ready_process();
 		if (KernelContextSwitch(KCSwitch, current_process, next) < 0) {
 			TracePrintf(0, "There was an error with the KCSwitch in TtyWrite!\n");
-			Halt(); //for testing
 			return ERROR;
 		}
 
@@ -651,8 +644,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 	free(kbuffer);
 
 	if(t_array[tty_id].transmit_message_head == NULL){
-		TracePrintf(0 , "THIS SHOULD NOT HAPPEN! Please check the logic for setting up the linked list of messages!");
-		Halt(); //Test
+		TracePrintf(0, "THIS SHOULD NOT HAPPEN! Please check the logic for setting up the linked list of messages!");
 		return ERROR;
 	}
 
@@ -668,29 +660,12 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 	PCB *next = get_next_ready_process();
 	if (KernelContextSwitch(KCSwitch, current_process, next) < 0) {
 			TracePrintf(0, "There was an error with the KCSwitch in TtyWrite!\n");
-			Halt(); //For testing
 			return ERROR;
 	}
 
 	//The MessageNode should be freed in the trap handler {I think-> It should be and also its message field}
 	TracePrintf(0, "Great we are done with the KernelTtyWrite syscall! Bye!\n");
 	return len;
-}
-
-/* ============================
- * Other Syscalls?
- * IDK if we implement these
- * ============================
- */
-
-int KernelReadSector(int sector, void *buf) {
-    TracePrintf(0, "ReadSector()\n");
-    return ERROR;
-}
-
-int KernelWriteSector(int sector, void *buf) {
-    TracePrintf(0, "WriteSector()\n");
-    return ERROR;
 }
 
 /* ============================

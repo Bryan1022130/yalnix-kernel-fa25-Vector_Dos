@@ -11,7 +11,6 @@ void HandleMathTrap(UserContext *CurrUC);
 void HandleClockTrap(UserContext *CurrUC);
 void HandleMemoryTrap(UserContext *CurrUC);
 void HandleIllegalTrap(UserContext *CurrUC);
-void HandleDiskTrap(UserContext *CurrUC);
 void HandleTransmitTrap(UserContext *CurrUC);
 void HandleReceiveTrap(UserContext *CurrUC);
 
