@@ -22,7 +22,7 @@ extern unsigned char *track_global;
 #define TRUE 1
 #define FALSE 0
 
-KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p){
+KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p) {
     TracePrintf(1, "This is the start of the KCSwitch ++++++++++++++++++++++++++++++++++++++++++++>\n");
     PCB *curr = (PCB *)curr_pcb_p;
     PCB *next = (PCB *)next_pcb_p;
@@ -64,7 +64,7 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     return &next->curr_kc;
 }
 
-KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *){
+KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *) {
 	TracePrintf(1, "This is the start of the KCCopy ++++++++++++++++++++++++++++++++++++++++++++>\n");
 
 	if (kc_in == NULL) {
@@ -85,14 +85,12 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *){
 	int holdvpn = (((KERNEL_STACK_BASE) >> PAGESHIFT) - 1);
 	int stack_base = KERNEL_STACK_BASE >> PAGESHIFT;
 	int num_stack_pages = KERNEL_STACK_MAXSIZE / PAGESIZE;
-	TracePrintf(0,"This is the value of holdvpn --> %d\n", holdvpn);
 
 	//Copy over the content of the current kernel stack into frames that have been allocated
 	for (int t = 0; t < num_stack_pages; t++) {
 		//Get the current pfn from our process && current proc
 		int kernel_curr_pfn = current_process->kernel_stack_frames[t];
 		int kernel_new_pfn = new_pcb->kernel_stack_frames[t];
-		TracePrintf(0, "This is the kernel pfn of current process -> %d, and this is pfn of new process -> %d\n", kernel_curr_pfn, kernel_new_pfn);
 			
 		//Map this value in kernel virtual memory 
 		kernel_page_table[holdvpn].pfn = kernel_new_pfn;
@@ -218,6 +216,7 @@ PCB *get_next_ready_process(void) {
 		TracePrintf(0, "The process at the start of the readyQueue is -> %d\n", ready_proc->pid);
 		return ready_proc;
 	}
+
 	TracePrintf(0, "The readyQueue is empty. Returing NULL!");
 	return NULL;
 }

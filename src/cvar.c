@@ -1,11 +1,8 @@
 #include "cvar.h"
-#include <stdlib.h>
-#include <string.h>
 #include "Queue.h"
 
 Cvar *linked_cvars = NULL;
 int cvar_count = 0;
-
 
 // called in kernel start
 void CvarTableInit(void) {

@@ -11,7 +11,6 @@
 #include "process.h"
 
 //Extern 
-extern PCB *current_process;
 extern UserContext *KernelUC;
 
 PCB *create_init_proc(unsigned char *track) {
@@ -23,7 +22,7 @@ PCB *create_init_proc(unsigned char *track) {
                 return NULL;
         }
 	
-	//Set up its Kernel Frames
+	//Set up its Kernel Stack Frames
 	int kf_ret = create_sframes(init_proc, track);
 	if (kf_ret == ERROR) {
 		TracePrintf(0, "Init Proc: Error with setting up kernel stack!\n");
@@ -31,7 +30,7 @@ PCB *create_init_proc(unsigned char *track) {
 		return NULL;
 	}
 	
-	//Malloc new regions space for 1
+	//Malloc new region 1 space
 	pte_t *proc_space = (pte_t *)calloc(1, (MAX_PT_LEN * sizeof(pte_t)));
 	if (proc_space == NULL) {
 		TracePrintf(0,"There was an error with malloc for region 1 space");

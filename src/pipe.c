@@ -3,9 +3,7 @@
 #include "process.h"
 #include "Queue.h"
 
-
 Pipe pipe_table[MAX_PIPES];
-
 
 // Making Pipe table, called in kernelstart()
 // resets pipes
@@ -20,6 +18,7 @@ Pipe *get_pipe(int id) {
     if (id < 0 || id >= MAX_PIPES || !pipe_table[id].in_use)
         // return error how can the pipe exist and its id not be in use?
         return NULL;
+
     return &pipe_table[id];
 }
 
@@ -28,6 +27,7 @@ Pipe *get_pipe(int id) {
 void PipeFree(int id) {
     if (id < 0 || id >= MAX_PIPES)
         return;
+
     Pipe *p = &pipe_table[id];
     p->in_use = 0;
     p->count = p->head = p->tail = 0;

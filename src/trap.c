@@ -507,7 +507,6 @@ void HandleTrap(UserContext *){
 
 //Abort function
 void abort(void){
-	//TODO
 	TracePrintf(0, "We are aborting the current process!\n");
 
 	if (current_process->pid == 1){

@@ -14,7 +14,7 @@
 extern unsigned int frame_count;
 
 //KernelStart.c function declarations
-int  SetKernelBrk(void *addr);
+int SetKernelBrk(void *addr);
 void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt);
 
 //Frame logic 

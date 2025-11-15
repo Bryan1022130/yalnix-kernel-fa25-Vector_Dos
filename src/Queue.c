@@ -68,9 +68,6 @@ void *Dequeue(Queue *MQueue) {
 	}
 
 	//Since a Queue is FIFO, we get rid of the front 
-	//We then update to the Node it points to (current heads next)
-	//Tail stays the same 
-
 	QueueNode *temp = MQueue->head;
 	void *tempdata = temp->data;
 
@@ -89,8 +86,7 @@ void *Dequeue(Queue *MQueue) {
 }
 
 int isEmpty(Queue *MQueue) {
-	//return 1 for true 
-	if(MQueue->size == 0){
+	if(MQueue->size == 0) {
 		return TRUE;
 	}
 
@@ -112,7 +108,7 @@ QueueNode *peek(Queue *MQueue) {
 	return MQueue->head;
 }
 
-void remove_data(Queue *MQueue, void *find_data){
+void remove_data(Queue *MQueue, void *find_data) {
 	TracePrintf(0, "Hello! I will look for node to remove!\n");
 
 	if (isEmpty(MQueue)) {

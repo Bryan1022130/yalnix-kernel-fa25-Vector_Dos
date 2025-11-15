@@ -1,6 +1,4 @@
 #pragma once 
-#ifndef _LOCK_H_
-#define _LOCK_H_
 #include "process.h"
 #include "Queue.h"
 
@@ -8,9 +6,9 @@
 
 //Our lock implementation
 typedef struct Lock { 
-
 	int id;
 	int in_use;
+
 	//Keep track of the process with the current lock
 	PCB *locked_process;
 
@@ -22,6 +20,4 @@ typedef struct Lock {
 void LockTableInit(void);
 Lock *get_lock(int id);
 void LockFree(int id);
-
-#endif
 

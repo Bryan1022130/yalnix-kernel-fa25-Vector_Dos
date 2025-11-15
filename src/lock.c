@@ -32,7 +32,6 @@ Lock *get_lock(int id) {
     return &lock_table[id];
 }
 
-
 void LockFree(int id) {
     if (id < 0 || id >= MAX_LOCKS)
         return;

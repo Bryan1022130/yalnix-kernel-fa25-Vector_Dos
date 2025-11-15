@@ -369,7 +369,7 @@ LoadProgram(char *name, char *args[], PCB *proc)
   
   //Set up its user stack and heap point
   unsigned int data_end_ = data_pg1 + data_npg;
-  proc->user_heap_brk = (void *)UP_TO_PAGE(((data_end << PAGESHIFT) + VMEM_1_BASE)); //CHANGE IF THIS FAILS 
+  proc->user_heap_brk = (void *)UP_TO_PAGE(((data_end << PAGESHIFT) + VMEM_1_BASE));  
   TracePrintf(0, "This is the data_end_ withouth the pageshift -> %ld\n", data_end_); 
   TracePrintf(0, "This is the user stack pointer memory address -> %p\n", proc->user_heap_brk);
 

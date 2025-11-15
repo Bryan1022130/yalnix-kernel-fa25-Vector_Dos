@@ -1,6 +1,4 @@
-#ifndef _PIPE_H_
-#define _PIPE_H_
-
+#pragma once
 #include "Queue.h"
 #include "ykernel.h"
 #include "yalnix.h"
@@ -31,4 +29,3 @@ int PipeReadBytes(Pipe *p, char *dst, int len);
 int space_available(Pipe *p);
 int bytes_available(Pipe *p);
 
-#endif

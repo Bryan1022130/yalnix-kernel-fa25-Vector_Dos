@@ -32,7 +32,6 @@ struct pcb{
         ProcessState currState; //Enum states for process
         pte_t *AddressSpace; // to keep track of where it is currently in its address space for region 1 {Page Table}
 		
-	// TODO: make these page indices
 	void *user_heap_brk; //The top of heap
 	void *user_stack_ptr; //Lowest stack address
 	

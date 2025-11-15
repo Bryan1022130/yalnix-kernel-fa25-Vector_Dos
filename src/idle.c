@@ -27,18 +27,9 @@ extern pte_t *kernel_page_table;
 
 void DoIdle(void) {
         int count = 0;
-        while(1) {
-		/*
-                TracePrintf(1,"Idle loop running (%d)\n", count++);
+        while(1) {	
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
-		TracePrintf(1,"Idle loop running (%d)\n", count++);
-		TracePrintf(1,"Idle loop running (%d)\n", count++);
-		TracePrintf(1,"Idle loop running (%d)\n", count++);
-		TracePrintf(1,"Idle loop running (%d)\n", count++);
-		TracePrintf(1,"Idle loop running (%d)\n", count++);
-		TracePrintf(1,"Idle loop running (%d)\n", count++);
-		*/
 		TracePrintf(1,"Idle loop running (%d)\n", count++);
                 Pause();
         }
@@ -48,6 +39,7 @@ void DoIdle(void) {
  * Idle Process that runs when there is not other process being runned 
  * ===================================================================================================================
  */
+
 int idle_proc_create(unsigned char *track, pte_t *user_page_table, UserContext *uctxt) {
         TracePrintf(0, "Start of the idle_proc_create function <|> \n");
 

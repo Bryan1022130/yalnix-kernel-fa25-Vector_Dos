@@ -1,6 +1,4 @@
-#ifndef _CVAR_H_
-#define _CVAR_H_
-
+#pragma once
 #include "Queue.h"
 #include "process.h"
 
@@ -10,7 +8,6 @@ typedef struct CvarWaiter {
     int lock_id; // the lock it must reaquire later
 } CvarWaiter;
 
-// condition variables
 typedef struct Cvar {
     int id;
     int in_use; // 1 if allocated 0 if free
@@ -28,4 +25,3 @@ void CvarTableInit(void);
 Cvar *find_cvar(int id);
 void add_cvar(Cvar *cv);
 
-#endif

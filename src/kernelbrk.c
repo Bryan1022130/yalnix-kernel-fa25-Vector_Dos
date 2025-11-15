@@ -3,17 +3,19 @@
 #include <ykernel.h> // Macro for ERROR, SUCCESS, KILL
 #include <hardware.h> // Macro for Kernel Stack, PAGESIZE, ...
 #include <yalnix.h> // Macro for MAX_PROCS, SYSCALL VALUES, extern variables kernel text: kernel page: kernel text
-#include <sys/mman.h> // For PROT_WRITE | PROT_READ | PROT_EXEC
-#include <stdint.h>
+#include <sys/mman.h> // for PROT_WRITE | PROT_READ | PROT_EXEC
+#include <stdint.h> // for uintptr_t
 
-//Our Header files
+//Our header files
 #include "memory.h"
 
+//Extern variables
 extern pte_t *kernel_page_table;
 extern int vm_enabled;
 extern void *current_kernel_brk;
 extern unsigned char *track_global;
 
+//Macros
 #define FALSE 0
 #define TRUE 1
 
@@ -22,7 +24,7 @@ extern unsigned char *track_global;
  * ==============================================================================================
  */
 
-int SetKernelBrk(void * addr){
+int SetKernelBrk(void * addr) {
         TracePrintf(1, "We are in the function SetKernelBrk\n");
 
         //Convert the address to uintptr_t to be able to use as a integer
@@ -50,7 +52,6 @@ int SetKernelBrk(void * addr){
 
         if (!vm_enabled) {
                 current_kernel_brk = (void *)new_kbrk_addr;
-
                 TracePrintf(1, "[SetKernelBrk (NO VM)] Updated current_brk (no VM): %p\n", current_kernel_brk);
                 return SUCCESS;
         }

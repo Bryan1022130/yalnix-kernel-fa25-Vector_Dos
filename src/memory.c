@@ -12,7 +12,7 @@
 #define IN_USE 1
 #define UNUSED 0
 
-void init_frames(unsigned char *track){
+void init_frames(unsigned char *track) {
 	for (unsigned int x = 0; x < frame_count; x++) {
 		track[x] = UNUSED;
 	}
@@ -31,9 +31,9 @@ void init_frames(unsigned char *track){
 }
 
 //Loop through the current buffer and just return the first frame available
-int find_frame(unsigned char *track){
+int find_frame(unsigned char *track) {
 	for (unsigned int z = 0; z < frame_count; z++) {
-		if(track[z] == UNUSED){
+		if (track[z] == UNUSED) {
 			frame_alloc(track, z);
 			return z;
 		}

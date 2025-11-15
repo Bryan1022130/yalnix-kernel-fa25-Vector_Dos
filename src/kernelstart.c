@@ -74,9 +74,9 @@ HandleTrapCall Interrupt_Vector_Table[TRAP_VECTOR_SIZE];
  * Kernel Stack free function 
  * ==================================================================================================================
  */
-void free_sframes(PCB *free_proc, unsigned char *track){
+void free_sframes(PCB *free_proc, unsigned char *track) {
         TracePrintf(0, "Freeing the Kernel Stack for the process, this many --> %d\n", KERNEL_STACK_PAGES);
-        for(int i = 0; i < KERNEL_STACK_PAGES; i++){
+        for (int i = 0; i < KERNEL_STACK_PAGES; i++) {
 		int kernels_pfn = free_proc->kernel_stack_frames[i];
 		TracePrintf(0, "We are freeing this physical frame -> %d\n");
 		frame_free(track, kernels_pfn);
@@ -87,12 +87,12 @@ void free_sframes(PCB *free_proc, unsigned char *track){
  * Kernel Stack Allocation function 
  * ==================================================================================================================
  */
-int create_sframes(PCB *free_proc, unsigned char *track){
+int create_sframes(PCB *free_proc, unsigned char *track) {
         TracePrintf(0, "Creating the Kernel Stack for the process, this many --> %d\n", KERNEL_STACK_PAGES);
-        for(int i = 0; i < KERNEL_STACK_PAGES; i++){
+        for (int i = 0; i < KERNEL_STACK_PAGES; i++) {
                 //Allocate a physical frame for kernel stack
 		int pfn = find_frame(track);
-                if(pfn == ERROR){
+                if (pfn == ERROR) {
                         TracePrintf(0, "There is no more frames to give!\n");
                         return ERROR;
                 }
@@ -133,14 +133,11 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	TracePrintf(0, "Pipe system ready for IPC\n");
 
 	//Malloc and clear input_buffer that will hold user input
-	input_buffer = (char *)malloc(TERMINAL_MAX_LINE * sizeof(char));
+	input_buffer = (char *)calloc(1, TERMINAL_MAX_LINE * sizeof(char));
 	if (input_buffer == NULL) {
 		TracePrintf(0, "Error with malloc for input_buffer\n");
 		Halt();
 	}
-
-	//clear
-	memset(input_buffer, 0, (TERMINAL_MAX_LINE * sizeof(char)));
 
 	//initialize process queues
 	readyQueue = initializeQueue();
@@ -192,7 +189,7 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	current_kernel_brk = (void *)orig_brk_address;
 
 	int kbrk_return = SetKernelBrk(current_kernel_brk);
-	if (kbrk_return != 0) {
+	if (kbrk_return == ERROR) {
 		TracePrintf(0, "There was an error in SetKernelBrk\n");
 		Halt();
 	}
@@ -209,7 +206,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 	}
 
 	if (cmd_args[0] == NULL) {
-		TracePrintf(0, "Nothing was passed so I will just loop cause Idle :)\n");
 		idle_process->currState = READY;
 		Enqueue(readyQueue, idle_process);
 	} else {
@@ -222,18 +218,16 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 			TracePrintf(0, "Returning to idle process\n");
 			Halt();
 		}
-		TracePrintf(0, "<@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Calling KCS with KCCopy SHOULD BE ONCE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>\n\n\n");
 
 		if (KernelContextSwitch(KCCopy, init_pcb, NULL) < 0) 
 			Halt();
 
-		if (idle_process->pid == current_process->pid){
+		if (idle_process->pid == current_process->pid) {
                 	TracePrintf(0, "This is the pid of the idle process because current and idle are the same --> %d\n", current_process->pid);
 			TracePrintf(0, "Just run idle\n");
 
         	} else {
                 	TracePrintf(0, "This is the pid of current process and they are not the same as idle  --> %d\n", current_process->pid);
-			TracePrintf(0, "We should load program here\n");
 			if(LoadProgram(cmd_args[0], cmd_args, current_process) < 0)
 				Halt();
         	}

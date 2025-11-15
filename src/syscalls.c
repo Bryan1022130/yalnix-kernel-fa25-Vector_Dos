@@ -113,7 +113,6 @@ int KernelFork(void) {
 	    child_reg1[vpn].valid = 1;
 
     }
-    TracePrintf(0, "I am going to set up information for the child now\n");
 
     //Set up other information
     child->parent = parent;
@@ -441,7 +440,7 @@ int KernelDelay(int clock_ticks) {
  * ============================
  */
 
-int KernelTtyRead(int tty_id, void *buf, int len){
+int KernelTtyRead(int tty_id, void *buf, int len) {
 	//Check if inputs are valid
 	if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len < 0){
 		TracePrintf(0, "TtyRead: One of your arguments was invalid!\n");
