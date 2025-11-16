@@ -300,7 +300,6 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 void HandleMathTrap(UserContext *CurrUC) {
     TracePrintf(0, "MathTrap: Hello and Welcome to Math Trap!\n");
     TracePrintf(0, "I will call abort(). Please hold\n");
-
     abort();
 }
 
@@ -487,7 +486,7 @@ void HandleTrap(UserContext *){
 	return;
 }
 
-//Abort function
+//Abort function {Maybe take in status return?}
 void abort(void){
 	TracePrintf(0, "We are aborting the current process!\n");
 
@@ -504,7 +503,11 @@ void abort(void){
 	}
 
 	//Free the proc from queues, and most of its memory
-	free_proc(current_process, 0);
+	//Set as zombie to be reaped by wait and -1 as exit status {Maybe another status}
+	
+	current_process->currState = ZOMBIE;
+	current_process->exit_status = -1;
+	TracePrintf(0, "this is my parent pid -> %d\n", current_process->parent->pid);
 
 	//Context Switch
 	if(KernelContextSwitch(KCSwitch, current_process, next) < 0){

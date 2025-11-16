@@ -6,13 +6,60 @@ Terminals:
 
 Trap:
 	Kernel
-	Clock {It says that its round robin but we will check}
+	Clock {It says that its round robin but we will check more}
 	Illegal
 	Memory
 	Math
 	Receive
 	Transmit
+	Abort {Logic mostly fixed}
 
 Syscalls:
 	Checked all major syscall and I/O
 	Need to verify pipes, cvar, anc lock
+
+
+
+
+Test:
+	Math.c:
+		Simple file to abort a child with a math trap. 
+		The child always prints first
+		It aborts and does not print it second message
+		The parent reaps its value correctly
+		The parent exits 40
+		Status: Passed :)
+
+	getpid_test.c:
+		Simple test for GetPid, TtyWrite, and Exit
+		Returns pid 1
+		Writes it out to terminal 0
+		Exits with 0
+
+	getpid.c:
+		Simple file to test GetPid and Exit
+		Returns pid 1 {Since there is no Fork}
+		Exits with 100
+		Status: Passed :)
+
+	torture.c:
+		Lots of fun
+		Bunch of random stuff happening the terminal
+		Does not crash though :)
+		Status: Passed :) {If not crashing means passed}
+
+	forky.c:
+		Fork testfile
+		Parent or child can print a message first to terminal 0
+		Parent gets trapped in Wait
+		Child writes out its status {0} and pid {2}
+		Child exits with 45
+		Parent writes out its status {45} and pid {1} (45 since it reaps it from the child)
+		Parent exits with 45
+
+	fork.c:
+
+	
+	
+
+

@@ -258,7 +258,8 @@ int KernelWait(int *status_ptr) {
 		    //Get child pid to return
 		    int pid = child->pid;
 
-		    // free child's PCB and memory, kernel stack, and pcb 
+		    // free child's PCB and memory, kernel stack, and pcb
+		    // Get it out 
 		    free_proc(child, 1);
 
 		    return pid;
