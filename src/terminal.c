@@ -237,10 +237,12 @@ MessageNode *read_remove_message(int terminal) {
 
 	TracePrintf(0, "Found a message! Updating the head of the list!\n");
 	MessageNode *node = t_array[terminal].input_read_head;
-	node->next = NULL;
 
 	//Update the head of the message linked list
-	t_array[terminal].input_read_head = t_array[terminal].input_read_head->next; 
+	t_array[terminal].input_read_head = t_array[terminal].input_read_head->next;
+
+	node->next = NULL;
+
 	return node;
 }
 

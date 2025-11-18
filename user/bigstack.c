@@ -1,6 +1,6 @@
 #include <yuser.h>
 
-int main(void )
+int main(void)
 {
   char big_buffer[10*1024];
   int foo;

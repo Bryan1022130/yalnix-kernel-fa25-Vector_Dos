@@ -518,7 +518,7 @@ int KernelTtyRead(int tty_id, void *buf, int len) {
 	//Note: We dont have to stricly return len only as much as we currently have
 	
 	unsigned int bytes_copied = 0;
-	while (bytes_copied < len && curr_message->next != NULL) {
+	while (bytes_copied < len && curr_message != NULL) {
 		int bytes_in_node = curr_message->length; //Bytes in the curernt node
 		int bytes_search = len - bytes_copied; //Bytes we need left to satisfy user request
 		int bytes_to_copy = (bytes_in_node < bytes_search) ? bytes_in_node : bytes_search;
@@ -530,12 +530,18 @@ int KernelTtyRead(int tty_id, void *buf, int len) {
 		if (bytes_to_copy == curr_message->length) {
 			TracePrintf(0, "TtyRead: We have read all the data from this message node! Moving to the next :)\n");
 
-			curr_message = curr_message->next;
 			MessageNode *head = read_remove_message(tty_id);
+			if (head == NULL) { 
+				TracePrintf(0, "TtyRead: This should never happen! ERROR PLEASE CHECK NOW!\n");
+				return ERROR;
+			}
 
-			//Clean up message node and message buffer
+			//Free the malloced MessageNode && its buffer
 			free(head->message);
 			free(head);
+
+			//Update and go to the next node
+			curr_message = t_array[tty_id].input_read_head; 
 
 		 } else {
 			//Incase we reach a node and we only use part of the its buffer

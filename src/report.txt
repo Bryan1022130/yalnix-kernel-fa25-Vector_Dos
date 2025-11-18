@@ -35,6 +35,7 @@ Test:
 		Returns pid 1
 		Writes it out to terminal 0
 		Exits with 0
+		Status: Passed :)
 
 	getpid.c:
 		Simple file to test GetPid and Exit
@@ -56,8 +57,59 @@ Test:
 		Child exits with 45
 		Parent writes out its status {45} and pid {1} (45 since it reaps it from the child)
 		Parent exits with 45
+		Status: Passed :)
+	wait.c:
+		Spawn in one child process
+		Write to terminal 0
+		Exit 10
+		Parent wakes up and writes to terminal 0
+		Parent is back on wait
+		Spawn in another child process
+		Write to terminal 0
+		Exit 20
+		Parent wakes up and writes to terminal 0
+		Parent exits
+		Status: Passed :)
 
-	fork.c:
+	tty_test.c:
+		Fork a process
+		Parent or child writes to terminal first
+		Parent stuck in Wait
+		Child waits for input to be read from terminal 0
+		Child reads input and then leaves
+		Child exits with 43
+		Parent wakes up
+		Parent Writes to terminal
+		It does not get stuff in a infinite loop 
+		parent waits to read input from terminal 0
+		exits with 43
+		Status: Passed :)
+	
+	read_test.c:
+		This test is to test my string concatenation logic}
+		Write to terminal 2
+		Delay so that user can input into terminal 1
+		I type in many messages and return for each message
+		I read from terminal 1
+		I then print the message i got into terminal 0 
+		Exit with 70
+		Status: Passed :)
+	zero.c:
+		Memory Trap occurs
+		Process Aborted
+		Status: Passed :) {I think}
+
+	terminal_test.c:
+		Simple test to test TtyWrite and TtyRead
+		Write to terminal 0 and 3 
+		Read from the terminal 3
+		Write the input from terminal 3 into terminal 0
+		Exit with 67
+		Status: Passed :)
+		
+
+
+
 
 	
 	
