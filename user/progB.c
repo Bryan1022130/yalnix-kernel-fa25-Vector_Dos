@@ -8,6 +8,5 @@ int main() {
     Delay(2);
     Brk((void *)0x120000);
     TtyPrintf(0, "ProgB finished syscalls succsessfully. \n");
-
-    return 0;
+    Exit(30);
 }

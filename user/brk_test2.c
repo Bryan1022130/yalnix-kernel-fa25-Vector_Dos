@@ -13,6 +13,6 @@ int main(void){
         int rc4 = Brk(too_high);
 
         TtyPrintf(0, "[Brk Test] normal1=%d, normal2=%d, too_low=%d, too_high=%d \n", rc1, rc2, rc3, rc4);
-        Exit(0);
+        Exit(30);
 }
 
