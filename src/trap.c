@@ -251,16 +251,16 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 
     if(CurrUC->addr >= (void *)VMEM_1_BASE && CurrUC->addr < (void *)VMEM_1_LIMIT){
 	    TracePrintf(0, "We are in current region 1 space. Nice!\n");
-	    if (CurrUC->addr > current_process->user_heap_brk) {
-		    TracePrintf(0, "This is the current_user_brk --> %p and this is the user addr --> %p\n", current_process->user_heap_brk, CurrUC->addr);
+	    unsigned int curr_stack_base = (((unsigned long int)current_process->user_stack_ptr) >> PAGESHIFT);
+	    unsigned int new_stack_base = (((unsigned long int) CurrUC->addr) >> PAGESHIFT) - MAX_PT_LEN;
+	    unsigned int curr_heap_base = ((unsigned int)current_process->user_heap_brk >> PAGESHIFT);
+
+	    if (new_stack_base > curr_heap_base) {
 		    TracePrintf(0, "Great are able to grow the user stack space!\n");
 		    TracePrintf(0, "I will now set up more stack memory for you.\n");
-
-		    unsigned int curr_stack_base = (((unsigned long int)current_process->user_stack_ptr) >> PAGESHIFT);
-		    unsigned int new_stack_base = (((unsigned long int) CurrUC->addr) >> PAGESHIFT) - MAX_PT_LEN;
-
 		    TracePrintf(0, "Memory Trap: This is the current stack base --> %d\n", curr_stack_base);
 		    TracePrintf(0, "Memory Trap: This is the new stack base --> %d\n", new_stack_base);
+		    TracePrintf(0, "Memory Trap: This is the heap base ---> %d\n", (unsigned int)((unsigned int) current_process->user_heap_brk >> PAGESHIFT));
 
 		    pte_t *reg1_pt = (pte_t *)current_process->AddressSpace;
 		    //We store our region 1 space in our proc; so we just map it the same way as in template.c
@@ -503,10 +503,10 @@ void abort(void){
 	}
 
 	//Free the proc from queues, and most of its memory
-	//Set as zombie to be reaped by wait and -1 as exit status {Maybe another status}
+	//Set as zombie to be reaped by wait and ERROR as the exit status
 	
 	current_process->currState = ZOMBIE;
-	current_process->exit_status = -1;
+	current_process->exit_status = ERROR;
 	TracePrintf(0, "this is my parent pid -> %d\n", current_process->parent->pid);
 
 	//Context Switch

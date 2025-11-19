@@ -106,6 +106,113 @@ Test:
 		Write the input from terminal 3 into terminal 0
 		Exit with 67
 		Status: Passed :)
+
+	lock.c:
+                Tests LockInit, Acquire, Release, Delay, and Fork.
+                Parent initializes lock 0 and acquires it.
+                Child tries to acquire lock 0 and correctly blocks.
+                Parent delays, then releases lock 0.
+                The child wakes up, acquires lock 0, and prints confirmation.
+                Both processes exit normally with no deadlocks or unexpected behavior.
+                status: passed :)
+
+        cvar.c:
+                Cvar test file tests CvarInit, LockInit, Acquire, CvarWait, CvarSignal, and Delay.
+                Parent initializes a lock and a cvar, acquires the lock, then calls CvarWait.
+                The parent correctly releases the lock when waiting and blocks.
+                Child delays for a few ticks, then signals the cvar.
+                The parent wakes up, re-acquires the lock, and continues running.
+                Parent exits with the expected status (67).
+                status: passed :)
+
+	brk_test2.c:
+		Brk test
+		We call brk with two valid inputs
+		We then call brk with two invalid inputs
+		We print the returns values at the end using a TtyPrintf to terminal 0
+		We expect the output to be 0, 0, Error, Error
+		The output at the end was: 0>[Brk Test] normal1=0, normal2=0, too_low=-1, too_high=-1
+		Exit with 30
+		Status: Passed :)
+	
+	bigstack.c:
+		Bigstack test
+		The user attempts to right into the current heap space
+		Our Kernel detects this and aborts the current process
+		Status: Passed :)
+
+	exec_test.c:
+		File for exec testing
+		This files execs another file
+		it execs brk correctly
+		It loads the content and display data to the terminal
+		Exits with 30
+		Status: Passed :)
+
+	forkstack.c:
+		Recurses until 27 for both child and parent
+		Status: IDK
+
+	simple_read.c:
+		A simple read test
+		Read from terminal 1
+		Store in buffer and write out the terminal 
+		Exit 98
+		Status: Passed :)
+
+	tty_read.c:
+		Another simple read test
+		read ten bytes from terminal 0
+		Exit 0 
+		Status: Passed :)
+	write.c:
+		Simple write test
+		Print my message to terminal 3
+		Exit with 56
+		Status: Passed :)
+
+	write2.c:
+		Simple write test
+		Print or write a huge buffer to terminal 3
+		Exit with 56
+		Status: Passed :)
+
+	brk_test:
+                brk_test file tests brk by calling it to insert two brks, one at
+                0x120000 and another at 0x140000. Brk evaluates the new addresses
+                and verifies them as safe, it then grows the heap
+                Brk(0x120000) grows the heap from VPN 4 --> 15 allocating 12 pages
+                Brk(0x140000) grows the heap from VPN 16 --> 31 allocating 16 pages
+                Brk correctly rounds the addresses and checks stack bounds,
+                allocates and updates the brk.
+                status: Passed :)
+
+	delay_test:
+                pid 1 calls delay and has it wait for 3 ticks
+                Pid 1 calls delay(3) and is blocked until tick 5
+                idle proc runs ticks 2-5
+                tick 5 lcok trap wakes pid 1
+                pid 1 os unblocked
+                exits returns 0
+                status: Passed :)
+
+	syscall_test:
+                tests Getpid, Brk, Delay, Tyywrite
+                Get pid is called and returns 1
+                Brk is called twice once at 0x110000 and agian at 0x130000
+                at 0x110000 heap grows from vpn 4 --> 7 retruns 0
+                at 0x130000 heap grows from vpn 24 --> 31 returns 0
+                calls delay in a loop 5 times, PID 1 blocked until tick 7
+                clock trap wake PID correctly
+                exit is called, and mahcines halts
+
+	
+	
+
+
+	
+
+	
 		
 
 
