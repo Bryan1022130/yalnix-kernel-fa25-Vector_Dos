@@ -289,6 +289,7 @@ int KernelWait(int *status_ptr) {
 int KernelBrk(void *addr) {
     TracePrintf(0, "================================ KERNELBRK START============================================>\n");
     TracePrintf(1, "KernelBrk: requested addr=%p\n", addr);
+
     addr = (void *)UP_TO_PAGE(addr);
 
     void *heap_start = current_process->user_heap_brk;

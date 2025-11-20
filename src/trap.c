@@ -251,16 +251,17 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 
     if(CurrUC->addr >= (void *)VMEM_1_BASE && CurrUC->addr < (void *)VMEM_1_LIMIT){
 	    TracePrintf(0, "We are in current region 1 space. Nice!\n");
-	    unsigned int curr_stack_base = (((unsigned long int)current_process->user_stack_ptr) >> PAGESHIFT);
+	    unsigned int curr_stack_base = (((unsigned long int)current_process->user_stack_ptr) >> PAGESHIFT) - MAX_PT_LEN;
 	    unsigned int new_stack_base = (((unsigned long int) CurrUC->addr) >> PAGESHIFT) - MAX_PT_LEN;
-	    unsigned int curr_heap_base = ((unsigned int)current_process->user_heap_brk >> PAGESHIFT);
+	    unsigned int curr_heap_base = ((unsigned int)current_process->user_heap_brk >> PAGESHIFT) - MAX_PT_LEN;
+
+	    TracePrintf(0, "Memory Trap: This is the current stack base --> %d\n", curr_stack_base);
+	    TracePrintf(0, "Memory Trap: This is the new stack base --> %d\n", new_stack_base);
+	    TracePrintf(0, "Memory Trap: This is the heap base ---> %d\n", curr_heap_base);
 
 	    if (new_stack_base > curr_heap_base) {
 		    TracePrintf(0, "Great are able to grow the user stack space!\n");
 		    TracePrintf(0, "I will now set up more stack memory for you.\n");
-		    TracePrintf(0, "Memory Trap: This is the current stack base --> %d\n", curr_stack_base);
-		    TracePrintf(0, "Memory Trap: This is the new stack base --> %d\n", new_stack_base);
-		    TracePrintf(0, "Memory Trap: This is the heap base ---> %d\n", (unsigned int)((unsigned int) current_process->user_heap_brk >> PAGESHIFT));
 
 		    pte_t *reg1_pt = (pte_t *)current_process->AddressSpace;
 		    //We store our region 1 space in our proc; so we just map it the same way as in template.c
@@ -278,7 +279,7 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 
 		    //Update the stack base for the proc
 		    TracePrintf(0, "MemoryTrap: Success! I will now return and stack has growed!\n");
-		    current_process->user_stack_ptr = CurrUC->addr;
+		    current_process->user_stack_ptr = DOWN_TO_PAGE(CurrUC->addr);
 		    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 		    return;
     	}
@@ -286,6 +287,7 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 
   die:
     //In we cant grow the stack then we should abort
+    TracePrintf(0, "Your new stack base is below the current heap base!\n");
     TracePrintf(0, "MemoryTrap: Error! I will now abort\n");
     abort();
 }
@@ -491,7 +493,7 @@ void abort(void){
 	TracePrintf(0, "We are aborting the current process!\n");
 
 	if (current_process->pid == 1){
-		TracePrintf(0, "Idle is aborting! Time to Halt())\n");
+		TracePrintf(0, "Init is aborting! Time to Halt())\n");
 		Halt();
 	}
 

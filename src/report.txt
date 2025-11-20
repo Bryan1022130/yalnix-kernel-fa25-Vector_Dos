@@ -204,7 +204,41 @@ Test:
                 at 0x130000 heap grows from vpn 24 --> 31 returns 0
                 calls delay in a loop 5 times, PID 1 blocked until tick 7
                 clock trap wake PID correctly
-                exit is called, and mahcines halts
+                exit is called, and machines halts
+
+	pipe_r2w.c:
+		GetPid is called and returns 1
+		Pipe 0 is created
+		Fork is called
+		Parent is delayed 
+		reader function is called
+		Child should be blocked
+		Fork is called again 
+		reader function is called
+		Parents is free from delay
+		Parent forks twice
+		Function writer is called twice
+		Parent is delayed
+		Readers should read input from writers
+		Parent is freed from delay
+		exit with 0
+		Status: Status Passed :)
+	pipe_w2r.c:
+		GetPid is called and returns 1
+		Pipe 0 is created
+		Fork is called twice
+		Parent is delayed
+		write function is called twice
+		parent wakes up from delay
+		parent forks twice
+		parent is delayed
+		children read from pipe
+		children delayed
+		parent wakes up from delay and exits with 0
+		The input is written and read in a fifo manner
+		Status: Passed :)
+
+
 
 	
 	
