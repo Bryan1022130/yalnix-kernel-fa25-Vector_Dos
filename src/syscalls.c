@@ -1117,3 +1117,18 @@ int KernelReclaim(int id) {
     TracePrintf(0, "Reclaim: invalid ID  %d not found\n", id);
     return ERROR;
 }
+
+// Function to check user input	
+int PointerCheck(void *addr, long len) { 
+	
+	if((unsigned long)addr == NULL && len > 0) {
+		TracePrintf(0, "You passed in a NULL pointer but a valid length! Error!\n");
+		return ERROR;
+	}
+
+	if((unsigned long)addr + len > VMEM_1_LIMIT) { 
+		TracePrintf(0, "The pointer and its length would lead you to entering above VMEM_1 space! Error!\n");
+		TracePrintf(0, "For your reference this is the amount --> %ld and this is the VMEM_1_LIMIT --> %ld", ((unsigned long)addr + len), VMEM_1_LIMIT);
+		return ERROR;
+	}
+}
