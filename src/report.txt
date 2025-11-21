@@ -242,6 +242,18 @@ Test:
 		The input is written and read in a fifo manner
 		Status: Passed :)
 
+	lock_test.c:
+		Parent forks 3 times
+		Parent aquire locks
+		it delays for 10, and then releases
+		Child 1 gets lock, delays, and releases
+		Child 2 gets lock, delays, and releases
+		Child 3 gets lock, delays, and releases
+		Exits with 40
+		Status: Passed
+	
+
+
 
 
 	

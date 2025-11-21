@@ -14,6 +14,7 @@ typedef struct Pipe {
 
     Queue *waiting_readers;
     Queue *waiting_writers;
+
 }Pipe;
 
 extern Pipe pipe_table[MAX_PIPES];

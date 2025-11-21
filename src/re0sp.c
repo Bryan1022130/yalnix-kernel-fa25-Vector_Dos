@@ -14,7 +14,6 @@ void SetupRegion0(pte_t *kernel_page_table) {
 	//Clear out the malloc space
 	memset(kernel_page_table, 0, (MAX_PT_LEN* (sizeof(pte_t))));
 	
-	TracePrintf(1, "\n\n");
         TracePrintf(1,"------------------------------------------------- Region 0 Setup ----------------------------------------------------\n");
 
 	// -------------------------------------- TEXT --------------------------------------------------

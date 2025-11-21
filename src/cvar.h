@@ -2,7 +2,6 @@
 #include "Queue.h"
 #include "process.h"
 
-
 typedef struct CvarWaiter {
     PCB *proc; // the proc blocked on this condition
     int lock_id; // the lock it must reaquire later
@@ -15,9 +14,9 @@ typedef struct Cvar {
     struct Cvar *next;
 } Cvar;
 
-
 // global list head 
 extern Cvar *linked_cvars;
+
 // ID counter
 extern int cvar_count;
 

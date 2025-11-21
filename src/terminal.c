@@ -17,11 +17,12 @@
 
 extern Terminal t_array[NUM_TERMINALS];
 
-void TerminalSetup(void){
+void TerminalSetup(void) {
 	TracePrintf(0, "We are setting up the Terminal array!\n");
 	
 	//Clear out and populate the struct
 	memset(t_array, 0, NUM_TERMINALS * sizeof(Terminal));
+
 	for (int x = 0; x < NUM_TERMINALS; x++) {
 		t_array[x].terminal_num = x;
 		t_array[x].transmit_waiting_process = NULL;
@@ -38,9 +39,8 @@ void TerminalSetup(void){
 void TerminalFree(unsigned int tnum) {
 	TracePrintf(0, "We are freeing Terminal %d\n", tnum);
 
-	if(tnum > NUM_TERMINALS){
+	if (tnum > NUM_TERMINALS) {
 		TracePrintf(0, "This is not a valid terminal!\n");
-		Halt();//Testing right now
 		return;
 	}
 
@@ -58,7 +58,7 @@ void TerminalFree(unsigned int tnum) {
 		return;
 	}
 	
-	//Null out these fields {Might have to implement logic to unblock
+	//Null out these fields 
 	t_array[tnum].read_waiting_process = NULL;
 	t_array[tnum].transmit_waiting_process = NULL;
 
@@ -147,7 +147,7 @@ int message_free(int terminal, int which_list) {
 		TracePrintf(0, "We are going to be freeing all the transmit messages\n");
 		list_free = t_array[terminal].transmit_message_head;
 	} else {
-		TracePrintf(0, "We are goign to be freeing all the read messages");
+		TracePrintf(0, "We are goign to be freeing all the read messages\n");
 		list_free = t_array[terminal].input_read_head;
 	}
 
@@ -165,9 +165,10 @@ int message_free(int terminal, int which_list) {
 		//Get a pointer to the next node now, since we are about to free
 		next = list_free->next;
 
-		//Since the message field in a MessageNode cause malloc
+		//Since the message field in a MessageNode calls malloc
 		//We should check if its valid and set it free
-		if (list_free != NULL) { //----------------------NOTE: this must conform with my other files, so if i free i have to set as null
+
+		if (list_free != NULL) { 
 			TracePrintf(0, "We are going to free a message from the struct MessageNode!\n");
 			free(list_free->message);
 		}
@@ -248,7 +249,8 @@ MessageNode *read_remove_message(int terminal) {
 
 int read_message_free(int terminal) {
 	TracePrintf(0, "We are going to free all the messages in the list!\n");
-	if(t_array[terminal].input_read_head  == NULL){
+
+	if(t_array[terminal].input_read_head  == NULL) {
 		TracePrintf(0, "Error! There is no messages in my list to free!\n");
 		return ERROR;
 	}

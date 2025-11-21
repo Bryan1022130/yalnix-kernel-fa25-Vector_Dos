@@ -484,7 +484,7 @@ void abort(void){
 	TracePrintf(0, "We are aborting the current process!\n");
 
 	if (current_process->pid == 1){
-		TracePrintf(0, "Init is aborting! Time to Halt())\n");
+		TracePrintf(0, "Init is aborting! Time to Halt()\n");
 		Halt();
 	}
 

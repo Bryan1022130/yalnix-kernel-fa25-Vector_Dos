@@ -20,6 +20,7 @@ extern PCB *idle_process;
 extern Terminal t_array[NUM_TERMINALS];
 extern PCB *init_process;
 extern Lock lock_table[MAX_LOCKS];
+extern unsigned long current_tick;
 
 //Helper Functions
 void rollback_frames(int first_frame, int amount) {
@@ -174,7 +175,7 @@ int KernelExec(char *filename, char *argv[]) {
     }
 
     TracePrintf(1, "Exec success -> now running new program %s\n", filename);
-    TracePrintf(0, "=================================== Kenenl Exec Exit =======================================================\n");
+    TracePrintf(0, "=================================== Kernel Exec Exit =======================================================\n");
     return SUCCESS;
 }
 
@@ -206,7 +207,8 @@ void KernelExit(int status) {
     //Check if parent was blocked from Wait() and wake up
     if (current_process->parent != NULL) {
         PCB *parent = current_process->parent;
-        if (parent->currState == BLOCKED) {
+	TracePrintf(0, "This is the amounf for my parents wake_tick --> %d", parent->wake_tick);
+        if (parent->currState == BLOCKED && parent->wake_tick < current_tick) {
             TracePrintf(1, "KernelExit: waking parent PID %d\n", parent->pid);
 	    TracePrintf(0, "KernelExit: removing parent from blocked queue!\n");
             parent->currState = READY;
@@ -614,7 +616,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 			return ERROR;
 		}
 
-		TracePrintf(0, "Transmit was done and returing to you this much -> %d", len);
+		TracePrintf(0, "Transmit was done and returing to you this much -> %d\n", len);
 		return len;
 	}
 
@@ -905,7 +907,7 @@ int KernelAcquire(int lock_id) {
 
 int KernelRelease(int lock_id) {
 
-    TracePrintf(0," Realease() called by PID %d for lock %d\n",
+    TracePrintf(0," Release() called by PID %d for lock %d\n",
                 current_process->pid, lock_id);
 
     Lock *lk = get_lock(lock_id);

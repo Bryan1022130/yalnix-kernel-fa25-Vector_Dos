@@ -2,7 +2,7 @@
 #include "process.h"
 #include "Queue.h"
 
-#define MAX_LOCKS 64 //Idk if there is limit so just put a small amount for now
+#define MAX_LOCKS 64
 
 //Our lock implementation
 typedef struct Lock { 

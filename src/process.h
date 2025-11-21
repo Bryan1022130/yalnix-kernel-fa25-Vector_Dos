@@ -1,4 +1,5 @@
 #pragma once
+
 #include <hardware.h>
 typedef struct pcb PCB;
 #include "memory.h"
@@ -16,17 +17,17 @@ typedef enum{
 }ProcessState;
 
 //Create the PCB that we be use for context switching
-struct pcb{
+struct pcb {
 
 	//Kernel Stack Frames
 	unsigned int kernel_stack_frames[KERNEL_STACK_MAXSIZE / PAGESIZE];
 
 	//Context Switch Logic
         KernelContext curr_kc; // Hold the Current Kernel Context {Not just a pointer}
-        UserContext curr_uc; //Hold the Current User Context { Not just the pointer}
+        UserContext curr_uc; //Hold the Current User Context {Not just the pointer}
 	
 	//Process information
-        unsigned int pid; //Keep track of the id of the current process {This could be changed to a ssize_t}
+        unsigned int pid; //Keep track of the id of the current process
 	int exit_status; // When a process is going to exit
 
         ProcessState currState; //Enum states for process

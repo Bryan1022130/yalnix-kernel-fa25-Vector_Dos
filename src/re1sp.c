@@ -11,10 +11,8 @@
 #define VALID 1
 #define INVALID 0
 
-//Set up the region 1 user_page_table as invaid
 void SetupRegion1(pte_t *user_page_table) {
 
-	TracePrintf(1, "\n\n");
  	TracePrintf(1,"------------------------------------------------- Region 1 Setup ----------------------------------------------------\n");
 
 	//Clear out the malloc region 

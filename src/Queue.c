@@ -182,5 +182,3 @@ int in_queue(Queue *MQueue, void *find_data) {
 	TracePrintf(0, "I could not find the process in the Queue! [THIS MAY BE AN ERROR]\n");
 	return 0;
 }
-
-

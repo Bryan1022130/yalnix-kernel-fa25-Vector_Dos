@@ -42,7 +42,6 @@ KernelContext *KCSwitch(KernelContext *kc_in, void *curr_pcb_p, void *next_pcb_p
     memcpy(&curr->curr_kc, kc_in, sizeof(KernelContext));
 
     int ks_base_vpn = (KERNEL_STACK_BASE >> PAGESHIFT);
-    TracePrintf(0, "This is the value of the base_vpn --> %d\n", ks_base_vpn);
     for (int i = 0; i < KSTACKS; i++) {
         kernel_page_table[ks_base_vpn + i].pfn = next->kernel_stack_frames[i];
         kernel_page_table[ks_base_vpn + i].prot = PROT_READ | PROT_WRITE;
@@ -204,6 +203,7 @@ void free_proc(PCB *proc, int free_flip) {
 
 // ======================================================================================> Process Queue Logic 
 PCB *get_next_ready_process(void) {
+
 	if (!isEmpty(readyQueue)) {
 		PCB *ready_proc = Dequeue(readyQueue);
 		TracePrintf(0, "The process at the start of the readyQueue is -> %d\n", ready_proc->pid);

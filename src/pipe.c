@@ -16,7 +16,6 @@ Pipe *get_pipe(int id) {
     // if pipe exists, AND and its id is less than MAX_PIPES AND Pipe id not in use
 
     if (id < 0 || id >= MAX_PIPES || !pipe_table[id].in_use)
-        // return error how can the pipe exist and its id not be in use?
         return NULL;
 
     return &pipe_table[id];
