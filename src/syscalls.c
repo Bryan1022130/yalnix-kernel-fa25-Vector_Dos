@@ -23,7 +23,7 @@ extern Lock lock_table[MAX_LOCKS];
 
 //Helper Functions
 void rollback_frames(int first_frame, int amount) {
-	TracePrintf(0, "We are rolling back stack frames becauses there was an error!\n");
+	TracePrintf(0, "We are rolling back stack frames because there was an error!\n");
 
 	for (int x = first_frame; x < amount; x++) {
 		frame_free(track_global, x);
@@ -72,7 +72,7 @@ int KernelFork(void) {
     PCB *parent = current_process;
     PCB *child = spawn_proc();
 
-    if(child == NULL) {
+    if (child == NULL) {
 	    TracePrintf(0, "There was an error making a process in KernelFork()\n");
 	    return ERROR;
     }
@@ -138,7 +138,6 @@ int KernelFork(void) {
 	    TracePrintf(0, "I am the parent process! Just to make sure here is my pid -> %d\n", current_process->pid);
 	    TracePrintf(0, "==========================================================================================\n");
 	    return child_pid;
-
     }
 
     TracePrintf(0, "I am the child process! Just to make sure here is my pid -> %d\n", current_process->pid);
@@ -216,7 +215,6 @@ void KernelExit(int status) {
         }
     }
 
-    //Erase some of the data from the process
     //Mark process as zombie 
     current_process->exit_status = status;
     current_process->currState = ZOMBIE;
@@ -303,7 +301,7 @@ int KernelBrk(void *addr) {
     TracePrintf(0, "current stack_start = %p\n", stack_start);
     TracePrintf(0, "current rounded addr = %p\n", addr);
 
-    if ((uintptr_t) addr < heap_start) {
+    if ((uintptr_t)addr < (uintptr_t)heap_start) {
         TracePrintf(0, "KernelBrk: Requested addr (%p) is below heapstart (%p)\n", addr, heap_start);
         return ERROR;
     }
@@ -352,7 +350,7 @@ int KernelBrk(void *addr) {
 
 	TracePrintf(1, "KernelBrk: grow heap from vpn %d to %d\n", start_vpn, end_vpn);
 
-	for (int vpn = start_vpn; vpn<= end_vpn; vpn++){
+	for (int vpn = start_vpn; vpn<= end_vpn; vpn++) {
 		// we skip pages already valid
 		if (pt[vpn].valid) continue;
 
@@ -383,7 +381,7 @@ int KernelBrk(void *addr) {
 
 	TracePrintf(1, "KernelBrk: shrinking heap from vpn %d down to %d\n", end_vpn, start_vpn);
 
-	for(int vpn = start_vpn; vpn <= end_vpn; vpn++){
+	for (int vpn = start_vpn; vpn <= end_vpn; vpn++) {
 		if (!pt[vpn].valid)continue; //nothing to free if invalid 
 
 		// freeing physical frame and clear PTE
@@ -566,15 +564,13 @@ int KernelTtyRead(int tty_id, void *buf, int len) {
 	return bytes_copied;
 }
 
-
 int KernelTtyWrite(int tty_id, void *buf, int len) {
 	if (tty_id < 0 || tty_id >= NUM_TERMINALS || buf == NULL || len < 0) {
 		TracePrintf(0, "One of your arguments was invalid!\n");
 		return ERROR;
 	}
 
-	if(t_array[tty_id].transmit_waiting_process != NULL) {
-		//NOTE MIGHT NOT BE AN ERROR MAYBE JUST BLOCK THE CURRENT PROCESS ANS ADD READY QUEUE `
+	if (t_array[tty_id].transmit_waiting_process != NULL) {
 		TracePrintf(0, "Sorry but another process is already writing to this terminal! PLEASE WAIT!\n");
 		return ERROR;
 	}
@@ -648,7 +644,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 		}
 
 		message_node->message = mbuffer;
-		mbuffer[TERMINAL_MAX_LINE] = '\0'; //Might not need this???
+		mbuffer[TERMINAL_MAX_LINE] = '\0';
 						   
 		memcpy(message_node->message, kbuffer + i, chunk_split);
 		message_node->length = chunk_split;
@@ -664,7 +660,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 	TracePrintf(0, "We have made all messages nodes! there is this many chunks --> %d\n", chunks);
 	free(kbuffer);
 
-	if(t_array[tty_id].transmit_message_head == NULL){
+	if (t_array[tty_id].transmit_message_head == NULL) {
 		TracePrintf(0, "THIS SHOULD NOT HAPPEN! Please check the logic for setting up the linked list of messages!");
 		return ERROR;
 	}
@@ -672,7 +668,7 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 	//Block the process since we need more than 1 transmit
 	t_array[tty_id].transmit_waiting_process = current_process;
 	current_process->currState = BLOCKED;
-	Enqueue(blockedQueue, (void *)current_process); //Add to block queue
+	Enqueue(blockedQueue, (void *)current_process); 
 						      
 	MessageNode *current = t_array[tty_id].transmit_message_head;
 	TracePrintf(0, "We are going to transmit a message!\n");
@@ -1184,21 +1180,21 @@ int PointBuffCheck(void *addr, long len, int permission) {
 	return 0;
 }
 
-
+///Check if a sting is valid from user input
 int StringReadCheck(char *str, int length) {
 
 	if(str == NULL) { 
-		TracePrintf(0,  "StringReadCheck: Your string was NULL! ERROR!\n");
+		TracePrintf(0, "StringReadCheck: Your string was NULL! ERROR!\n");
 		return ERROR;
 	}
 
 	if (length < 0) {
-		TracePrintf(0,  "StringReadCheck: Length is below zero! THIS IS AN ERROR\n\n");
+		TracePrintf(0,  "StringReadCheck: Length is below zero! THIS IS AN ERROR\n");
 		return ERROR;
 	}
 
 	if((unsigned long)str > VMEM_1_LIMIT) { 
-		TracePrintf(0,  "StringReadCheck: String would be overflowing out region 1 space!\n");
+		TracePrintf(0, "StringReadCheck: String would be overflowing out region 1 space!\n");
 		return ERROR;
 	}
 
@@ -1213,7 +1209,7 @@ int StringReadCheck(char *str, int length) {
 		int page_index = (char_addr >> PAGESHIFT);
 		pte_t *page_find = &(current_process->AddressSpace[page_index]);
 
-		if(!page_find->valid) {
+		if (!page_find->valid) {
 			TracePrintf(0, "StringReadCheck: Page is not mapped! Error\n");
 			return ERROR;
 		}

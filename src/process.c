@@ -89,7 +89,6 @@ KernelContext *KCCopy(KernelContext *kc_in, void *new_pcb_p, void *) {
 	//Copy over the content of the current kernel stack into frames that have been allocated
 	for (int t = 0; t < num_stack_pages; t++) {
 		//Get the current pfn from our process && current proc
-		int kernel_curr_pfn = current_process->kernel_stack_frames[t];
 		int kernel_new_pfn = new_pcb->kernel_stack_frames[t];
 			
 		//Map this value in kernel virtual memory 
@@ -157,7 +156,6 @@ PCB* spawn_proc(void) {
 	return proc;
 }
 
-//Need to add more to this {Might need to return a int to signify success}
 void free_proc(PCB *proc, int free_flip) {
 	TracePrintf(0, "+++++++++++++++++++++++++++++FREE PROC++++++++++++++++++++++++++++++++++\n");
 	TracePrintf(0, "We are going to free the process with a pid of --> %d\n", proc->pid);

@@ -14,7 +14,7 @@ typedef struct termial {
 	 //Terminal Tracking
 	 int terminal_num;
 
-	 //Blocked process foe transmitting 
+	 //Blocked process for transmitting 
 	 PCB *transmit_waiting_process;
 
 	 //Blocked process for reading

@@ -137,8 +137,9 @@ Test:
 	
 	bigstack.c:
 		Bigstack test
-		The user attempts to right into the current heap space
-		Our Kernel detects this and aborts the current process
+		The user allocates a big stack
+		The user is able to write into this space
+		Nothing crashed!
 		Status: Passed :)
 
 	exec_test.c:
@@ -150,8 +151,10 @@ Test:
 		Status: Passed :)
 
 	forkstack.c:
-		Recurses until 27 for both child and parent
-		Status: IDK
+		Recurses and grows the heap and the stack
+		Both the parent and the child go down to 0
+		the test exits correctly
+		Status: Passed :)
 
 	simple_read.c:
 		A simple read test
@@ -185,7 +188,7 @@ Test:
                 Brk(0x140000) grows the heap from VPN 16 --> 31 allocating 16 pages
                 Brk correctly rounds the addresses and checks stack bounds,
                 allocates and updates the brk.
-                status: Passed :)
+                Status: Passed :)
 
 	delay_test:
                 pid 1 calls delay and has it wait for 3 ticks
@@ -194,7 +197,7 @@ Test:
                 tick 5 lcok trap wakes pid 1
                 pid 1 os unblocked
                 exits returns 0
-                status: Passed :)
+                Status: Passed :)
 
 	syscall_test:
                 tests Getpid, Brk, Delay, Tyywrite
@@ -204,7 +207,8 @@ Test:
                 at 0x130000 heap grows from vpn 24 --> 31 returns 0
                 calls delay in a loop 5 times, PID 1 blocked until tick 7
                 clock trap wake PID correctly
-                exit is called, and machines halts
+                exit is called
+		Status: Passed :)
 
 	pipe_r2w.c:
 		GetPid is called and returns 1
