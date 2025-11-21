@@ -155,6 +155,11 @@ int KernelExec(char *filename, char *argv[]) {
 	    return ERROR;
     }
 
+    if (StringReadCheck(filename, 100) == ERROR) {
+	    TracePrintf(0, "Exec: Invlid filename pointer :(\n");
+	    return ERROR;
+    }
+
     // free old region1 frames
     pte_t *pt = current_process->AddressSpace;
     for (int i = 0; i < MAX_PT_LEN; i++) {
@@ -222,7 +227,6 @@ void KernelExit(int status) {
     if (next_proc == NULL) {
 	    TracePrintf(0, "KenrelExit: Error! No other process besides idle was found! Recheck readyQueue logic!\n");
 	    return;
-	    //next_proc = idle_process;     // REVERT THIS IS FAILS
     }
 
     TracePrintf(1, "KernelExit: switching from PID %d to PID %d\n", current_process->pid, next_proc->pid);
@@ -451,6 +455,12 @@ int KernelTtyRead(int tty_id, void *buf, int len) {
 		return ERROR;
 	}
 
+	// 1 here is for read permission
+	if (PointBuffCheck(buf, len, 1) == ERROR) { 
+		TracePrintf(0, "PointBuffCheck did not pass! :(\n");
+		return ERROR;
+	}
+
 	//Check if another caller is blocked or there is no input; if yes block this caller 
 	while (t_array[tty_id].read_waiting_process != NULL || t_array[tty_id].input_read_head == NULL) { 
 		//If proc already in blocked queue do not keep adding it back in
@@ -566,6 +576,12 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 	if(t_array[tty_id].transmit_waiting_process != NULL) {
 		//NOTE MIGHT NOT BE AN ERROR MAYBE JUST BLOCK THE CURRENT PROCESS ANS ADD READY QUEUE `
 		TracePrintf(0, "Sorry but another process is already writing to this terminal! PLEASE WAIT!\n");
+		return ERROR;
+	}
+
+	//2 here is for write permission
+	if (PointBuffCheck(buf, len, 2) == ERROR) { 
+		TracePrintf(0, "PointBuffCheck did not pass! :(\n");
 		return ERROR;
 	}
 
@@ -1119,16 +1135,102 @@ int KernelReclaim(int id) {
 }
 
 // Function to check user input	
-int PointerCheck(void *addr, long len) { 
-	
-	if((unsigned long)addr == NULL && len > 0) {
-		TracePrintf(0, "You passed in a NULL pointer but a valid length! Error!\n");
+int PointBuffCheck(void *addr, long len, int permission) { 
+	TracePrintf(0, "Checking to make sure your arguments are valid!\n");
+
+	if(addr == NULL && len > 0) {
+		TracePrintf(0, "PointBuffCheck: You passed in a NULL pointer but a valid length! Error!\n");
 		return ERROR;
 	}
 
 	if((unsigned long)addr + len > VMEM_1_LIMIT) { 
-		TracePrintf(0, "The pointer and its length would lead you to entering above VMEM_1 space! Error!\n");
-		TracePrintf(0, "For your reference this is the amount --> %ld and this is the VMEM_1_LIMIT --> %ld", ((unsigned long)addr + len), VMEM_1_LIMIT);
+		TracePrintf(0, "PointBuffCheck: The pointer and its length would lead you to entering above VMEM_1 space! Error!\n");
+		TracePrintf(0, "PointBuffCheck: For your reference this is the amount --> %ld and this is the VMEM_1_LIMIT --> %ld\n", ((unsigned long)addr + len), VMEM_1_LIMIT);
 		return ERROR;
 	}
+
+	unsigned long current_addr = DOWN_TO_PAGE((unsigned long)addr);
+	unsigned long end_addr = DOWN_TO_PAGE((unsigned long)addr + len);
+
+	//Check to see if the page table has correct permission, based on the address of userland buffer
+	while (current_addr < end_addr) { 
+		int page_index = (current_addr >> PAGESHIFT);
+
+		pte_t *page_find = &(current_process->AddressSpace[page_index]);
+
+		if(!page_find->valid) {
+			TracePrintf(0, "PointBuffCheck: Page is not mapped! Error\n");
+			return ERROR;
+		}
+		
+		//Check if we can read in this certain memory region
+		if(permission == 1 && !(page_find->prot & PROT_READ)) {
+			TracePrintf(0, "PointBuffCheck: Page not readable!\n");
+			return ERROR;
+		}
+		
+		//Check if we can write in this certain memory region 
+		if(permission == 2 && !(page_find->prot & PROT_WRITE)) {
+			TracePrintf(0, "PointBuffCheck: Page not readable!\n");
+			return ERROR;
+		}
+
+		current_addr += PAGESIZE;
+	}
+		
+
+
+	TracePrintf(0, "PointBuffCheck: Great! You passed!\n");
+	return 0;
+}
+
+
+int StringReadCheck(char *str, int length) {
+
+	if(str == NULL) { 
+		TracePrintf(0,  "StringReadCheck: Your string was NULL! ERROR!\n");
+		return ERROR;
+	}
+
+	if (length < 0) {
+		TracePrintf(0,  "StringReadCheck: Length is below zero! THIS IS AN ERROR\n\n");
+		return ERROR;
+	}
+
+	if((unsigned long)str > VMEM_1_LIMIT) { 
+		TracePrintf(0,  "StringReadCheck: String would be overflowing out region 1 space!\n");
+		return ERROR;
+	}
+
+	for(int counter = 0; counter < length; counter++) { 
+		unsigned long char_addr = (unsigned long)str;
+		
+		if((unsigned long)char_addr > VMEM_1_LIMIT) { 
+			TracePrintf(0, "StringReadCheck: String would be overflowing out region 1 space!\n");
+			return ERROR;
+		}
+
+		int page_index = (char_addr >> PAGESHIFT);
+		pte_t *page_find = &(current_process->AddressSpace[page_index]);
+
+		if(!page_find->valid) {
+			TracePrintf(0, "StringReadCheck: Page is not mapped! Error\n");
+			return ERROR;
+		}
+		
+		if(!(page_find->prot & PROT_READ)) { 
+			TracePrintf(0, "StringReadCheck: String page is not readable! Error\n");
+			return ERROR;
+		}
+
+		if(*str == 0x00) { 
+			TracePrintf(0, "StringReadCheck: Great I found the null terminator! You have passed!\n");
+			return 0;
+		}
+		
+		str++;
+	}
+
+	TracePrintf(0, "StringReadCheck: Hey! Your string was missing a null terminator! ERROR!\n");
+	return ERROR;
 }
