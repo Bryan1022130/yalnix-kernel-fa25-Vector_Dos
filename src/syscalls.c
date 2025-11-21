@@ -57,6 +57,7 @@ void data_copy(void *parent_pte, int cpfn) {
 
 	WriteRegister(REG_TLB_FLUSH, (unsigned int)kernel_ptr);
 }
+
 /* ==========================================
  * Syscall functions 
  * ==========================================
@@ -155,8 +156,15 @@ int KernelExec(char *filename, char *argv[]) {
 	    return ERROR;
     }
 
-    if (StringReadCheck(filename, 100) == ERROR) {
+    //Check if file name is valid
+    if (StringReadCheck(filename) == ERROR) {
 	    TracePrintf(0, "Exec: Invlid filename pointer :(\n");
+	    return ERROR;
+    }
+
+    //Check if argv vector is valid
+    if (ArgvCheck(argv) == ERROR) {
+	    TracePrintf(0, "Your argv input was invalid!\n");
 	    return ERROR;
     }
 
@@ -207,7 +215,7 @@ void KernelExit(int status) {
     //Check if parent was blocked from Wait() and wake up
     if (current_process->parent != NULL) {
         PCB *parent = current_process->parent;
-	TracePrintf(0, "This is the amounf for my parents wake_tick --> %d", parent->wake_tick);
+	TracePrintf(0, "This is the amount for my parents wake_tick --> %d\n", parent->wake_tick);
         if (parent->currState == BLOCKED && parent->wake_tick < current_tick) {
             TracePrintf(1, "KernelExit: waking parent PID %d\n", parent->pid);
 	    TracePrintf(0, "KernelExit: removing parent from blocked queue!\n");
@@ -263,7 +271,6 @@ int KernelWait(int *status_ptr) {
 		    int pid = child->pid;
 
 		    // free child's PCB and memory, kernel stack, and pcb
-		    // Get it out 
 		    free_proc(child, 1);
 
 		    return pid;
@@ -1136,6 +1143,11 @@ int KernelReclaim(int id) {
 int PointBuffCheck(void *addr, long len, int permission) { 
 	TracePrintf(0, "Checking to make sure your arguments are valid!\n");
 
+	if (len < 0) { 
+		TracePrintf(0, "PointBuffCheck: Your length is negative!\n");
+		return ERROR;
+	}
+
 	if(addr == NULL && len > 0) {
 		TracePrintf(0, "PointBuffCheck: You passed in a NULL pointer but a valid length! Error!\n");
 		return ERROR;
@@ -1152,83 +1164,77 @@ int PointBuffCheck(void *addr, long len, int permission) {
 
 	//Check to see if the page table has correct permission, based on the address of userland buffer
 	while (current_addr < end_addr) { 
-		int page_index = (current_addr >> PAGESHIFT);
+		int page_index = (current_addr >> PAGESHIFT) - MAX_PT_LEN;
 
-		pte_t *page_find = &(current_process->AddressSpace[page_index]);
+		pte_t page_find = current_process->AddressSpace[page_index];
 
-		if(!page_find->valid) {
+		if(!page_find.valid) {
 			TracePrintf(0, "PointBuffCheck: Page is not mapped! Error\n");
 			return ERROR;
 		}
 		
 		//Check if we can read in this certain memory region
-		if(permission == 1 && !(page_find->prot & PROT_READ)) {
+		//1 for read
+		if(permission == 1 && !(page_find.prot & PROT_READ)) {
 			TracePrintf(0, "PointBuffCheck: Page not readable!\n");
 			return ERROR;
 		}
 		
 		//Check if we can write in this certain memory region 
-		if(permission == 2 && !(page_find->prot & PROT_WRITE)) {
+		//2 for write
+		if(permission == 2 && !(page_find.prot & PROT_WRITE)) {
 			TracePrintf(0, "PointBuffCheck: Page not readable!\n");
 			return ERROR;
 		}
 
 		current_addr += PAGESIZE;
 	}
-		
-
 
 	TracePrintf(0, "PointBuffCheck: Great! You passed!\n");
 	return 0;
 }
 
-///Check if a sting is valid from user input
-int StringReadCheck(char *str, int length) {
-
-	if(str == NULL) { 
-		TracePrintf(0, "StringReadCheck: Your string was NULL! ERROR!\n");
-		return ERROR;
+int is_r1_readable(char *s) {
+	if ((unsigned long)s >= VMEM_1_LIMIT || (unsigned long)s < VMEM_1_BASE) {
+		return 0; // false
 	}
-
-	if (length < 0) {
-		TracePrintf(0,  "StringReadCheck: Length is below zero! THIS IS AN ERROR\n");
-		return ERROR;
+	pte_t page_find = current_process->AddressSpace[((unsigned long)s >> PAGESHIFT) - MAX_PT_LEN];
+	if (!page_find.valid || !(page_find.prot & PROT_READ)) {
+		return 0; // false
 	}
+	return 1; // true
+}
 
-	if((unsigned long)str > VMEM_1_LIMIT) { 
-		TracePrintf(0, "StringReadCheck: String would be overflowing out region 1 space!\n");
-		return ERROR;
-	}
-
-	for(int counter = 0; counter < length; counter++) { 
-		unsigned long char_addr = (unsigned long)str;
-		
-		if((unsigned long)char_addr > VMEM_1_LIMIT) { 
-			TracePrintf(0, "StringReadCheck: String would be overflowing out region 1 space!\n");
-			return ERROR;
+int ArgvCheck(char **argv) {
+	while (1) {
+		for (unsigned int i = 0; i < sizeof(char *); i++) {
+			if (!is_r1_readable(((char *)argv) + i)) {
+				return ERROR;
+			}
 		}
-
-		int page_index = (char_addr >> PAGESHIFT);
-		pte_t *page_find = &(current_process->AddressSpace[page_index]);
-
-		if (!page_find->valid) {
-			TracePrintf(0, "StringReadCheck: Page is not mapped! Error\n");
-			return ERROR;
-		}
-		
-		if(!(page_find->prot & PROT_READ)) { 
-			TracePrintf(0, "StringReadCheck: String page is not readable! Error\n");
-			return ERROR;
-		}
-
-		if(*str == 0x00) { 
-			TracePrintf(0, "StringReadCheck: Great I found the null terminator! You have passed!\n");
+		char *s = *argv;
+		if (s == NULL) {
 			return 0;
 		}
-		
-		str++;
+		if (StringReadCheck(s) == ERROR) {
+			return ERROR;
+		}
+		argv++;
 	}
+}
 
-	TracePrintf(0, "StringReadCheck: Hey! Your string was missing a null terminator! ERROR!\n");
-	return ERROR;
+//Check if a string is valid from user input
+int StringReadCheck(char *str) {
+	while (1) {
+	    if (!is_r1_readable(str)) {
+		TracePrintf(0, "This byte is not readable!\n");
+		return ERROR;
+	    }
+
+	    if (*str == '\0') {
+		    break;
+	    }
+	    str++;
+	}
+	return 0;
 }

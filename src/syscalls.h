@@ -30,5 +30,7 @@ int KernelReclaim(int lock_id);
 //Helper functions 
 void rollback_frames(int first_frame, int amount);
 void data_copy(void *parent_pte, int cpfn);
-int StringReadCheck(char *str, int length);
+int StringReadCheck(char *str);
 int PointBuffCheck(void *addr, long len, int permission);
+int is_r1_readable(char *s);
+int ArgvCheck(char **argv);
