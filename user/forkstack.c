@@ -15,6 +15,7 @@ recurse(who, i)
     waste[j] = 'a';
 
   TtyPrintf(1, "%s %d\n", who, i);
+  TtyPrintf(2, "I am being called\n");
   if (i == 0)
     {
       TtyPrintf(1, "Done with recursion\n");
