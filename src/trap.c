@@ -122,7 +122,6 @@ void HandleKernelTrap(UserContext *CurrUC){
 			sys_return = KernelReclaim((int)CurrUC->regs[0]); 
 			break;
 
-
 		default:
 			TracePrintf(0,"ERROR! The current code did not match any syscall\n");
 			break;
@@ -137,13 +136,6 @@ void HandleKernelTrap(UserContext *CurrUC){
 	TracePrintf(0, "Leaving HandleKernelTrap =====================================================================\n");
 	return;
 }
-
-/* <<<---------------------------------
- * General Flow: In Progress for now
- * CP1 only needs use to trace print that it works
- *  ->
- * --------------------------------->>>
- */
 
 void HandleClockTrap(UserContext *CurrUC) {
     TracePrintf(0, "=================================================== Entering HandleClockTrap ===============================================\n");
@@ -225,7 +217,7 @@ void HandleClockTrap(UserContext *CurrUC) {
     return;
 }
 
-void HandleIllegalTrap(UserContext *CurrUC){
+void HandleIllegalTrap(UserContext *CurrUC) {
 	current_process->curr_uc = *CurrUC;
 
 	TracePrintf(0, "IllegalTrap: You have invoked an Illegal Trap!" 
@@ -233,7 +225,7 @@ void HandleIllegalTrap(UserContext *CurrUC){
 	abort();
 
 	*CurrUC = current_process->curr_uc;
-}
+ }
 
 /* =========================================
  * General Flow:
@@ -245,7 +237,6 @@ void HandleIllegalTrap(UserContext *CurrUC){
  * =========================================
  */
 
-//TODO: CHECK WHY WHEN I DO A MEMSORY THAT IA VALID I GET AN ERROR
 void HandleMemoryTrap(UserContext *CurrUC) {
     TracePrintf(0, "MemoryTrap: You have invoked a Memory Trap!\n");
 
@@ -260,8 +251,8 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 	    TracePrintf(0, "Memory Trap: This is the heap base ---> %d\n", curr_heap_base);
 
 	    if (new_stack_base > curr_heap_base) {
-		    TracePrintf(0, "Great are able to grow the user stack space!\n");
-		    TracePrintf(0, "I will now set up more stack memory for you.\n");
+		    TracePrintf(0, "Memory Trap: Great are able to grow the user stack space!\n");
+		    TracePrintf(0, "Memory Trap: I will now set up more stack memory for you.\n");
 
 		    pte_t *reg1_pt = (pte_t *)current_process->AddressSpace;
 		    //We store our region 1 space in our proc; so we just map it the same way as in template.c
@@ -279,7 +270,7 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 
 		    //Update the stack base for the proc
 		    TracePrintf(0, "MemoryTrap: Success! I will now return and stack has growed!\n");
-		    current_process->user_stack_ptr = DOWN_TO_PAGE(CurrUC->addr);
+		    current_process->user_stack_ptr = (void *)DOWN_TO_PAGE(CurrUC->addr);
 		    WriteRegister(REG_TLB_FLUSH, TLB_FLUSH_1);
 		    return;
     	}
@@ -301,7 +292,7 @@ void HandleMemoryTrap(UserContext *CurrUC) {
 
 void HandleMathTrap(UserContext *CurrUC) {
     TracePrintf(0, "MathTrap: Hello and Welcome to Math Trap!\n");
-    TracePrintf(0, "I will call abort(). Please hold\n");
+    TracePrintf(0, "I will call abort(). Please hold!\n");
     abort();
 }
 
@@ -309,7 +300,7 @@ void HandleMathTrap(UserContext *CurrUC) {
  * General Flow:
  * -> Index into CurrUC->code
  * -> Read the user input from terminal with TtyReceive
- * ---> Buffer if neccessary
+ * ---> Buffer if necessary
  * -> Store in our terminal struct
  * -> This will get read later on by Ttyread
  * =========================================

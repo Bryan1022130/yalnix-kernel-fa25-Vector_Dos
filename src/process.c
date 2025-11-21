@@ -162,7 +162,7 @@ void free_proc(PCB *proc, int free_flip) {
 	TracePrintf(0, "+++++++++++++++++++++++++++++FREE PROC++++++++++++++++++++++++++++++++++\n");
 	TracePrintf(0, "We are going to free the process with a pid of --> %d\n", proc->pid);
 
-	if(proc == NULL){
+	if(proc == NULL) {
 		TracePrintf(0, "ERROR! You are trying to free a NULL process!\n");
 		return;
 	}
@@ -189,11 +189,6 @@ void free_proc(PCB *proc, int free_flip) {
 	//Remove from all queues
 	remove_data(readyQueue, (void *)proc);
 	remove_data(blockedQueue, (void *)proc);
-
-	//Im not sure yet if this is before or after abort KCS
-	
-	//TODO : I have to move the children of the process to somewhere else
-	
 
 	if (free_flip) {
 		//free its kernelstack frames

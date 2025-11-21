@@ -56,10 +56,6 @@ unsigned int frame_count;
 //how many hardware clock ticks have occurred since boot
 unsigned long current_tick = 0;
 
-//Virtual Memory look up logic
-unsigned long int vp0 = VMEM_0_BASE >> PAGESHIFT;
-unsigned long int vp1 = VMEM_1_BASE >> PAGESHIFT;
-
 //Kernel Page Table {Malloc Called}
 pte_t *kernel_page_table;
 
@@ -209,7 +205,6 @@ void KernelStart(char *cmd_args[], unsigned int pmem_size, UserContext *uctxt){
 		idle_process->currState = READY;
 		Enqueue(readyQueue, idle_process);
 	} else {
-		TracePrintf(1, "------------------------------------- TIME TO CREATE OUR PROCESS (INIT) -------------------------------------\n");
 
 		PCB *init_pcb = create_init_proc(track);
 		init_process = init_pcb;

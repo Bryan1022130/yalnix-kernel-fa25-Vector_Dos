@@ -171,7 +171,7 @@ int KernelExec(char *filename, char *argv[]) {
 
     TracePrintf(1, "Exec success -> now running new program %s\n", filename);
     TracePrintf(0, "=================================== Kenenl Exec Exit =======================================================\n");
-    return SUCCESS; // never checked
+    return SUCCESS;
 }
 
 void KernelExit(int status) {
@@ -516,7 +516,6 @@ int KernelTtyRead(int tty_id, void *buf, int len) {
 
 	//Case: We need to string multiple message nodes together
 	//We loop until we can satisfy len or until we reach then end
-	//Note: We dont have to stricly return len only as much as we currently have
 	
 	unsigned int bytes_copied = 0;
 	while (bytes_copied < len && curr_message != NULL) {
@@ -570,8 +569,6 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 		return ERROR;
 	}
 
-	//TODO: Check if the buffer is valid {This should be a function we use around}
-	
 	//Create buffer in region 0
 	char *kbuffer = calloc(1, len);
 	if (kbuffer == NULL) {
@@ -671,7 +668,6 @@ int KernelTtyWrite(int tty_id, void *buf, int len) {
 			return ERROR;
 	}
 
-	//The MessageNode should be freed in the trap handler {I think-> It should be and also its message field}
 	TracePrintf(0, "Great we are done with the KernelTtyWrite syscall! Bye!\n");
 	return len;
 }
@@ -817,7 +813,6 @@ int KernelPipeWrite(int pipe_id, void *buf, int len) {
  * Synchronization Syscalls
  * ============================
  */
-
 
 int KernelLockInit(int *lock_idp) {
         TracePrintf(0, "LockInit() called PID %d\n", current_process->pid);
