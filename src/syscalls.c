@@ -19,7 +19,7 @@ extern Queue *readyQueue;
 extern PCB *idle_process;
 extern Terminal t_array[NUM_TERMINALS];
 extern PCB *init_process;
-extern lock_table[MAX_LOCKS];
+extern Lock lock_table[MAX_LOCKS];
 
 //Helper Functions
 void rollback_frames(int first_frame, int amount) {
@@ -299,12 +299,12 @@ int KernelBrk(void *addr) {
     TracePrintf(0, "current stack_start = %p\n", stack_start);
     TracePrintf(0, "current rounded addr = %p\n", addr);
 
-    if (addr < heap_start) {
+    if ((uintptr_t) addr < heap_start) {
         TracePrintf(0, "KernelBrk: Requested addr (%p) is below heapstart (%p)\n", addr, heap_start);
         return ERROR;
     }
 
-    if (addr >= stack_start - PAGESIZE) {
+    if ((uintptr_t) addr >= (uintptr_t)stack_start - PAGESIZE) {
         TracePrintf(0, "KernelBrk: Requested addr (%p) collides with stack (%p)\n", addr, stack_start);
         return ERROR;
     }
