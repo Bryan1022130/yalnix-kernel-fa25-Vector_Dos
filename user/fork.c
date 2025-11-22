@@ -18,12 +18,12 @@ int main(){
   init = me;
 
   for (i=0; i < FORKTIMES; i++){
-    TracePrintf(0,"pid %d  starting fork %d\n", me, i);
+    TtyPrintf(0,"pid %d  starting fork %d\n", me, i);
 
     pid = Fork();
 
     if (pid < 0){
-      TracePrintf(0, "pid %d fork %d Error %d, Maybe out of memory?\n", 
+      TtyPrintf(0, "pid %d fork %d Error %d, Maybe out of memory?\n", 
 		  me, i, pid);
       continue;
 
@@ -31,7 +31,7 @@ int main(){
 
     if (pid > 0) {
 
-      TracePrintf(0,"pid %d fork %d was succesful---just launched %d!\n", 
+      TtyPrintf(0,"pid %d fork %d was succesful---just launched %d!\n", 
 		  me, i, pid);
       continue;
     }
@@ -42,21 +42,21 @@ int main(){
 
       while(j++ < PRINTTIMES){
 
-	TracePrintf(0,"pid %d delaying loop %d \n", me, j);
+	TtyPrintf(0,"pid %d delaying loop %d \n", me, j);
 	rc = Delay(3);
 	if (rc) 
 	  TracePrintf(0, "pid %d has delay rc %d\n", me, rc);
       }
 
       if (me != init) {
-	TracePrintf(0," %d terminated\n", me);
+	TtyPrintf(0," %d terminated\n", me);
 	Exit(pid);
       } else {
-	TracePrintf(0,"pid %d delaying \n", me);
+	TtyPrintf(0,"pid %d delaying \n", me);
 	rc = Delay(5);
 	if (rc) 
-	  TracePrintf(0, "pid %d has delay rc %d\n", me, rc);
-	TracePrintf(0," %d terminated\n", me);
+	  TtyPrintf(0, "pid %d has delay rc %d\n", me, rc);
+	TtyPrintf(0," %d terminated\n", me);
 	Exit(pid);
       }
 
@@ -66,10 +66,10 @@ int main(){
 
   TracePrintf(0,"parent %d sleeping\n", init);
 
-  Delay(70);  // was 60
+  Delay(60);  // was 60
 
 
-  TracePrintf(0,"parent %d exiting\n", init);
+  TtyPrintf(0,"parent %d exiting\n", init);
 
 
 
